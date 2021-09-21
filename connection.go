@@ -40,8 +40,8 @@ func rmqConnect(connData rmqConnectionData) (*amqp.Connection, APIError) {
 	return conn, nil
 }
 
-// OpenConnectionNChannel - open new RMQ connection & channel
-func OpenConnectionNChannel(connData rmqConnectionData) (*amqp.Connection, *amqp.Channel, APIError) {
+// openConnectionNChannel - open new RMQ connection & channel
+func (r *RMQHandler) openConnectionNChannel(connData rmqConnectionData) (*amqp.Connection, *amqp.Channel, APIError) {
 	// get connection
 	conn, err := rmqConnect(connData)
 	if err != nil {
@@ -49,7 +49,7 @@ func OpenConnectionNChannel(connData rmqConnectionData) (*amqp.Connection, *amqp
 	}
 
 	// get channel
-	channel, err := OpenRMQChannel(conn)
+	channel, err := r.openRMQChannel(conn)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -57,8 +57,8 @@ func OpenConnectionNChannel(connData rmqConnectionData) (*amqp.Connection, *amqp
 	return conn, channel, nil
 }
 
-// OpenRMQChannel - open new RMQ channel
-func OpenRMQChannel(conn *amqp.Connection) (*amqp.Channel, APIError) {
+// openRMQChannel - open new RMQ channel
+func (r *RMQHandler) openRMQChannel(conn *amqp.Connection) (*amqp.Channel, APIError) {
 	channel, rmqErr := conn.Channel()
 	if rmqErr != nil {
 		return nil, constants.Error(
@@ -67,4 +67,32 @@ func OpenRMQChannel(conn *amqp.Connection) (*amqp.Channel, APIError) {
 		)
 	}
 	return channel, nil
+}
+
+// checkRMQConnection - check RMQ connection is active. open new connection if inactive
+func (r *RMQHandler) checkRMQConnection(RMQConn *amqp.Connection, connData rmqConnectionData) (*amqp.Channel, APIError) {
+	if !RMQConn.IsClosed() {
+		return nil, constants.Error(
+			"DATA_EXISTS",
+			"rmq connection is active",
+		)
+	}
+	conn, err := rmqConnect(connData)
+	if err != nil {
+		return nil, err
+	}
+
+	RMQConn = conn
+	RMQChannel, err := r.openRMQChannel(conn)
+	if err != nil {
+		return nil, err
+	}
+
+	if RMQChannel == nil {
+		return nil, constants.Error(
+			"BASE_INTERNAL_ERROR",
+			"failed to open new rmq channel, new channel is nil",
+		)
+	}
+	return RMQChannel, nil
 }

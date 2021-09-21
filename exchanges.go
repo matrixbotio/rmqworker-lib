@@ -5,8 +5,8 @@ import (
 	"github.com/streadway/amqp"
 )
 
-// RMQExchangeDeclare - declare RMQ exchange
-func RMQExchangeDeclare(RMQChannel *amqp.Channel, exchangeName, exchangeType string) APIError {
+// rmqExchangeDeclare - declare RMQ exchange
+func (r *RMQHandler) rmqExchangeDeclare(RMQChannel *amqp.Channel, exchangeName, exchangeType string) APIError {
 	err := RMQChannel.ExchangeDeclare(
 		exchangeName, // name
 		exchangeType, // type

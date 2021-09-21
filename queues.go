@@ -5,8 +5,8 @@ import (
 	"github.com/streadway/amqp"
 )
 
-// RMQQueueDeclare - declare RMQ queue
-func RMQQueueDeclare(RMQChannel *amqp.Channel, queueName string, durable bool, autodelete bool) APIError {
+// rmqQueueDeclare - declare RMQ queue
+func (r *RMQHandler) rmqQueueDeclare(RMQChannel *amqp.Channel, queueName string, durable bool, autodelete bool) APIError {
 	_, err := RMQChannel.QueueDeclare(
 		queueName,  // name
 		durable,    // durable
@@ -24,8 +24,8 @@ func RMQQueueDeclare(RMQChannel *amqp.Channel, queueName string, durable bool, a
 	return nil
 }
 
-// RMQQueueBind - bind queue to exchange
-func RMQQueueBind(RMQChannel *amqp.Channel, fromExchangeName, toQueueName, routingKey string) APIError {
+// rmqQueueBind - bind queue to exchange
+func (r *RMQHandler) rmqQueueBind(RMQChannel *amqp.Channel, fromExchangeName, toQueueName, routingKey string) APIError {
 	err := RMQChannel.QueueBind(
 		toQueueName,      // queue name
 		routingKey,       // routing key
@@ -43,14 +43,14 @@ func RMQQueueBind(RMQChannel *amqp.Channel, fromExchangeName, toQueueName, routi
 	return nil
 }
 
-// RMQQueueDeclareAndBind - declare queue & bind to exchange
-func RMQQueueDeclareAndBind(task RMQQueueDeclareTask) APIError {
+// rmqQueueDeclareAndBind - declare queue & bind to exchange
+func (r *RMQHandler) rmqQueueDeclareAndBind(task RMQQueueDeclareTask) APIError {
 	// declare
-	err := RMQQueueDeclare(task.RMQChannel, task.QueueName, task.Durable, task.AutoDelete)
+	err := r.rmqQueueDeclare(task.RMQChannel, task.QueueName, task.Durable, task.AutoDelete)
 	if err != nil {
 		return err
 	}
 
 	// bind
-	return RMQQueueBind(task.RMQChannel, task.FromExchangeName, task.QueueName, task.RoutingKey)
+	return r.rmqQueueBind(task.RMQChannel, task.FromExchangeName, task.QueueName, task.RoutingKey)
 }
