@@ -3,7 +3,6 @@ package rmqworker
 import (
 	"crypto/tls"
 	"net/url"
-	"os"
 
 	"github.com/matrixbotio/constants-lib"
 	"github.com/streadway/amqp"
@@ -14,7 +13,7 @@ func rmqConnect(connData rmqConnectionData) (*amqp.Connection, apiError) {
 	var err error
 	var useTLS bool = true
 
-	if os.Getenv("AMQP_TLS") == "0" {
+	if connData.UseTLS == "0" {
 		useTLS = false
 	}
 
