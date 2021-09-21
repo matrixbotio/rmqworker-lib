@@ -23,3 +23,34 @@ func RMQQueueDeclare(RMQChannel *amqp.Channel, queueName string, durable bool, a
 	}
 	return nil
 }
+
+// RMQQueueBind - bind queue to exchange
+func RMQQueueBind(RMQChannel *amqp.Channel, fromExchangeName, toQueueName, routingKey string) APIError {
+	err := RMQChannel.QueueBind(
+		toQueueName,      // queue name
+		routingKey,       // routing key
+		fromExchangeName, // exchange
+		false,
+		nil,
+	)
+	if err != nil {
+		return constants.Error(
+			"SERVICE_REQ_FAILED",
+			"failed to bind '"+toQueueName+"' queue to '"+
+				fromExchangeName+"' exchange: "+err.Error(),
+		)
+	}
+	return nil
+}
+
+// RMQQueueDeclareAndBind - declare queue & bind to exchange
+func RMQQueueDeclareAndBind(task RMQQueueDeclareTask) APIError {
+	// declare
+	err := RMQQueueDeclare(task.RMQChannel, task.QueueName, task.Durable, task.AutoDelete)
+	if err != nil {
+		return err
+	}
+
+	// bind
+	return RMQQueueBind(task.RMQChannel, task.FromExchangeName, task.QueueName, task.RoutingKey)
+}
