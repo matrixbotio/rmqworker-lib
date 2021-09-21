@@ -1,0 +1,6 @@
+github.com/go-stack/stack v1.8.0 h1:5SgMzNM5HxrEjV0ww2lTmX6E2Izsfxas4+YHWRs3Lsk=
+github.com/go-stack/stack v1.8.0/go.mod h1:v0f6uXyyMGvRgIKkXu+yp6POWl0qKG85gN/melR3HDY=
+github.com/matrixbotio/constants-lib v1.0.58 h1:HcmBn/GLa8k0dpX/6Y9+LvaL/TeZbgElV2xgKewYpBs=
+github.com/matrixbotio/constants-lib v1.0.58/go.mod h1:ol7WN7tisKCBoLOObf9/8vmnv3cBZC9oFL4Jv59YnwQ=
+github.com/streadway/amqp v1.0.0 h1:kuuDrUJFZL1QYL9hUNuCxNObNzB0bV/ZG5jV3RWAQgo=
+github.com/streadway/amqp v1.0.0/go.mod h1:AZpEONHx3DKn8O/DFsRAY58/XVQiIPMTMB1SddzLXVw=
