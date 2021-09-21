@@ -1,6 +1,8 @@
 package rmqworker
 
 import (
+	"time"
+
 	"github.com/matrixbotio/constants-lib"
 	"github.com/streadway/amqp"
 )
@@ -24,4 +26,82 @@ type RMQQueueDeclareTask struct {
 	AutoDelete       bool
 	FromExchangeName string
 	RoutingKey       string
+}
+
+// RMQPublishRequestTask - publish message to RMQ task data container
+type RMQPublishRequestTask struct {
+	RMQChannel         *amqp.Channel
+	QueueName          string
+	ResponseRoutingKey string
+	MessageBody        []byte
+}
+
+// RMQPublishResponseTask - response for publish message to RMQ request
+type RMQPublishResponseTask struct {
+	RMQConn            *amqp.Connection
+	RMQChannel         *amqp.Channel
+	ExchangeName       string
+	ResponseRoutingKey string
+	MessageBody        []byte
+}
+
+// RMQMonitoringWorkerTask - new RMQ request->response monitoring worker data
+type RMQMonitoringWorkerTask struct {
+	// required
+	QueueName        string
+	ISQueueDurable   bool
+	ISAutoDelete     bool
+	FromExchangeName string
+	RoutingKey       string
+	RMQConn          *amqp.Connection
+	RMQChannel       *amqp.Channel
+	Callback         RMQDeliveryCallback
+
+	// optional
+	ID              string
+	Timeout         time.Duration
+	TimeoutCallback RMQTimeoutCallback
+}
+
+// RMQDeliveryCallback - RMQ delivery callback function
+type RMQDeliveryCallback func(w *RMQWorker, rmqDelivery amqp.Delivery)
+
+// RMQTimeoutCallback - RMQ response timeout callback function
+type RMQTimeoutCallback func(w *RMQWorker)
+
+// RMQWorker - just RMQ worker
+type RMQWorker struct {
+	Data        rmqWorkerData
+	Connections rmqWorkerConnections
+	Channels    rmqWorkerChannels
+	Paused      bool
+
+	DeliveryCallback RMQDeliveryCallback
+	TimeoutCallback  RMQTimeoutCallback
+}
+
+type rmqWorkerData struct {
+	Name                string // worker name
+	QueueName           string
+	AutoAck             bool
+	CheckResponseErrors bool
+
+	// if only one response is expected,
+	// then a timeout can be applied
+	UseResponseTimeout  bool
+	WaitResponseTimeout time.Duration
+
+	// optional params
+	ID string
+}
+
+type rmqWorkerConnections struct {
+	RMQConn    *amqp.Connection
+	RMQChannel *amqp.Channel //channel for worker
+}
+
+type rmqWorkerChannels struct {
+	RMQMessages <-chan amqp.Delivery
+	OnFinished  chan struct{}
+	StopCh      chan struct{}
 }
