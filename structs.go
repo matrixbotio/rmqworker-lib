@@ -65,7 +65,7 @@ type rmqMonitoringWorkerTask struct {
 }
 
 // RMQDeliveryCallback - RMQ delivery callback function
-type RMQDeliveryCallback func(w *RMQWorker, rmqDelivery amqp.Delivery)
+type RMQDeliveryCallback func(w *RMQWorker, deliveryHandler RMQDeliveryHandler)
 
 // RMQTimeoutCallback - RMQ response timeout callback function
 type RMQTimeoutCallback func(w *RMQWorker)
