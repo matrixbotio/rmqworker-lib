@@ -49,3 +49,36 @@ func (d *RMQDeliveryHandler) Accept() APIError {
 	}
 	return nil
 }
+
+// CheckResponseError - check RMQ response error
+func (d *RMQDeliveryHandler) CheckResponseError() APIError {
+	responseCodeRaw, isErrorFound := d.rmqDelivery.Headers["code"]
+	if isErrorFound {
+		responseCode, isConvertable := responseCodeRaw.(int64)
+		if !isConvertable {
+			return constants.Error(
+				"DATA_PARSE_ERR",
+				"failed to parse rmq response code",
+			)
+		}
+		if responseCode == 0 {
+			// no errors
+			return nil
+		}
+		var errName string = "UNKNOWN"
+		errNameRaw, isErrorNameFound := d.GetHeader("name")
+		if isErrorNameFound {
+			errName, isConvertable = errNameRaw.(string)
+			if !isConvertable {
+				return constants.Error(
+					"DATA_PARSE_ERR",
+					"failed to parse rmq error name",
+				)
+			}
+		}
+
+		errMessage := string(d.GetMessageBody())
+		return constants.Error(errName, errMessage)
+	}
+	return nil
+}

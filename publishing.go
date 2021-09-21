@@ -48,39 +48,6 @@ func (r *RMQHandler) RMQPublishToQueue(task RMQPublishRequestTask) APIError {
 	return nil
 }
 
-// rmqCheckResponseError - check RMQ response error
-func rmqCheckResponseError(rmqDelivery amqp.Delivery) APIError {
-	responseCodeRaw, isErrorFound := rmqDelivery.Headers["code"]
-	if isErrorFound {
-		responseCode, isConvertable := responseCodeRaw.(int64)
-		if !isConvertable {
-			return constants.Error(
-				"DATA_PARSE_ERR",
-				"failed to parse rmq response code",
-			)
-		}
-		if responseCode == 0 {
-			// no errors
-			return nil
-		}
-		var errName string = "UNKNOWN"
-		errNameRaw, isErrorNameFound := rmqDelivery.Headers["name"]
-		if isErrorNameFound {
-			errName, isConvertable = errNameRaw.(string)
-			if !isConvertable {
-				return constants.Error(
-					"DATA_PARSE_ERR",
-					"failed to parse rmq error name",
-				)
-			}
-		}
-
-		errMessage := string(rmqDelivery.Body)
-		return constants.Error(errName, errMessage)
-	}
-	return nil
-}
-
 // SendRMQResponse - publish message to RMQ exchange
 func (r *RMQHandler) SendRMQResponse(
 	task *RMQPublishResponseTask,
