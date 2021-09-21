@@ -37,10 +37,8 @@ type rmqPublishRequestTask struct {
 	MessageBody        []byte
 }
 
-// rmqPublishResponseTask - response for publish message to RMQ request
-type rmqPublishResponseTask struct {
-	RMQConn            *amqp.Connection
-	RMQChannel         *amqp.Channel
+// RMQPublishResponseTask - response for publish message to RMQ request
+type RMQPublishResponseTask struct {
 	ExchangeName       string
 	ResponseRoutingKey string
 	MessageBody        []byte

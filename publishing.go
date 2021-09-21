@@ -76,8 +76,11 @@ func rmqCheckResponseError(rmqDelivery amqp.Delivery) APIError {
 	return nil
 }
 
-// sendRMQResponse - publish message to RMQ exchange
-func (r *RMQHandler) sendRMQResponse(task *rmqPublishResponseTask, errorMsg ...*constants.APIError) APIError {
+// SendRMQResponse - publish message to RMQ exchange
+func (r *RMQHandler) SendRMQResponse(
+	task *RMQPublishResponseTask,
+	errorMsg ...*constants.APIError,
+) APIError {
 	headers := amqp.Table{}
 	var responseBody []byte
 	var responseToEncode interface{}
@@ -103,7 +106,7 @@ func (r *RMQHandler) sendRMQResponse(task *rmqPublishResponseTask, errorMsg ...*
 	}
 
 	// check RMQ connection
-	newChannel, err := checkRMQConnection(task.RMQConn, r.ConnectionData)
+	newChannel, err := checkRMQConnection(r.RMQConn, r.ConnectionData)
 	if err != nil {
 		// check connection is open
 		if err.Name != "DATA_EXISTS" {
@@ -115,11 +118,11 @@ func (r *RMQHandler) sendRMQResponse(task *rmqPublishResponseTask, errorMsg ...*
 	}
 	if newChannel != nil {
 		// channel updated
-		task.RMQChannel = newChannel
+		r.RMQChannel = newChannel
 	}
 
 	// push result to rmq
-	rmqErr := task.RMQChannel.Publish(
+	rmqErr := r.RMQChannel.Publish(
 		task.ExchangeName,       // exchange
 		task.ResponseRoutingKey, // routing key
 		false,                   // mandatory
