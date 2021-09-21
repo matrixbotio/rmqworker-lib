@@ -2,7 +2,8 @@ package rmqworker
 
 import "github.com/matrixbotio/constants-lib"
 
-type apiError *constants.APIError
+// APIError - error data container
+type APIError *constants.APIError
 
 type rmqConnectionData struct {
 	User     string `json:"user"`

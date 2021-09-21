@@ -8,7 +8,7 @@ import (
 	"github.com/streadway/amqp"
 )
 
-func rmqConnect(connData rmqConnectionData) (*amqp.Connection, apiError) {
+func rmqConnect(connData rmqConnectionData) (*amqp.Connection, APIError) {
 	var conn *amqp.Connection
 	var err error
 	var useTLS bool = true
@@ -38,4 +38,33 @@ func rmqConnect(connData rmqConnectionData) (*amqp.Connection, apiError) {
 		)
 	}
 	return conn, nil
+}
+
+// OpenConnectionNChannel - open new RMQ connection & channel
+func OpenConnectionNChannel(connData rmqConnectionData) (*amqp.Connection, *amqp.Channel, APIError) {
+	// get connection
+	conn, err := rmqConnect(connData)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// get channel
+	channel, err := OpenRMQChannel(conn)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return conn, channel, nil
+}
+
+// OpenRMQChannel - open new RMQ channel
+func OpenRMQChannel(conn *amqp.Connection) (*amqp.Channel, APIError) {
+	channel, rmqErr := conn.Channel()
+	if rmqErr != nil {
+		return nil, constants.Error(
+			"SERVICE_REQ_FAILED",
+			"failed to get amqp channel: "+rmqErr.Error(),
+		)
+	}
+	return channel, nil
 }
