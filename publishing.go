@@ -9,7 +9,7 @@ import (
 )
 
 // rmqPublishInterfaceToQueue - another version of rmqPublishToQueue. use `message` instead of `task.MessageBody`
-func (r *RMQHandler) rmqPublishInterfaceToQueue(task rmqPublishRequestTask, message interface{}) error {
+func (r *RMQHandler) rmqPublishInterfaceToQueue(task RMQPublishRequestTask, message interface{}) error {
 	var err error
 	task.MessageBody, err = json.Marshal(message)
 	if err != nil {
@@ -19,13 +19,13 @@ func (r *RMQHandler) rmqPublishInterfaceToQueue(task rmqPublishRequestTask, mess
 }
 
 // rmqPublishToQueue - send request to rmq queue
-func (r *RMQHandler) rmqPublishToQueue(task rmqPublishRequestTask) error {
+func (r *RMQHandler) rmqPublishToQueue(task RMQPublishRequestTask) error {
 	headers := amqp.Table{}
 	if task.ResponseRoutingKey != "" {
 		headers["responseRoutingKey"] = task.ResponseRoutingKey
 	}
 
-	err := task.RMQChannel.Publish(
+	err := r.RMQChannel.Publish(
 		"",             // exchange
 		task.QueueName, // queue
 		false,          // mandatory
@@ -33,7 +33,7 @@ func (r *RMQHandler) rmqPublishToQueue(task rmqPublishRequestTask) error {
 		amqp.Publishing{
 			Headers:      headers,
 			DeliveryMode: amqp.Persistent,
-			ContentType:  "text/plain",
+			ContentType:  "application/json",
 			Body:         task.MessageBody,
 		},
 	)
@@ -84,6 +84,8 @@ func (r *RMQHandler) SendRMQResponse(
 	headers := amqp.Table{}
 	var responseBody []byte
 	var responseToEncode interface{}
+	contentType := "application/json"
+
 	if len(errorMsg) == 0 {
 		// no errors
 		headers["code"] = 0
@@ -93,6 +95,7 @@ func (r *RMQHandler) SendRMQResponse(
 		headers["code"] = errorMsg[0].Code
 		headers["name"] = errorMsg[0].Name
 		responseToEncode = errorMsg[0].Message
+		contentType = "text/plain"
 	}
 
 	// encode response to json
@@ -129,7 +132,7 @@ func (r *RMQHandler) SendRMQResponse(
 		false,                   // immediate
 		amqp.Publishing{
 			Headers:     headers,
-			ContentType: "application/json",
+			ContentType: contentType,
 			Body:        responseBody,
 		})
 	if rmqErr != nil {

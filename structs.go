@@ -28,9 +28,8 @@ type RMQQueueDeclareTask struct {
 	RoutingKey       string
 }
 
-// rmqPublishRequestTask - publish message to RMQ task data container
-type rmqPublishRequestTask struct {
-	RMQChannel         *amqp.Channel
+// RMQPublishRequestTask - publish message to RMQ task data container
+type RMQPublishRequestTask struct {
 	QueueName          string
 	ResponseRoutingKey string
 	MessageBody        []byte
