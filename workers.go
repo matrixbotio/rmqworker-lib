@@ -274,8 +274,7 @@ type RMQMonitoringWorker struct {
 // monitoring worker used for send request & get response.
 func (r *RMQHandler) NewRMQMonitoringWorker(task RMQMonitoringWorkerTask) (*RMQMonitoringWorker, APIError) {
 	// declare queue & bind
-	err := r.rmqQueueDeclareAndBind(rmqQueueDeclareTask{
-		RMQChannel:       r.RMQChannel,
+	err := r.rmqQueueDeclareAndBind(RMQQueueDeclareTask{
 		QueueName:        task.QueueName,
 		Durable:          task.ISQueueDurable,
 		AutoDelete:       task.ISAutoDelete,

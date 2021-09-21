@@ -19,9 +19,8 @@ type RMQConnectionData struct {
 	UseTLS   string `json:"tls"`
 }
 
-// rmqQueueDeclareTask - queue declare task data container
-type rmqQueueDeclareTask struct {
-	RMQChannel       *amqp.Channel
+// RMQQueueDeclareTask - queue declare task data container
+type RMQQueueDeclareTask struct {
 	QueueName        string
 	Durable          bool
 	AutoDelete       bool

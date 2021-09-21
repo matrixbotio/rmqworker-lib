@@ -44,13 +44,13 @@ func (r *RMQHandler) rmqQueueBind(RMQChannel *amqp.Channel, fromExchangeName, to
 }
 
 // rmqQueueDeclareAndBind - declare queue & bind to exchange
-func (r *RMQHandler) rmqQueueDeclareAndBind(task rmqQueueDeclareTask) APIError {
+func (r *RMQHandler) rmqQueueDeclareAndBind(task RMQQueueDeclareTask) APIError {
 	// declare
-	err := r.rmqQueueDeclare(task.RMQChannel, task.QueueName, task.Durable, task.AutoDelete)
+	err := r.rmqQueueDeclare(r.RMQChannel, task.QueueName, task.Durable, task.AutoDelete)
 	if err != nil {
 		return err
 	}
 
 	// bind
-	return r.rmqQueueBind(task.RMQChannel, task.FromExchangeName, task.QueueName, task.RoutingKey)
+	return r.rmqQueueBind(r.RMQChannel, task.FromExchangeName, task.QueueName, task.RoutingKey)
 }
