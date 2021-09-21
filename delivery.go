@@ -21,6 +21,13 @@ func (d *RMQDeliveryHandler) GetMessageBody() []byte {
 	return d.rmqDelivery.Body
 }
 
+// GetHeader from RMQ delivery headers.
+// returns header value, is header exists (bool)
+func (d *RMQDeliveryHandler) GetHeader(headerName string) (interface{}, bool) {
+	headerValue, isHeaderExists := d.rmqDelivery.Headers[headerName]
+	return headerValue, isHeaderExists
+}
+
 // GetCorrelationID from RMQ delivery
 func (d *RMQDeliveryHandler) GetCorrelationID() string {
 	return d.rmqDelivery.CorrelationId
