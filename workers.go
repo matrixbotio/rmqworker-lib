@@ -223,17 +223,17 @@ func (w *RMQWorker) Listen() {
 }
 
 func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
+	// create delivery handler
+	delivery := newRMQDeliveryHandler(rmqDelivery)
+
 	// auto accept message if needed
 	if !w.Data.AutoAck {
 		w.logInfo("ack message")
-		/*err := rmqDelivery.Acknowledger.Ack(rmqDelivery.DeliveryTag, false)
+		err := delivery.Accept()
 		if err != nil {
-			w.logError(constants.Error(
-				"DATA_HANDLE_ERR",
-				"failed to ack task: "+err.Error(),
-			))
+			w.logError(err)
 			return
-		}*/
+		}
 	}
 
 	// check response error
@@ -250,9 +250,6 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 	if w.DeliveryCallback == nil {
 		w.logError(constants.Error("DATA_HANDLE_ERR", "rmq worker message callback is nil"))
 	}
-
-	// create delivery handler
-	delivery := newRMQDeliveryHandler(rmqDelivery)
 
 	// run callback
 	w.DeliveryCallback(w, delivery)
