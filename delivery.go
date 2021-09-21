@@ -16,6 +16,11 @@ func newRMQDeliveryHandler(delivery amqp.Delivery) RMQDeliveryHandler {
 	}
 }
 
+// GetMessageBody from RMQ delivery
+func (d *RMQDeliveryHandler) GetMessageBody() []byte {
+	return d.rmqDelivery.Body
+}
+
 // GetCorrelationID from RMQ delivery
 func (d *RMQDeliveryHandler) GetCorrelationID() string {
 	return d.rmqDelivery.CorrelationId
