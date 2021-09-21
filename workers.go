@@ -272,7 +272,7 @@ type RMQMonitoringWorker struct {
 
 // NewRMQMonitoringWorker - declare queue, bind to exchange, create worker & run.
 // monitoring worker used for send request & get response.
-func (r *RMQHandler) NewRMQMonitoringWorker(task rmqMonitoringWorkerTask) (*RMQMonitoringWorker, APIError) {
+func (r *RMQHandler) NewRMQMonitoringWorker(task RMQMonitoringWorkerTask) (*RMQMonitoringWorker, APIError) {
 	// declare queue & bind
 	err := r.rmqQueueDeclareAndBind(rmqQueueDeclareTask{
 		RMQChannel:       task.RMQChannel,

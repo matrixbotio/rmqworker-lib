@@ -44,8 +44,8 @@ type RMQPublishResponseTask struct {
 	MessageBody        []byte
 }
 
-// rmqMonitoringWorkerTask - new RMQ request->response monitoring worker data
-type rmqMonitoringWorkerTask struct {
+// RMQMonitoringWorkerTask - new RMQ request->response monitoring worker data
+type RMQMonitoringWorkerTask struct {
 	// required
 	QueueName        string
 	ISQueueDurable   bool
