@@ -224,7 +224,7 @@ func (w *RMQWorker) Listen() {
 
 func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 	// create delivery handler
-	delivery := newRMQDeliveryHandler(rmqDelivery)
+	delivery := NewRMQDeliveryHandler(rmqDelivery)
 
 	// auto accept message if needed
 	if !w.Data.AutoAck {

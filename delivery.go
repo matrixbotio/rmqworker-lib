@@ -10,7 +10,8 @@ type RMQDeliveryHandler struct {
 	rmqDelivery amqp.Delivery
 }
 
-func newRMQDeliveryHandler(delivery amqp.Delivery) RMQDeliveryHandler {
+// NewRMQDeliveryHandler - create new RMQ delivery handler
+func NewRMQDeliveryHandler(delivery amqp.Delivery) RMQDeliveryHandler {
 	return RMQDeliveryHandler{
 		rmqDelivery: delivery,
 	}
