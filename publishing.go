@@ -44,7 +44,7 @@ func (r *RMQHandler) rmqPublishToQueue(task rmqPublishRequestTask) error {
 }
 
 // rmqCheckResponseError - check RMQ response error
-func (r *RMQHandler) rmqCheckResponseError(rmqDelivery amqp.Delivery) APIError {
+func rmqCheckResponseError(rmqDelivery amqp.Delivery) APIError {
 	responseCodeRaw, isErrorFound := rmqDelivery.Headers["code"]
 	if isErrorFound {
 		responseCode, isConvertable := responseCodeRaw.(int64)
@@ -103,7 +103,7 @@ func (r *RMQHandler) sendRMQResponse(task *rmqPublishResponseTask, errorMsg ...*
 	}
 
 	// check RMQ connection
-	newChannel, err := r.checkRMQConnection(task.RMQConn, r.ConnectionData)
+	newChannel, err := checkRMQConnection(task.RMQConn, r.ConnectionData)
 	if err != nil {
 		// check connection is open
 		if err.Name != "DATA_EXISTS" {

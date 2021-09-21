@@ -3,6 +3,8 @@ package rmqworker
 import (
 	"crypto/tls"
 	"net/url"
+	"strconv"
+	"time"
 
 	"github.com/matrixbotio/constants-lib"
 	"github.com/streadway/amqp"
@@ -41,15 +43,15 @@ func rmqConnect(connData rmqConnectionData) (*amqp.Connection, APIError) {
 }
 
 // openConnectionNChannel - open new RMQ connection & channel
-func (r *RMQHandler) openConnectionNChannel(connData rmqConnectionData) (*amqp.Connection, *amqp.Channel, APIError) {
+func (r *RMQHandler) openConnectionNChannel() (*amqp.Connection, *amqp.Channel, APIError) {
 	// get connection
-	conn, err := rmqConnect(connData)
+	conn, err := rmqConnect(r.ConnectionData)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	// get channel
-	channel, err := r.openRMQChannel(conn)
+	channel, err := openRMQChannel(conn)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -58,7 +60,7 @@ func (r *RMQHandler) openConnectionNChannel(connData rmqConnectionData) (*amqp.C
 }
 
 // openRMQChannel - open new RMQ channel
-func (r *RMQHandler) openRMQChannel(conn *amqp.Connection) (*amqp.Channel, APIError) {
+func openRMQChannel(conn *amqp.Connection) (*amqp.Channel, APIError) {
 	channel, rmqErr := conn.Channel()
 	if rmqErr != nil {
 		return nil, constants.Error(
@@ -70,7 +72,7 @@ func (r *RMQHandler) openRMQChannel(conn *amqp.Connection) (*amqp.Channel, APIEr
 }
 
 // checkRMQConnection - check RMQ connection is active. open new connection if inactive
-func (r *RMQHandler) checkRMQConnection(RMQConn *amqp.Connection, connData rmqConnectionData) (*amqp.Channel, APIError) {
+func checkRMQConnection(RMQConn *amqp.Connection, connData rmqConnectionData) (*amqp.Channel, APIError) {
 	if !RMQConn.IsClosed() {
 		return nil, constants.Error(
 			"DATA_EXISTS",
@@ -83,7 +85,7 @@ func (r *RMQHandler) checkRMQConnection(RMQConn *amqp.Connection, connData rmqCo
 	}
 
 	RMQConn = conn
-	RMQChannel, err := r.openRMQChannel(conn)
+	RMQChannel, err := openRMQChannel(conn)
 	if err != nil {
 		return nil, err
 	}
@@ -95,4 +97,31 @@ func (r *RMQHandler) checkRMQConnection(RMQConn *amqp.Connection, connData rmqCo
 		)
 	}
 	return RMQChannel, nil
+}
+
+type connFunc func() APIError
+
+func (r *RMQWorker) reconnect(callback connFunc, connectionDescription string) {
+	isConnected := false
+	for !isConnected {
+		for i := 0; i < reconnectionAttemptsNumber; i++ {
+			err := callback()
+			if err == nil {
+				// connection established
+				return
+			}
+			if err.Name == "DATA_EXISTS" {
+				// connection is open
+				return
+			}
+			r.Logger.Warn(err)
+			time.Sleep(reconnectAfterSeconds * time.Second)
+		}
+		errMsg := "failed to connect to " +
+			connectionDescription + " after " +
+			strconv.Itoa(reconnectionAttemptsNumber) + " attempts"
+
+		r.Logger.Error(constants.Error("SERVICE_CONN_ERR", errMsg))
+		time.Sleep(time.Second * waitingBetweenAttempts)
+	}
 }
