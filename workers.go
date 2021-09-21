@@ -84,26 +84,31 @@ func (w *RMQWorker) logError(err APIError) {
 	}
 }
 
+// SetName - set RMQ worker name for logs
 func (w *RMQWorker) SetName(name string) *RMQWorker {
 	w.Data.Name = name
 	return w
 }
 
+// SetID - set RMQ worker ID
 func (w *RMQWorker) SetID(id string) *RMQWorker {
 	w.Data.ID = id
 	return w
 }
 
+// SetAutoAck - auto accept messages
 func (w *RMQWorker) SetAutoAck(autoAck bool) *RMQWorker {
 	w.Data.AutoAck = autoAck
 	return w
 }
 
+// SetCheckResponseErrors - determines whether the errors in the answers passed to headers will be checked
 func (w *RMQWorker) SetCheckResponseErrors(check bool) *RMQWorker {
 	w.Data.CheckResponseErrors = check
 	return w
 }
 
+// SetTimeout - set RMQ response timeout. When the timer goes out, the callback will be called
 func (w *RMQWorker) SetTimeout(timeout time.Duration, callback RMQTimeoutCallback) *RMQWorker {
 	w.Data.UseResponseTimeout = true
 	w.Data.WaitResponseTimeout = timeout
@@ -115,15 +120,18 @@ func (w *RMQWorker) getLogWorkerName() string {
 	return "RMQ Worker " + w.Data.Name + ": "
 }
 
+// Serve - listen RMQ messages
 func (w *RMQWorker) Serve() {
 	w.HandleReconnect()
 }
 
+// HandleReconnect - reconnect to RMQ delivery (messages)
 func (w *RMQWorker) HandleReconnect() {
 	w.reconnect(w.Subscribe, w.Data.Name)
 	w.Listen()
 }
 
+// Subscribe to RMQ messages
 func (w *RMQWorker) Subscribe() APIError {
 	var err error
 	var aErr APIError
@@ -165,18 +173,22 @@ func (w *RMQWorker) Subscribe() APIError {
 	return nil
 }
 
+// Stop RMQ messages listen
 func (w *RMQWorker) Stop() {
 	w.Channels.StopCh <- struct{}{}
 }
 
+// Pause RMQ Worker (ignore messages)
 func (w *RMQWorker) Pause() {
 	w.Paused = true
 }
 
+// Resume RMQ Worker (continue listen messages)
 func (w *RMQWorker) Resume() {
 	w.Paused = false
 }
 
+// Listen RMQ messages
 func (w *RMQWorker) Listen() {
 	w.logInfo("listen messages...")
 	awaitMessages := true
@@ -247,6 +259,7 @@ func (w *RMQWorker) timeIsUp() {
 	w.TimeoutCallback(w)
 }
 
+// AwaitFinish - wait for worker finished
 func (w *RMQWorker) AwaitFinish() {
 	<-w.Channels.OnFinished
 }
