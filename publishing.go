@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 
+	"github.com/matrixbotio/constants-lib"
 	"github.com/streadway/amqp"
 )
 
@@ -38,6 +39,39 @@ func rmqPublishToQueue(task RMQPublishRequestTask) error {
 	)
 	if err != nil {
 		return errors.New("failed to push event to rmq queue: " + err.Error())
+	}
+	return nil
+}
+
+// RMQCheckResponseError - check RMQ response error
+func RMQCheckResponseError(rmqDelivery amqp.Delivery) APIError {
+	responseCodeRaw, isErrorFound := rmqDelivery.Headers["code"]
+	if isErrorFound {
+		responseCode, isConvertable := responseCodeRaw.(int64)
+		if !isConvertable {
+			return constants.Error(
+				"DATA_PARSE_ERR",
+				"failed to parse rmq response code",
+			)
+		}
+		if responseCode == 0 {
+			// no errors
+			return nil
+		}
+		var errName string = "UNKNOWN"
+		errNameRaw, isErrorNameFound := rmqDelivery.Headers["name"]
+		if isErrorNameFound {
+			errName, isConvertable = errNameRaw.(string)
+			if !isConvertable {
+				return constants.Error(
+					"DATA_PARSE_ERR",
+					"failed to parse rmq error name",
+				)
+			}
+		}
+
+		errMessage := string(rmqDelivery.Body)
+		return constants.Error(errName, errMessage)
 	}
 	return nil
 }
