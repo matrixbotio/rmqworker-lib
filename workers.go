@@ -275,7 +275,7 @@ type RMQMonitoringWorker struct {
 func (r *RMQHandler) NewRMQMonitoringWorker(task RMQMonitoringWorkerTask) (*RMQMonitoringWorker, APIError) {
 	// declare queue & bind
 	err := r.rmqQueueDeclareAndBind(rmqQueueDeclareTask{
-		RMQChannel:       task.RMQChannel,
+		RMQChannel:       r.RMQChannel,
 		QueueName:        task.QueueName,
 		Durable:          task.ISQueueDurable,
 		AutoDelete:       task.ISAutoDelete,
