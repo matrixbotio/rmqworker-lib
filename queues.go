@@ -54,3 +54,40 @@ func (r *RMQHandler) RMQQueueDeclareAndBind(task RMQQueueDeclareTask) APIError {
 	// bind
 	return r.rmqQueueBind(r.RMQChannel, task.FromExchangeName, task.QueueName, task.RoutingKey)
 }
+
+// DeclareQueues - declare RMQ exchanges list
+func (r *RMQHandler) DeclareQueues(queues []string) APIError {
+	for _, queueName := range queues {
+		err := r.rmqQueueDeclare(
+			r.RMQChannel, // RMQ channel
+			queueName,    // queue name
+			true,         // durable
+			false,        // auto-delete
+		)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// DeleteQueues - delete RMQ queues
+func (r *RMQHandler) DeleteQueues(queueNames map[string][]string) APIError {
+	for managerName, queueNames := range queueNames {
+		for _, queueName := range queueNames {
+			_, err := r.RMQChannel.QueueDelete(
+				queueName, // queue name
+				false,     // if unused
+				false,     // if empty
+				true,      // no-wait
+			)
+			if err != nil {
+				return constants.Error(
+					"SERVICE_REQ_FAILED",
+					"failed to delete "+managerName+" queue: "+err.Error(),
+				)
+			}
+		}
+	}
+	return nil
+}
