@@ -215,7 +215,6 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 	if !w.Data.AutoAck {
 		w.logInfo("ack message")
 		err := rmqDelivery.Acknowledger.Ack(rmqDelivery.DeliveryTag, false)
-		//err := rmqDelivery.Ack(false) // accept multiple = false
 		if err != nil {
 			w.logError(constants.Error(
 				"DATA_HANDLE_ERR",
