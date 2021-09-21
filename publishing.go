@@ -7,8 +7,8 @@ import (
 	"github.com/streadway/amqp"
 )
 
-// rmqPublishInterfaceToQueue - another version of rmqPublishToQueue. use `message` instead of `task.MessageBody`
-func (r *RMQHandler) rmqPublishInterfaceToQueue(task RMQPublishRequestTask, message interface{}) APIError {
+// RMQPublishInterfaceToQueue - another version of rmqPublishToQueue. use `message` instead of `task.MessageBody`
+func (r *RMQHandler) RMQPublishInterfaceToQueue(task RMQPublishRequestTask, message interface{}) APIError {
 	var convErr error
 	task.MessageBody, convErr = json.Marshal(message)
 	if convErr != nil {
