@@ -10,7 +10,7 @@ import (
 	"github.com/streadway/amqp"
 )
 
-func rmqConnect(connData rmqConnectionData) (*amqp.Connection, APIError) {
+func rmqConnect(connData RMQConnectionData) (*amqp.Connection, APIError) {
 	var conn *amqp.Connection
 	var err error
 	var useTLS bool = true
@@ -72,7 +72,7 @@ func openRMQChannel(conn *amqp.Connection) (*amqp.Channel, APIError) {
 }
 
 // checkRMQConnection - check RMQ connection is active. open new connection if inactive
-func checkRMQConnection(RMQConn *amqp.Connection, connData rmqConnectionData) (*amqp.Channel, APIError) {
+func checkRMQConnection(RMQConn *amqp.Connection, connData RMQConnectionData) (*amqp.Channel, APIError) {
 	if !RMQConn.IsClosed() {
 		return nil, constants.Error(
 			"DATA_EXISTS",

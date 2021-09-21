@@ -10,7 +10,8 @@ import (
 // APIError - error data container
 type APIError *constants.APIError
 
-type rmqConnectionData struct {
+// RMQConnectionData - rmq connection data container
+type RMQConnectionData struct {
 	User     string `json:"user"`
 	Password string `json:"password"`
 	Host     string `json:"host"`

@@ -7,14 +7,14 @@ import (
 
 // RMQHandler - RMQ connection handler
 type RMQHandler struct {
-	ConnectionData rmqConnectionData
+	ConnectionData RMQConnectionData
 	RMQConn        *amqp.Connection
 	RMQChannel     *amqp.Channel
 	Logger         *constants.Logger
 }
 
 // NewRMQHandler - create new RMQHandler
-func NewRMQHandler(connData rmqConnectionData, logger ...*constants.Logger) (*RMQHandler, APIError) {
+func NewRMQHandler(connData RMQConnectionData, logger ...*constants.Logger) (*RMQHandler, APIError) {
 	// create handler
 	r := RMQHandler{
 		ConnectionData: connData,

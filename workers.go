@@ -11,7 +11,7 @@ import (
 
 // RMQWorker - just RMQ worker
 type RMQWorker struct {
-	ConnectionData rmqConnectionData
+	ConnectionData RMQConnectionData
 	Data           rmqWorkerData
 	Connections    rmqWorkerConnections
 	Channels       rmqWorkerChannels
