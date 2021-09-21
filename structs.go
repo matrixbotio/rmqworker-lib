@@ -52,8 +52,6 @@ type RMQMonitoringWorkerTask struct {
 	ISAutoDelete     bool
 	FromExchangeName string
 	RoutingKey       string
-	RMQConn          *amqp.Connection
-	RMQChannel       *amqp.Channel
 	Callback         RMQDeliveryCallback
 
 	// optional
