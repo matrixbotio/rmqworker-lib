@@ -69,17 +69,6 @@ type RMQDeliveryCallback func(w *RMQWorker, rmqDelivery amqp.Delivery)
 // RMQTimeoutCallback - RMQ response timeout callback function
 type RMQTimeoutCallback func(w *RMQWorker)
 
-// RMQWorker - just RMQ worker
-type RMQWorker struct {
-	Data        rmqWorkerData
-	Connections rmqWorkerConnections
-	Channels    rmqWorkerChannels
-	Paused      bool
-
-	DeliveryCallback RMQDeliveryCallback
-	TimeoutCallback  RMQTimeoutCallback
-}
-
 type rmqWorkerData struct {
 	Name                string // worker name
 	QueueName           string

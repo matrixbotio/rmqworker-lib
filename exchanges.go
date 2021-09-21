@@ -35,3 +35,19 @@ func (r *RMQHandler) DeclareExchanges(exchangeTypes map[string]string) APIError 
 	}
 	return nil
 }
+
+// DeclareQueues - declare RMQ exchanges list
+func (r *RMQHandler) DeclareQueues(queues []string) APIError {
+	for _, queueName := range queues {
+		err := r.rmqQueueDeclare(
+			r.RMQChannel, // RMQ channel
+			queueName,    // queue name
+			true,         // durable
+			false,        // auto-delete
+		)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
