@@ -9,7 +9,7 @@ import (
 )
 
 // rmqPublishInterfaceToQueue - another version of rmqPublishToQueue. use `message` instead of `task.MessageBody`
-func (r *RMQHandler) rmqPublishInterfaceToQueue(task RMQPublishRequestTask, message interface{}) error {
+func (r *RMQHandler) rmqPublishInterfaceToQueue(task rmqPublishRequestTask, message interface{}) error {
 	var err error
 	task.MessageBody, err = json.Marshal(message)
 	if err != nil {
@@ -19,7 +19,7 @@ func (r *RMQHandler) rmqPublishInterfaceToQueue(task RMQPublishRequestTask, mess
 }
 
 // rmqPublishToQueue - send request to rmq queue
-func (r *RMQHandler) rmqPublishToQueue(task RMQPublishRequestTask) error {
+func (r *RMQHandler) rmqPublishToQueue(task rmqPublishRequestTask) error {
 	headers := amqp.Table{}
 	if task.ResponseRoutingKey != "" {
 		headers["responseRoutingKey"] = task.ResponseRoutingKey
@@ -77,7 +77,7 @@ func (r *RMQHandler) rmqCheckResponseError(rmqDelivery amqp.Delivery) APIError {
 }
 
 // sendRMQResponse - publish message to RMQ exchange
-func (r *RMQHandler) sendRMQResponse(task *RMQPublishResponseTask, errorMsg ...*constants.APIError) APIError {
+func (r *RMQHandler) sendRMQResponse(task *rmqPublishResponseTask, errorMsg ...*constants.APIError) APIError {
 	headers := amqp.Table{}
 	var responseBody []byte
 	var responseToEncode interface{}

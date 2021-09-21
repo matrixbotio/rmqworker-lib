@@ -44,7 +44,7 @@ func (r *RMQHandler) rmqQueueBind(RMQChannel *amqp.Channel, fromExchangeName, to
 }
 
 // rmqQueueDeclareAndBind - declare queue & bind to exchange
-func (r *RMQHandler) rmqQueueDeclareAndBind(task RMQQueueDeclareTask) APIError {
+func (r *RMQHandler) rmqQueueDeclareAndBind(task rmqQueueDeclareTask) APIError {
 	// declare
 	err := r.rmqQueueDeclare(task.RMQChannel, task.QueueName, task.Durable, task.AutoDelete)
 	if err != nil {

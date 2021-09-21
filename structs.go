@@ -18,8 +18,8 @@ type rmqConnectionData struct {
 	UseTLS   string `json:"tls"`
 }
 
-// RMQQueueDeclareTask - queue declare task data container
-type RMQQueueDeclareTask struct {
+// rmqQueueDeclareTask - queue declare task data container
+type rmqQueueDeclareTask struct {
 	RMQChannel       *amqp.Channel
 	QueueName        string
 	Durable          bool
@@ -28,16 +28,16 @@ type RMQQueueDeclareTask struct {
 	RoutingKey       string
 }
 
-// RMQPublishRequestTask - publish message to RMQ task data container
-type RMQPublishRequestTask struct {
+// rmqPublishRequestTask - publish message to RMQ task data container
+type rmqPublishRequestTask struct {
 	RMQChannel         *amqp.Channel
 	QueueName          string
 	ResponseRoutingKey string
 	MessageBody        []byte
 }
 
-// RMQPublishResponseTask - response for publish message to RMQ request
-type RMQPublishResponseTask struct {
+// rmqPublishResponseTask - response for publish message to RMQ request
+type rmqPublishResponseTask struct {
 	RMQConn            *amqp.Connection
 	RMQChannel         *amqp.Channel
 	ExchangeName       string
@@ -45,8 +45,8 @@ type RMQPublishResponseTask struct {
 	MessageBody        []byte
 }
 
-// RMQMonitoringWorkerTask - new RMQ request->response monitoring worker data
-type RMQMonitoringWorkerTask struct {
+// rmqMonitoringWorkerTask - new RMQ request->response monitoring worker data
+type rmqMonitoringWorkerTask struct {
 	// required
 	QueueName        string
 	ISQueueDurable   bool
