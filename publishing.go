@@ -2,24 +2,26 @@ package rmqworker
 
 import (
 	"encoding/json"
-	"errors"
 
 	"github.com/matrixbotio/constants-lib"
 	"github.com/streadway/amqp"
 )
 
 // rmqPublishInterfaceToQueue - another version of rmqPublishToQueue. use `message` instead of `task.MessageBody`
-func (r *RMQHandler) rmqPublishInterfaceToQueue(task RMQPublishRequestTask, message interface{}) error {
-	var err error
-	task.MessageBody, err = json.Marshal(message)
-	if err != nil {
-		return errors.New("failed to encode message to json: " + err.Error())
+func (r *RMQHandler) rmqPublishInterfaceToQueue(task RMQPublishRequestTask, message interface{}) APIError {
+	var convErr error
+	task.MessageBody, convErr = json.Marshal(message)
+	if convErr != nil {
+		return constants.Error(
+			"DATA_ENCODE_ERR",
+			"failed to encode message to json: "+convErr.Error(),
+		)
 	}
-	return r.rmqPublishToQueue(task)
+	return r.RMQPublishToQueue(task)
 }
 
-// rmqPublishToQueue - send request to rmq queue
-func (r *RMQHandler) rmqPublishToQueue(task RMQPublishRequestTask) error {
+// RMQPublishToQueue - send request to rmq queue
+func (r *RMQHandler) RMQPublishToQueue(task RMQPublishRequestTask) APIError {
 	headers := amqp.Table{}
 	if task.ResponseRoutingKey != "" {
 		headers["responseRoutingKey"] = task.ResponseRoutingKey
@@ -38,7 +40,10 @@ func (r *RMQHandler) rmqPublishToQueue(task RMQPublishRequestTask) error {
 		},
 	)
 	if err != nil {
-		return errors.New("failed to push event to rmq queue: " + err.Error())
+		return constants.Error(
+			"SERVICE_REQ_FAILED",
+			"failed to push event to rmq queue: "+err.Error(),
+		)
 	}
 	return nil
 }
