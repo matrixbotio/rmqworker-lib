@@ -39,6 +39,7 @@ type RMQPublishRequestTask struct {
 type RMQPublishResponseTask struct {
 	ExchangeName       string
 	ResponseRoutingKey string
+	CorrelationID      string
 	MessageBody        []byte
 }
 

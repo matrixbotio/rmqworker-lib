@@ -103,9 +103,10 @@ func (r *RMQHandler) SendRMQResponse(
 		false,                   // mandatory
 		false,                   // immediate
 		amqp.Publishing{
-			Headers:     headers,
-			ContentType: contentType,
-			Body:        responseBody,
+			Headers:       headers,
+			ContentType:   contentType,
+			Body:          responseBody,
+			CorrelationId: task.CorrelationID,
 		})
 	if rmqErr != nil {
 		return constants.Error(
