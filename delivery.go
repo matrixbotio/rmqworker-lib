@@ -29,6 +29,28 @@ func (d *RMQDeliveryHandler) GetHeader(headerName string) (interface{}, bool) {
 	return headerValue, isHeaderExists
 }
 
+// GetResponseRoutingKeyHeader - get response routing key from delivery headers
+func (d *RMQDeliveryHandler) GetResponseRoutingKeyHeader() (string, APIError) {
+	// get header
+	headerRaw, exists := d.GetHeader("responseRoutingKey")
+	if !exists {
+		return "", constants.Error(
+			"DATA_HANDLE_ERR",
+			"failed to find responseRoutingKey header in rmq message",
+		)
+	}
+
+	// convert to string
+	header, isConvertable := headerRaw.(string)
+	if !isConvertable {
+		return "", constants.Error(
+			"DATA_PARSE_ERR",
+			"failed to parse header in from RMQ delivery to string",
+		)
+	}
+	return header, nil
+}
+
 // GetCorrelationID from RMQ delivery
 func (d *RMQDeliveryHandler) GetCorrelationID() string {
 	return d.rmqDelivery.CorrelationId
