@@ -35,3 +35,18 @@ func NewRMQHandler(connData RMQConnectionData, logger ...*constants.Logger) (*RM
 	}
 	return &r, nil
 }
+
+// NewRMQHandler - clone handler & open new RMQ channel
+func (r *RMQHandler) NewRMQHandler() (*RMQHandler, APIError) {
+	handlerRoot := *r
+	newHandler := handlerRoot
+
+	// open new channel
+	var err APIError
+	newHandler.RMQChannel, err = openRMQChannel(newHandler.RMQConn)
+	if err != nil {
+		return nil, err
+	}
+
+	return &newHandler, nil
+}
