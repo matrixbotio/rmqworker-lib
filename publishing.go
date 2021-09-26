@@ -116,3 +116,33 @@ func (r *RMQHandler) SendRMQResponse(
 	}
 	return nil
 }
+
+// RMQPublishToExchange - publish message to exchange
+func (r *RMQHandler) RMQPublishToExchange(message interface{}, exchangeName, routingKey string) APIError {
+	// encode message
+	jsonBytes, marshalErr := json.Marshal(message)
+	if marshalErr != nil {
+		return constants.Error(
+			"DATA_ENCODE_ERR",
+			"failed to marshal message to json: "+marshalErr.Error(),
+		)
+	}
+
+	// publish message
+	err := r.RMQChannel.Publish(
+		exchangeName, // exchange
+		routingKey,   // routing key
+		false,        // mandatory
+		false,        // immediate
+		amqp.Publishing{
+			ContentType: "application/json",
+			Body:        jsonBytes,
+		})
+	if err != nil {
+		return constants.Error(
+			"SERVICE_REQ_FAILED",
+			"failed to push message to exchange: "+err.Error(),
+		)
+	}
+	return nil
+}
