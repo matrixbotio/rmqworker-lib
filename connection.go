@@ -2,7 +2,6 @@ package rmqworker
 
 import (
 	"crypto/tls"
-	"net/url"
 	"strconv"
 	"time"
 
@@ -23,7 +22,7 @@ func rmqConnect(connData RMQConnectionData) (*amqp.Connection, APIError) {
 	if useTLS {
 		dsn += "s"
 	}
-	dsn += "://" + connData.User + ":" + url.QueryEscape(connData.Password) +
+	dsn += "://" + connData.User + ":" + connData.Password +
 		"@" + connData.Host + ":" + connData.Port + "/"
 
 	if useTLS {
