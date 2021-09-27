@@ -135,7 +135,6 @@ func (w *RMQWorker) HandleReconnect() {
 func (w *RMQWorker) Subscribe() APIError {
 	var err error
 	var aErr APIError
-	w.logInfo("check rmq connection...")
 	w.Connections.RMQChannel, aErr = checkRMQConnection(w.Connections.RMQConn, w.ConnectionData)
 	if aErr != nil {
 		// check connection is open
@@ -147,13 +146,11 @@ func (w *RMQWorker) Subscribe() APIError {
 	if w.Connections.RMQChannel == nil {
 		// channel not created but connection is active
 		// create new channel
-		w.logInfo("rmq channel is nil. creating new channel...")
 		w.Connections.RMQChannel, aErr = openRMQChannel(w.Connections.RMQConn)
 		if aErr != nil {
 			return aErr
 		}
 	}
-	w.logInfo("consume rmq messages...")
 	w.Channels.RMQMessages, err = w.Connections.RMQChannel.Consume(
 		w.Data.QueueName, // queue
 		"",               // consumer. "" > generate random ID
