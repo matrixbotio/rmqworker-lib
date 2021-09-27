@@ -185,6 +185,12 @@ func (w *RMQWorker) Resume() {
 	w.Paused = false
 }
 
+// Reset worker channels
+func (w *RMQWorker) Reset() {
+	w.Channels.OnFinished = make(chan struct{})
+	w.Channels.StopCh = make(chan struct{})
+}
+
 // Listen RMQ messages
 func (w *RMQWorker) Listen() {
 	w.logInfo("listen messages...")
@@ -320,4 +326,9 @@ func (w *RMQMonitoringWorker) Resume() {
 // AwaitFinish - await worker finished
 func (w *RMQMonitoringWorker) AwaitFinish() {
 	w.Worker.AwaitFinish()
+}
+
+// Reset worker channels
+func (w *RMQMonitoringWorker) Reset() {
+	w.Worker.Reset()
 }
