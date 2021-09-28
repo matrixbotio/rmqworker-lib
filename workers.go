@@ -16,6 +16,7 @@ type RMQWorker struct {
 	Connections    rmqWorkerConnections
 	Channels       rmqWorkerChannels
 	Paused         bool
+	SyncMode       bool
 
 	DeliveryCallback RMQDeliveryCallback
 	TimeoutCallback  RMQTimeoutCallback
@@ -266,6 +267,12 @@ func (w *RMQWorker) timeIsUp() {
 // AwaitFinish - wait for worker finished
 func (w *RMQWorker) AwaitFinish() {
 	<-w.Channels.OnFinished
+}
+
+// SetSyncMode - whether to run the callback of task processing synchronously
+func (w *RMQWorker) SetSyncMode(sync bool) *RMQWorker {
+	w.SyncMode = sync
+	return w
 }
 
 // RMQMonitoringWorker - rmq extended worker
