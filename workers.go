@@ -1,7 +1,6 @@
 package rmqworker
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/matrixbotio/constants-lib"
@@ -194,7 +193,6 @@ func (w *RMQWorker) Reset() {
 
 // Listen RMQ messages
 func (w *RMQWorker) Listen() {
-	w.logInfo("listen messages...")
 	awaitMessages := true
 
 	go func() {
@@ -244,7 +242,6 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 	if w.Data.CheckResponseErrors {
 		aErr := delivery.CheckResponseError()
 		if aErr != nil {
-			fmt.Println("check response error: " + aErr.Message)
 			w.logError(aErr)
 			return
 		}
