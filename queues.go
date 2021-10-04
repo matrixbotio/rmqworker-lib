@@ -71,7 +71,8 @@ func (r *RMQHandler) DeclareQueues(queues []string) APIError {
 	return nil
 }
 
-// DeleteQueues - delete RMQ queues
+// DeleteQueues - delete RMQ queues.
+// map[manager name] -> array of queue names
 func (r *RMQHandler) DeleteQueues(queueNames map[string][]string) APIError {
 	for managerName, queueNames := range queueNames {
 		for _, queueName := range queueNames {
