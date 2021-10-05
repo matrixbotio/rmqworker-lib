@@ -1,5 +1,7 @@
 github.com/go-stack/stack v1.8.0 h1:5SgMzNM5HxrEjV0ww2lTmX6E2Izsfxas4+YHWRs3Lsk=
 github.com/go-stack/stack v1.8.0/go.mod h1:v0f6uXyyMGvRgIKkXu+yp6POWl0qKG85gN/melR3HDY=
+github.com/google/uuid v1.3.0 h1:t6JiXgmwXMjEs8VusXIJk2BXHsn+wx8BZdTaoZ5fu7I=
+github.com/google/uuid v1.3.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/matrixbotio/constants-lib v1.0.58 h1:HcmBn/GLa8k0dpX/6Y9+LvaL/TeZbgElV2xgKewYpBs=
 github.com/matrixbotio/constants-lib v1.0.58/go.mod h1:ol7WN7tisKCBoLOObf9/8vmnv3cBZC9oFL4Jv59YnwQ=
 github.com/sagleft/simple-cron v1.0.2 h1:PyyhuB/lAqyEV58wlbatjCBLzR/yZy0O2oiNcBc2pvo=

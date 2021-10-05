@@ -33,10 +33,11 @@ func (r *RMQHandler) RMQPublishToQueue(task RMQPublishRequestTask) APIError {
 		false,          // mandatory
 		false,
 		amqp.Publishing{
-			Headers:      headers,
-			DeliveryMode: amqp.Persistent,
-			ContentType:  "application/json",
-			Body:         task.MessageBody,
+			CorrelationId: getUUID(),
+			Headers:       headers,
+			DeliveryMode:  amqp.Persistent,
+			ContentType:   "application/json",
+			Body:          task.MessageBody,
 		},
 	)
 	if err != nil {
