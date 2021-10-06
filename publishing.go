@@ -59,7 +59,14 @@ func (r *RMQHandler) SendRMQResponse(
 	var responseToEncode interface{}
 	contentType := "application/json"
 
+	var isErrorFound bool
 	if len(errorMsg) == 0 {
+		isErrorFound = false
+	} else {
+		isErrorFound = errorMsg[0] != nil
+	}
+
+	if !isErrorFound {
 		// no errors
 		headers["code"] = 0
 		responseToEncode = task.MessageBody
