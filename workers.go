@@ -46,7 +46,8 @@ func (r *RMQHandler) NewRMQWorker(
 		Data: rmqWorkerData{
 			Name:                "rmq worker",
 			QueueName:           QueueName,
-			AutoAck:             false,
+			AutoAckForQueue:     false,
+			AutoAckByLib:        false,
 			CheckResponseErrors: true,
 		},
 		Connections: rmqWorkerConnections{
@@ -99,7 +100,7 @@ func (w *RMQWorker) SetID(id string) *RMQWorker {
 
 // SetAutoAck - auto accept messages
 func (w *RMQWorker) SetAutoAck(autoAck bool) *RMQWorker {
-	w.Data.AutoAck = autoAck
+	w.Data.AutoAckByLib = autoAck
 	return w
 }
 
@@ -153,13 +154,13 @@ func (w *RMQWorker) Subscribe() APIError {
 		}
 	}
 	w.Channels.RMQMessages, err = w.Connections.RMQChannel.Consume(
-		w.Data.QueueName, // queue
-		"",               // consumer. "" > generate random ID
-		w.Data.AutoAck,   // auto-ack
-		false,            // exclusive
-		false,            // no-local
-		false,            // no-wait
-		nil,              // args
+		w.Data.QueueName,       // queue
+		"",                     // consumer. "" > generate random ID
+		w.Data.AutoAckForQueue, // auto-ack
+		false,                  // exclusive
+		false,                  // no-local
+		false,                  // no-wait
+		nil,                    // args
 	)
 	if err != nil {
 		e := constants.Error(
@@ -240,7 +241,7 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 	delivery := NewRMQDeliveryHandler(rmqDelivery)
 
 	// auto accept message if needed
-	if !w.Data.AutoAck {
+	if w.Data.AutoAckByLib {
 		w.logInfo("ack message")
 		err := delivery.Accept()
 		if err != nil {
