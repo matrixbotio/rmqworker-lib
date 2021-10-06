@@ -50,7 +50,7 @@ type RMQMonitoringWorkerTask struct {
 	ISQueueDurable   bool
 	ISAutoDelete     bool
 	FromExchangeName string
-	RoutingKey       string
+	RoutingKey       string // to bind queue to response exchange
 	Callback         RMQDeliveryCallback
 
 	// optional
