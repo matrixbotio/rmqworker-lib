@@ -265,6 +265,7 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 	}
 
 	// run callback
+	w.logInfo("run callback")
 	w.DeliveryCallback(w, delivery)
 }
 
