@@ -19,6 +19,7 @@ type RMQWorker struct {
 
 	DeliveryCallback RMQDeliveryCallback
 	TimeoutCallback  RMQTimeoutCallback
+	cronHandler      *simplecron.CronObject
 
 	Logger *constants.Logger
 }
@@ -172,16 +173,25 @@ func (w *RMQWorker) Subscribe() APIError {
 
 // Stop RMQ messages listen
 func (w *RMQWorker) Stop() {
+	if w.cronHandler != nil {
+		w.cronHandler.Stop()
+	}
 	w.Channels.StopCh <- struct{}{}
 }
 
 // Pause RMQ Worker (ignore messages)
 func (w *RMQWorker) Pause() {
+	if w.cronHandler != nil {
+		w.cronHandler.Pause()
+	}
 	w.Paused = true
 }
 
 // Resume RMQ Worker (continue listen messages)
 func (w *RMQWorker) Resume() {
+	if w.cronHandler != nil {
+		w.cronHandler.Resume()
+	}
 	w.Paused = false
 }
 
@@ -202,7 +212,8 @@ func (w *RMQWorker) Listen() {
 
 	if w.Data.UseResponseTimeout {
 		w.logInfo("run response timeout cron")
-		simplecron.NewCronHandler(w.timeIsUp, w.Data.WaitResponseTimeout).Run()
+		w.cronHandler = simplecron.NewCronHandler(w.timeIsUp, w.Data.WaitResponseTimeout)
+		w.cronHandler.Run()
 	}
 
 	for awaitMessages {
