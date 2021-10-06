@@ -251,6 +251,7 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 	}
 
 	// check response error
+	w.logInfo("check response error..")
 	if w.Data.CheckResponseErrors {
 		aErr := delivery.CheckResponseError()
 		if aErr != nil {
