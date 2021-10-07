@@ -219,7 +219,7 @@ func (w *RMQWorker) Listen() {
 	if w.Data.UseResponseTimeout {
 		w.logInfo("run response timeout cron")
 		w.cronHandler = simplecron.NewCronHandler(w.timeIsUp, w.Data.WaitResponseTimeout)
-		w.cronHandler.Run()
+		go w.cronHandler.Run()
 	}
 
 	for awaitMessages {
