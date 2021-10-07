@@ -2,6 +2,8 @@ package rmqworker
 
 import (
 	"encoding/json"
+	"log"
+	"reflect"
 
 	"github.com/matrixbotio/constants-lib"
 	"github.com/streadway/amqp"
@@ -82,6 +84,7 @@ func (d *RMQDeliveryHandler) CheckResponseError() APIError {
 		return nil
 	}
 
+	log.Println(reflect.TypeOf(responseCodeRaw))
 	responseCode, isConvertable := responseCodeRaw.(float64)
 	if !isConvertable {
 		errMessage := "failed to parse rmq response code"
