@@ -1,6 +1,8 @@
 package rmqworker
 
 import (
+	"encoding/json"
+
 	"github.com/matrixbotio/constants-lib"
 	"github.com/streadway/amqp"
 )
@@ -75,33 +77,41 @@ func (d *RMQDeliveryHandler) Accept() APIError {
 
 // CheckResponseError - check RMQ response error
 func (d *RMQDeliveryHandler) CheckResponseError() APIError {
-	responseCodeRaw, isErrorFound := d.rmqDelivery.Headers["code"]
-	if isErrorFound {
-		responseCode, isConvertable := responseCodeRaw.(int64)
+	responseCodeRaw, isFieldFound := d.GetHeader("code")
+	if !isFieldFound {
+		return nil
+	}
+
+	responseCode, isConvertable := responseCodeRaw.(int64)
+	if !isConvertable {
+		errMessage := "failed to parse rmq response code"
+		headers := d.rmqDelivery.Headers
+		headersBytes, err := json.Marshal(headers)
+		if err == nil {
+			errMessage += ". headers: " + string(headersBytes)
+		}
+
+		return constants.Error(
+			"DATA_PARSE_ERR",
+			errMessage,
+		)
+	}
+	if responseCode == 0 {
+		// no errors
+		return nil
+	}
+
+	var errName string = "UNKNOWN"
+	errNameRaw, isErrorNameFound := d.GetHeader("name")
+	if isErrorNameFound {
+		errName, isConvertable = errNameRaw.(string)
 		if !isConvertable {
 			return constants.Error(
 				"DATA_PARSE_ERR",
-				"failed to parse rmq response code",
+				"failed to parse rmq error name",
 			)
 		}
-		if responseCode == 0 {
-			// no errors
-			return nil
-		}
-		var errName string = "UNKNOWN"
-		errNameRaw, isErrorNameFound := d.GetHeader("name")
-		if isErrorNameFound {
-			errName, isConvertable = errNameRaw.(string)
-			if !isConvertable {
-				return constants.Error(
-					"DATA_PARSE_ERR",
-					"failed to parse rmq error name",
-				)
-			}
-		}
-
-		errMessage := string(d.GetMessageBody())
-		return constants.Error(errName, errMessage)
 	}
-	return nil
+	errMessage := string(d.GetMessageBody())
+	return constants.Error(errName, errMessage)
 }
