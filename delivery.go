@@ -82,7 +82,7 @@ func (d *RMQDeliveryHandler) CheckResponseError() APIError {
 		return nil
 	}
 
-	responseCode, isConvertable := responseCodeRaw.(int)
+	responseCode, isConvertable := responseCodeRaw.(int32)
 	if !isConvertable {
 		errMessage := "failed to parse rmq response code"
 		headers := d.rmqDelivery.Headers
