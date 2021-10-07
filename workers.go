@@ -82,8 +82,9 @@ func (w *RMQWorker) logInfo(message string) {
 	}
 }
 
-func (w *RMQWorker) logError(err APIError) {
+func (w *RMQWorker) logError(err *constants.APIError) {
 	if w.Logger != nil {
+		w.Logger.Error(err) // TEMP
 		err.Message = w.getLogWorkerName() + err.Message
 		w.Logger.Error(err)
 	} else {
