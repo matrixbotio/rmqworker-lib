@@ -228,6 +228,7 @@ func (w *RMQWorker) Listen() {
 				continue // ignore message
 			}
 
+			w.logInfo("new message found. run handler..")
 			go w.handleRMQMessage(rmqDelivery)
 		}
 	}
