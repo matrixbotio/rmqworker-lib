@@ -213,7 +213,9 @@ func (w *RMQWorker) Listen() {
 
 	go func() {
 		<-w.Channels.StopCh
+		w.logInfo("stop signal received")
 		awaitMessages = false
+		w.logInfo("send on finished signal")
 		w.Channels.OnFinished <- struct{}{}
 	}()
 
