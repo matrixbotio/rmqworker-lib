@@ -282,7 +282,7 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 }
 
 func (w *RMQWorker) timeIsUp() {
-	// w.Stop()
+	w.Stop()
 	w.TimeoutCallback(w)
 	w.cronHandler.Stop()
 }
