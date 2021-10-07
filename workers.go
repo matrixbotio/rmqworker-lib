@@ -229,7 +229,7 @@ func (w *RMQWorker) Listen() {
 			}
 
 			w.logInfo("new message found. run handler..")
-			go w.handleRMQMessage(rmqDelivery)
+			w.handleRMQMessage(rmqDelivery)
 		}
 	}
 
@@ -268,7 +268,7 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 
 	// run callback
 	w.logInfo("run callback")
-	w.DeliveryCallback(w, delivery)
+	go w.DeliveryCallback(w, delivery)
 }
 
 func (w *RMQWorker) timeIsUp() {
