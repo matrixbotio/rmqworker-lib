@@ -214,6 +214,7 @@ func (w *RMQWorker) Listen() {
 	go func() {
 		<-w.Channels.StopCh
 		awaitMessages = false
+		w.Channels.OnFinished <- struct{}{}
 	}()
 
 	if w.Data.UseResponseTimeout {
@@ -242,7 +243,6 @@ func (w *RMQWorker) Listen() {
 	}
 
 	w.logInfo("work finished")
-	w.Channels.OnFinished <- struct{}{}
 }
 
 func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
