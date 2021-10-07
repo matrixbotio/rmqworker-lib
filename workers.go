@@ -323,7 +323,11 @@ func (r *RMQHandler) NewRMQMonitoringWorker(task RMQMonitoringWorkerTask) (*RMQM
 	}
 
 	// run worker
-	go w.Worker.Serve()
+	if w.Worker.SyncMode {
+		w.Worker.Serve()
+	} else {
+		go w.Worker.Serve()
+	}
 	return &w, nil
 }
 
