@@ -256,6 +256,7 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 	if w.Data.CheckResponseErrors {
 		aErr := delivery.CheckResponseError()
 		if aErr != nil {
+			w.logInfo("error: " + aErr.Message + ", " + aErr.Stack)
 			w.logError(aErr)
 			return
 		}
@@ -263,12 +264,17 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 
 	// callback
 	if w.DeliveryCallback == nil {
+		w.logInfo("callback is not set")
 		w.logError(constants.Error("DATA_HANDLE_ERR", "rmq worker message callback is nil"))
 	}
 
 	// run callback
 	w.logInfo("run callback")
-	go w.DeliveryCallback(w, delivery)
+	if w.SyncMode {
+		w.DeliveryCallback(w, delivery)
+	} else {
+		go w.DeliveryCallback(w, delivery)
+	}
 }
 
 func (w *RMQWorker) timeIsUp() {
@@ -324,11 +330,7 @@ func (r *RMQHandler) NewRMQMonitoringWorker(task RMQMonitoringWorkerTask) (*RMQM
 	}
 
 	// run worker
-	if w.Worker.SyncMode {
-		w.Worker.Serve()
-	} else {
-		go w.Worker.Serve()
-	}
+	go w.Worker.Serve()
 	return &w, nil
 }
 
