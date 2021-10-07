@@ -1,6 +1,7 @@
 package rmqworker
 
 import (
+	"log"
 	"time"
 
 	"github.com/matrixbotio/constants-lib"
@@ -76,6 +77,8 @@ func (w *RMQWorker) logWarn(err APIError) {
 func (w *RMQWorker) logInfo(message string) {
 	if w.Logger != nil {
 		w.Logger.Log(w.getLogWorkerName() + message)
+	} else {
+		log.Println()
 	}
 }
 
@@ -83,6 +86,8 @@ func (w *RMQWorker) logError(err APIError) {
 	if w.Logger != nil {
 		err.Message = w.getLogWorkerName() + err.Message
 		w.Logger.Error(err)
+	} else {
+		log.Println(err)
 	}
 }
 
