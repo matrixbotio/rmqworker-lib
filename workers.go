@@ -233,6 +233,9 @@ func (w *RMQWorker) Listen() {
 				continue // ignore message
 			}
 
+			if w.cronHandler != nil {
+				w.cronHandler.Stop()
+			}
 			w.logInfo("new message found. run handler..")
 			w.handleRMQMessage(rmqDelivery)
 		}
