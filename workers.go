@@ -46,6 +46,7 @@ func (r *RMQHandler) NewRMQWorker(
 		},
 		deliveryCallback: callback,
 		logger:           r.Logger,
+		awaitMessages:    true,
 	}
 
 	return &w, nil
@@ -173,11 +174,13 @@ func (w *RMQWorker) Subscribe() APIError {
 
 // Stop RMQ messages listen
 func (w *RMQWorker) Stop() {
-	w.logInfo("stop...")
 	if w.cronHandler != nil {
 		w.cronHandler.Stop()
 	}
+	w.logInfo("stop signal received")
 	w.channels.StopCh <- struct{}{}
+	w.awaitMessages = false
+	w.channels.OnFinished <- struct{}{}
 }
 
 // Pause RMQ Worker (ignore messages)
@@ -204,14 +207,7 @@ func (w *RMQWorker) Reset() {
 
 // Listen RMQ messages
 func (w *RMQWorker) Listen() {
-	awaitMessages := true
-
-	go func() {
-		<-w.channels.StopCh
-		w.logInfo("stop signal received")
-		awaitMessages = false
-		w.channels.OnFinished <- struct{}{}
-	}()
+	w.awaitMessages = true
 
 	if w.data.UseResponseTimeout {
 		w.logInfo("run response timeout cron")
@@ -219,9 +215,9 @@ func (w *RMQWorker) Listen() {
 		go w.cronHandler.Run()
 	}
 
-	for awaitMessages {
+	for w.awaitMessages {
 		for rmqDelivery := range w.channels.RMQMessages {
-			if !awaitMessages {
+			if !w.awaitMessages {
 				w.logInfo("break")
 				break
 			}
@@ -284,7 +280,7 @@ func (w *RMQWorker) timeIsUp() {
 	w.logInfo("time is up")
 	w.Stop()
 	w.timeoutCallback(w)
-	//w.cronHandler.Stop()
+	w.cronHandler.Stop()
 }
 
 // AwaitFinish - wait for worker finished

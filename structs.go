@@ -28,6 +28,7 @@ type RMQWorker struct {
 	channels       rmqWorkerChannels
 	paused         bool
 	syncMode       bool
+	awaitMessages  bool
 
 	deliveryCallback RMQDeliveryCallback
 	timeoutCallback  RMQTimeoutCallback
