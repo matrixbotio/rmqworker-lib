@@ -113,14 +113,14 @@ func (r *RMQWorker) reconnect(callback connFunc, connectionDescription string) {
 				// connection is open
 				return
 			}
-			r.Logger.Warn(err)
+			r.logger.Warn(err)
 			time.Sleep(reconnectAfterSeconds * time.Second)
 		}
 		errMsg := "failed to connect to " +
 			connectionDescription + " after " +
 			strconv.Itoa(reconnectionAttemptsNumber) + " attempts"
 
-		r.Logger.Error(constants.Error("SERVICE_CONN_ERR", errMsg))
+		r.logger.Error(constants.Error("SERVICE_CONN_ERR", errMsg))
 		time.Sleep(time.Second * waitingBetweenAttempts)
 	}
 }

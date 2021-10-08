@@ -27,49 +27,49 @@ func (r *RMQHandler) NewRMQWorker(
 	}
 
 	w := RMQWorker{
-		ConnectionData: r.ConnectionData,
-		Data: rmqWorkerData{
+		connectionData: r.ConnectionData,
+		data: rmqWorkerData{
 			Name:                "rmq worker",
 			QueueName:           QueueName,
 			AutoAckForQueue:     false,
 			AutoAckByLib:        false,
 			CheckResponseErrors: true,
 		},
-		Connections: rmqWorkerConnections{
+		connections: rmqWorkerConnections{
 			RMQConn:    r.RMQConn,
 			RMQChannel: wChannel,
 		},
-		Channels: rmqWorkerChannels{
+		channels: rmqWorkerChannels{
 			RMQMessages: make(<-chan amqp.Delivery),
 			OnFinished:  make(chan struct{}),
 			StopCh:      make(chan struct{}),
 		},
-		DeliveryCallback: callback,
-		Logger:           r.Logger,
+		deliveryCallback: callback,
+		logger:           r.Logger,
 	}
 
 	return &w, nil
 }
 
 func (w *RMQWorker) logWarn(err APIError) {
-	if w.Logger != nil {
+	if w.logger != nil {
 		err.Message = w.getLogWorkerName() + err.Message
-		w.Logger.Warn(err)
+		w.logger.Warn(err)
 	}
 }
 
 func (w *RMQWorker) logInfo(message string) {
-	if w.Logger != nil {
-		w.Logger.Log(w.getLogWorkerName() + message)
+	if w.logger != nil {
+		w.logger.Log(w.getLogWorkerName() + message)
 	} else {
 		log.Println()
 	}
 }
 
 func (w *RMQWorker) logError(err *constants.APIError) {
-	if w.Logger != nil {
+	if w.logger != nil {
 		err.Message = w.getLogWorkerName() + err.Message
-		w.Logger.Error(err)
+		w.logger.Error(err)
 	} else {
 		log.Println(err)
 	}
@@ -77,38 +77,38 @@ func (w *RMQWorker) logError(err *constants.APIError) {
 
 // SetName - set RMQ worker name for logs
 func (w *RMQWorker) SetName(name string) *RMQWorker {
-	w.Data.Name = name
+	w.data.Name = name
 	return w
 }
 
 // SetID - set RMQ worker ID
 func (w *RMQWorker) SetID(id string) *RMQWorker {
-	w.Data.ID = id
+	w.data.ID = id
 	return w
 }
 
 // SetAutoAck - auto accept messages
 func (w *RMQWorker) SetAutoAck(autoAck bool) *RMQWorker {
-	w.Data.AutoAckByLib = autoAck
+	w.data.AutoAckByLib = autoAck
 	return w
 }
 
 // SetCheckResponseErrors - determines whether the errors in the answers passed to headers will be checked
 func (w *RMQWorker) SetCheckResponseErrors(check bool) *RMQWorker {
-	w.Data.CheckResponseErrors = check
+	w.data.CheckResponseErrors = check
 	return w
 }
 
 // SetTimeout - set RMQ response timeout. When the timer goes out, the callback will be called
 func (w *RMQWorker) SetTimeout(timeout time.Duration, callback RMQTimeoutCallback) *RMQWorker {
-	w.Data.UseResponseTimeout = true
-	w.Data.WaitResponseTimeout = timeout
-	w.TimeoutCallback = callback
+	w.data.UseResponseTimeout = true
+	w.data.WaitResponseTimeout = timeout
+	w.timeoutCallback = callback
 	return w
 }
 
 func (w *RMQWorker) getLogWorkerName() string {
-	return "RMQ Worker " + w.Data.Name + ": "
+	return "RMQ Worker " + w.data.Name + ": "
 }
 
 // Serve - listen RMQ messages
@@ -118,7 +118,7 @@ func (w *RMQWorker) Serve() {
 
 // HandleReconnect - reconnect to RMQ delivery (messages)
 func (w *RMQWorker) HandleReconnect() {
-	w.reconnect(w.Subscribe, w.Data.Name)
+	w.reconnect(w.Subscribe, w.data.Name)
 	w.Listen()
 }
 
@@ -126,7 +126,7 @@ func (w *RMQWorker) HandleReconnect() {
 func (w *RMQWorker) Subscribe() APIError {
 	var err error
 	var aErr APIError
-	w.Connections.RMQChannel, aErr = checkRMQConnection(w.Connections.RMQConn, w.ConnectionData)
+	w.connections.RMQChannel, aErr = checkRMQConnection(w.connections.RMQConn, w.connectionData)
 	if aErr != nil {
 		// check connection is open
 		if aErr.Name != "DATA_EXISTS" {
@@ -134,18 +134,18 @@ func (w *RMQWorker) Subscribe() APIError {
 		}
 	}
 
-	if w.Connections.RMQChannel == nil {
+	if w.connections.RMQChannel == nil {
 		// channel not created but connection is active
 		// create new channel
-		w.Connections.RMQChannel, aErr = openRMQChannel(w.Connections.RMQConn)
+		w.connections.RMQChannel, aErr = openRMQChannel(w.connections.RMQConn)
 		if aErr != nil {
 			return aErr
 		}
 	}
-	w.Channels.RMQMessages, err = w.Connections.RMQChannel.Consume(
-		w.Data.QueueName,       // queue
+	w.channels.RMQMessages, err = w.connections.RMQChannel.Consume(
+		w.data.QueueName,       // queue
 		"",                     // consumer. "" > generate random ID
-		w.Data.AutoAckForQueue, // auto-ack
+		w.data.AutoAckForQueue, // auto-ack
 		false,                  // exclusive
 		false,                  // no-local
 		false,                  // no-wait
@@ -167,7 +167,7 @@ func (w *RMQWorker) Stop() {
 	if w.cronHandler != nil {
 		w.cronHandler.Stop()
 	}
-	w.Channels.StopCh <- struct{}{}
+	w.channels.StopCh <- struct{}{}
 }
 
 // Pause RMQ Worker (ignore messages)
@@ -175,7 +175,7 @@ func (w *RMQWorker) Pause() {
 	if w.cronHandler != nil {
 		w.cronHandler.Pause()
 	}
-	w.Paused = true
+	w.paused = true
 }
 
 // Resume RMQ Worker (continue listen messages)
@@ -183,13 +183,13 @@ func (w *RMQWorker) Resume() {
 	if w.cronHandler != nil {
 		w.cronHandler.Resume()
 	}
-	w.Paused = false
+	w.paused = false
 }
 
 // Reset worker channels
 func (w *RMQWorker) Reset() {
-	w.Channels.OnFinished = make(chan struct{})
-	w.Channels.StopCh = make(chan struct{})
+	w.channels.OnFinished = make(chan struct{})
+	w.channels.StopCh = make(chan struct{})
 }
 
 // Listen RMQ messages
@@ -197,26 +197,26 @@ func (w *RMQWorker) Listen() {
 	awaitMessages := true
 
 	go func() {
-		<-w.Channels.StopCh
+		<-w.channels.StopCh
 		w.logInfo("stop signal received")
 		awaitMessages = false
-		w.Channels.OnFinished <- struct{}{}
+		w.channels.OnFinished <- struct{}{}
 	}()
 
-	if w.Data.UseResponseTimeout {
+	if w.data.UseResponseTimeout {
 		w.logInfo("run response timeout cron")
-		w.cronHandler = simplecron.NewCronHandler(w.timeIsUp, w.Data.WaitResponseTimeout)
+		w.cronHandler = simplecron.NewCronHandler(w.timeIsUp, w.data.WaitResponseTimeout)
 		go w.cronHandler.Run()
 	}
 
 	for awaitMessages {
-		for rmqDelivery := range w.Channels.RMQMessages {
+		for rmqDelivery := range w.channels.RMQMessages {
 			if !awaitMessages {
 				w.logInfo("break")
 				break
 			}
 
-			if w.Paused {
+			if w.paused {
 				continue // ignore message
 			}
 
@@ -236,7 +236,7 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 	delivery := NewRMQDeliveryHandler(rmqDelivery)
 
 	// auto accept message if needed
-	if w.Data.AutoAckByLib {
+	if w.data.AutoAckByLib {
 		w.logInfo("ack message")
 		err := delivery.Accept()
 		if err != nil {
@@ -247,7 +247,7 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 
 	// check response error
 	w.logInfo("check response error..")
-	if w.Data.CheckResponseErrors {
+	if w.data.CheckResponseErrors {
 		aErr := delivery.CheckResponseError()
 		if aErr != nil {
 			w.logError(aErr)
@@ -256,34 +256,34 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 	}
 
 	// callback
-	if w.DeliveryCallback == nil {
+	if w.deliveryCallback == nil {
 		w.logInfo("callback is not set")
 		w.logError(constants.Error("DATA_HANDLE_ERR", "rmq worker message callback is nil"))
 	}
 
 	// run callback
 	w.logInfo("run callback")
-	if w.SyncMode {
-		w.DeliveryCallback(w, delivery)
+	if w.syncMode {
+		w.deliveryCallback(w, delivery)
 	} else {
-		go w.DeliveryCallback(w, delivery)
+		go w.deliveryCallback(w, delivery)
 	}
 }
 
 func (w *RMQWorker) timeIsUp() {
 	w.Stop()
-	w.TimeoutCallback(w)
+	w.timeoutCallback(w)
 	//w.cronHandler.Stop()
 }
 
 // AwaitFinish - wait for worker finished
 func (w *RMQWorker) AwaitFinish() {
-	<-w.Channels.OnFinished
+	<-w.channels.OnFinished
 }
 
 // SetSyncMode - whether to run the callback of task processing synchronously
 func (w *RMQWorker) SetSyncMode(sync bool) *RMQWorker {
-	w.SyncMode = sync
+	w.syncMode = sync
 	return w
 }
 

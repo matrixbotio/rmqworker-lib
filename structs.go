@@ -22,18 +22,18 @@ type RMQConnectionData struct {
 
 // RMQWorker - just RMQ worker
 type RMQWorker struct {
-	ConnectionData RMQConnectionData
-	Data           rmqWorkerData
-	Connections    rmqWorkerConnections
-	Channels       rmqWorkerChannels
-	Paused         bool
-	SyncMode       bool
+	connectionData RMQConnectionData
+	data           rmqWorkerData
+	connections    rmqWorkerConnections
+	channels       rmqWorkerChannels
+	paused         bool
+	syncMode       bool
 
-	DeliveryCallback RMQDeliveryCallback
-	TimeoutCallback  RMQTimeoutCallback
+	deliveryCallback RMQDeliveryCallback
+	timeoutCallback  RMQTimeoutCallback
 	cronHandler      *simplecron.CronObject
 
-	Logger *constants.Logger
+	logger *constants.Logger
 }
 
 // RMQMonitoringWorker - rmq extended worker
