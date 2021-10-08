@@ -175,6 +175,7 @@ func (w *RMQWorker) Subscribe() APIError {
 // Stop RMQ messages listen
 func (w *RMQWorker) Stop() {
 	if w.cronHandler != nil {
+		w.logInfo("stop cron...")
 		w.cronHandler.Stop()
 	}
 	w.logInfo("stop signal received")
