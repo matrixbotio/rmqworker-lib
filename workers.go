@@ -216,7 +216,6 @@ func (w *RMQWorker) Listen() {
 		<-w.Channels.StopCh
 		w.logInfo("stop signal received")
 		awaitMessages = false
-		w.logInfo("send on finished signal")
 		w.Channels.OnFinished <- struct{}{}
 	}()
 
@@ -290,7 +289,7 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 func (w *RMQWorker) timeIsUp() {
 	w.Stop()
 	w.TimeoutCallback(w)
-	w.cronHandler.Stop()
+	//w.cronHandler.Stop()
 }
 
 // AwaitFinish - wait for worker finished
