@@ -81,10 +81,20 @@ func (w *RMQWorker) SetName(name string) *RMQWorker {
 	return w
 }
 
+// GetName - get worker name
+func (w *RMQWorker) GetName() string {
+	return w.data.Name
+}
+
 // SetID - set RMQ worker ID
 func (w *RMQWorker) SetID(id string) *RMQWorker {
 	w.data.ID = id
 	return w
+}
+
+// GetID - get worker ID
+func (w *RMQWorker) GetID() string {
+	return w.data.ID
 }
 
 // SetAutoAck - auto accept messages
@@ -345,4 +355,14 @@ func (w *RMQMonitoringWorker) AwaitFinish() {
 // Reset worker channels
 func (w *RMQMonitoringWorker) Reset() {
 	w.Worker.Reset()
+}
+
+// GetName - get worker name
+func (w *RMQMonitoringWorker) GetName() string {
+	return w.Worker.GetName()
+}
+
+// GetID - get worker ID
+func (w *RMQMonitoringWorker) GetID() string {
+	return w.Worker.GetID()
 }
