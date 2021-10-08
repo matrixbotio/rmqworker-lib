@@ -175,7 +175,7 @@ func (w *RMQWorker) Subscribe() APIError {
 // Stop RMQ messages listen
 func (w *RMQWorker) Stop() {
 	if w.cronHandler != nil {
-		w.cronHandler.Stop()
+		go w.cronHandler.Stop()
 	}
 	w.logInfo("stop signal received")
 	w.channels.StopCh <- struct{}{}
@@ -279,8 +279,8 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 func (w *RMQWorker) timeIsUp() {
 	w.logInfo("time is up")
 	w.Stop()
-	w.timeoutCallback(w)
 	w.cronHandler.Stop()
+	w.timeoutCallback(w)
 }
 
 // AwaitFinish - wait for worker finished
