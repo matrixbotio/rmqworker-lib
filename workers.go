@@ -9,22 +9,6 @@ import (
 	"github.com/streadway/amqp"
 )
 
-// RMQWorker - just RMQ worker
-type RMQWorker struct {
-	ConnectionData RMQConnectionData
-	Data           rmqWorkerData
-	Connections    rmqWorkerConnections
-	Channels       rmqWorkerChannels
-	Paused         bool
-	SyncMode       bool
-
-	DeliveryCallback RMQDeliveryCallback
-	TimeoutCallback  RMQTimeoutCallback
-	cronHandler      *simplecron.CronObject
-
-	Logger *constants.Logger
-}
-
 // NewRMQWorker - create new RMQ worker to receive messages
 func (r *RMQHandler) NewRMQWorker(
 	QueueName string,
@@ -301,11 +285,6 @@ func (w *RMQWorker) AwaitFinish() {
 func (w *RMQWorker) SetSyncMode(sync bool) *RMQWorker {
 	w.SyncMode = sync
 	return w
-}
-
-// RMQMonitoringWorker - rmq extended worker
-type RMQMonitoringWorker struct {
-	Worker *RMQWorker
 }
 
 // NewRMQMonitoringWorker - declare queue, bind to exchange, create worker & run.

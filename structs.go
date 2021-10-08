@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/matrixbotio/constants-lib"
+	simplecron "github.com/sagleft/simple-cron"
 	"github.com/streadway/amqp"
 )
 
@@ -17,6 +18,27 @@ type RMQConnectionData struct {
 	Host     string `json:"host"`
 	Port     string `json:"port"`
 	UseTLS   string `json:"tls"`
+}
+
+// RMQWorker - just RMQ worker
+type RMQWorker struct {
+	ConnectionData RMQConnectionData
+	Data           rmqWorkerData
+	Connections    rmqWorkerConnections
+	Channels       rmqWorkerChannels
+	Paused         bool
+	SyncMode       bool
+
+	DeliveryCallback RMQDeliveryCallback
+	TimeoutCallback  RMQTimeoutCallback
+	cronHandler      *simplecron.CronObject
+
+	Logger *constants.Logger
+}
+
+// RMQMonitoringWorker - rmq extended worker
+type RMQMonitoringWorker struct {
+	Worker *RMQWorker
 }
 
 // RMQQueueDeclareTask - queue declare task data container
