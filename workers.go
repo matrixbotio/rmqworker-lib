@@ -41,8 +41,8 @@ func (r *RMQHandler) NewRMQWorker(
 		},
 		channels: rmqWorkerChannels{
 			RMQMessages: make(<-chan amqp.Delivery),
-			OnFinished:  make(chan struct{}),
-			StopCh:      make(chan struct{}),
+			OnFinished:  make(chan struct{}, 1),
+			StopCh:      make(chan struct{}, 1),
 		},
 		deliveryCallback: callback,
 		logger:           r.Logger,
