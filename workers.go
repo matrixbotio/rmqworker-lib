@@ -181,6 +181,7 @@ func (w *RMQWorker) Stop() {
 	w.channels.StopCh <- struct{}{}
 	w.awaitMessages = false
 	w.channels.OnFinished <- struct{}{}
+	w.logInfo("worker stopped")
 }
 
 // Pause RMQ Worker (ignore messages)
