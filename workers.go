@@ -201,8 +201,8 @@ func (w *RMQWorker) Resume() {
 
 // Reset worker channels
 func (w *RMQWorker) Reset() {
-	w.channels.OnFinished = make(chan struct{})
-	w.channels.StopCh = make(chan struct{})
+	w.channels.OnFinished = make(chan struct{}, 1)
+	w.channels.StopCh = make(chan struct{}, 1)
 }
 
 // Listen RMQ messages
