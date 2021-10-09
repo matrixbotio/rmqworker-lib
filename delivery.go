@@ -10,6 +10,7 @@ import (
 // RMQDeliveryHandler - RMQ delivery data container
 type RMQDeliveryHandler struct {
 	rmqDelivery amqp.Delivery
+	isAccepted  bool
 }
 
 // NewRMQDeliveryHandler - create new RMQ delivery handler
@@ -65,6 +66,13 @@ func (d *RMQDeliveryHandler) GetRoutingKey() string {
 
 // Accept RMQ message delivery
 func (d *RMQDeliveryHandler) Accept() APIError {
+	if d.isAccepted {
+		return constants.Error(
+			"DATA_REQ_ERR",
+			"message has already been accepted",
+		)
+	}
+
 	err := d.rmqDelivery.Acknowledger.Ack(d.rmqDelivery.DeliveryTag, false)
 	if err != nil {
 		return constants.Error(
@@ -72,6 +80,7 @@ func (d *RMQDeliveryHandler) Accept() APIError {
 			"failed to ack task: "+err.Error(),
 		)
 	}
+	d.isAccepted = true
 	return nil
 }
 
