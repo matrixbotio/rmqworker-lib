@@ -56,7 +56,7 @@ func (r *RMQHandler) SendRMQResponse(
 ) APIError {
 	headers := amqp.Table{}
 	var responseBody []byte
-	var responseToEncode interface{}
+	//var responseToEncode interface{}
 	contentType := "application/json"
 
 	var isErrorFound bool
@@ -69,24 +69,24 @@ func (r *RMQHandler) SendRMQResponse(
 	if !isErrorFound {
 		// no errors
 		headers["code"] = 0
-		responseToEncode = task.MessageBody
+		responseBody = task.MessageBody
 	} else {
 		// add error to header & body
 		headers["code"] = errorMsg[0].Code
 		headers["name"] = errorMsg[0].Name
-		responseToEncode = errorMsg[0].Message
+		responseBody = []byte(errorMsg[0].Message)
 		contentType = "text/plain"
 	}
 
 	// encode response to json
-	responseBody, marshalErr := json.Marshal(responseToEncode)
+	/*responseBody, marshalErr := json.Marshal(responseToEncode)
 	if marshalErr != nil {
 		e := constants.Error(
 			"DATA_ENCODE_ERR",
 			"failed to marshal response to json: "+marshalErr.Error(),
 		)
 		return e
-	}
+	}*/
 
 	// check RMQ connection
 	newChannel, err := checkRMQConnection(r.RMQConn, r.ConnectionData)
