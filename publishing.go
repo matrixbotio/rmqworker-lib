@@ -1,21 +1,16 @@
 package rmqworker
 
 import (
-	"encoding/json"
-
 	"github.com/matrixbotio/constants-lib"
 	"github.com/streadway/amqp"
 )
 
 // RMQPublishInterfaceToQueue - another version of rmqPublishToQueue. use `message` instead of `task.MessageBody`
 func (r *RMQHandler) RMQPublishInterfaceToQueue(task RMQPublishRequestTask, message interface{}) APIError {
-	var convErr error
-	task.MessageBody, convErr = json.Marshal(message)
-	if convErr != nil {
-		return constants.Error(
-			"DATA_ENCODE_ERR",
-			"failed to encode message to json: "+convErr.Error(),
-		)
+	var err APIError
+	task.MessageBody, err = encodeMessage(message)
+	if err != nil {
+		return err
 	}
 	return r.RMQPublishToQueue(task)
 }
@@ -27,7 +22,13 @@ func (r *RMQHandler) RMQPublishToQueue(task RMQPublishRequestTask) APIError {
 		headers["responseRoutingKey"] = task.ResponseRoutingKey
 	}
 
-	err := r.RMQChannel.Publish(
+	// encode message
+	body, err := encodeMessage(task.MessageBody)
+	if err != nil {
+		return err
+	}
+
+	rmqErr := r.RMQChannel.Publish(
 		"",             // exchange
 		task.QueueName, // queue
 		false,          // mandatory
@@ -37,13 +38,13 @@ func (r *RMQHandler) RMQPublishToQueue(task RMQPublishRequestTask) APIError {
 			Headers:       headers,
 			DeliveryMode:  amqp.Persistent,
 			ContentType:   "application/json",
-			Body:          task.MessageBody,
+			Body:          body,
 		},
 	)
-	if err != nil {
+	if rmqErr != nil {
 		return constants.Error(
 			"SERVICE_REQ_FAILED",
-			"failed to push event to rmq queue: "+err.Error(),
+			"failed to push event to rmq queue: "+rmqErr.Error(),
 		)
 	}
 	return nil
@@ -55,8 +56,7 @@ func (r *RMQHandler) SendRMQResponse(
 	errorMsg ...*constants.APIError,
 ) APIError {
 	headers := amqp.Table{}
-	var responseBody []byte
-	//var responseToEncode interface{}
+	var responseToEncode interface{}
 	contentType := "application/json"
 
 	var isErrorFound bool
@@ -69,24 +69,20 @@ func (r *RMQHandler) SendRMQResponse(
 	if !isErrorFound {
 		// no errors
 		headers["code"] = 0
-		responseBody = task.MessageBody
+		responseToEncode = task.MessageBody
 	} else {
 		// add error to header & body
 		headers["code"] = errorMsg[0].Code
 		headers["name"] = errorMsg[0].Name
-		responseBody = []byte(errorMsg[0].Message)
+		responseToEncode = []byte(errorMsg[0].Message)
 		contentType = "text/plain"
 	}
 
-	// encode response to json
-	/*responseBody, marshalErr := json.Marshal(responseToEncode)
-	if marshalErr != nil {
-		e := constants.Error(
-			"DATA_ENCODE_ERR",
-			"failed to marshal response to json: "+marshalErr.Error(),
-		)
-		return e
-	}*/
+	// encode message
+	responseBody, err := encodeMessage(responseToEncode)
+	if err != nil {
+		return err
+	}
 
 	// check RMQ connection
 	newChannel, err := checkRMQConnection(r.RMQConn, r.ConnectionData)
@@ -128,16 +124,13 @@ func (r *RMQHandler) SendRMQResponse(
 // RMQPublishToExchange - publish message to exchange
 func (r *RMQHandler) RMQPublishToExchange(message interface{}, exchangeName, routingKey string) APIError {
 	// encode message
-	jsonBytes, marshalErr := json.Marshal(message)
-	if marshalErr != nil {
-		return constants.Error(
-			"DATA_ENCODE_ERR",
-			"failed to marshal message to json: "+marshalErr.Error(),
-		)
+	jsonBytes, err := encodeMessage(message)
+	if err != nil {
+		return err
 	}
 
 	// publish message
-	err := r.RMQChannel.Publish(
+	rmqErr := r.RMQChannel.Publish(
 		exchangeName, // exchange
 		routingKey,   // routing key
 		false,        // mandatory
@@ -146,10 +139,10 @@ func (r *RMQHandler) RMQPublishToExchange(message interface{}, exchangeName, rou
 			ContentType: "application/json",
 			Body:        jsonBytes,
 		})
-	if err != nil {
+	if rmqErr != nil {
 		return constants.Error(
 			"SERVICE_REQ_FAILED",
-			"failed to push message to exchange: "+err.Error(),
+			"failed to push message to exchange: "+rmqErr.Error(),
 		)
 	}
 	return nil

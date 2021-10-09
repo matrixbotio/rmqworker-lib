@@ -55,7 +55,7 @@ type RMQQueueDeclareTask struct {
 type RMQPublishRequestTask struct {
 	QueueName          string
 	ResponseRoutingKey string
-	MessageBody        []byte
+	MessageBody        interface{}
 }
 
 // RMQPublishResponseTask - response for publish message to RMQ request
@@ -63,7 +63,7 @@ type RMQPublishResponseTask struct {
 	ExchangeName       string
 	ResponseRoutingKey string
 	CorrelationID      string
-	MessageBody        []byte
+	MessageBody        interface{}
 }
 
 // RMQMonitoringWorkerTask - new RMQ request->response monitoring worker data
