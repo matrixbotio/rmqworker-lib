@@ -203,8 +203,16 @@ func (w *RMQWorker) Resume() {
 
 // Reset worker channels
 func (w *RMQWorker) Reset() {
+	w.awaitMessages = true
 	w.channels.OnFinished = make(chan struct{}, 1)
 	w.channels.StopCh = make(chan struct{}, 1)
+	w.runCron()
+}
+
+func (w *RMQWorker) runCron() {
+	w.logInfo("run response timeout cron")
+	w.cronHandler = simplecron.NewCronHandler(w.timeIsUp, w.data.WaitResponseTimeout)
+	go w.cronHandler.Run()
 }
 
 // Listen RMQ messages
@@ -212,9 +220,7 @@ func (w *RMQWorker) Listen() {
 	w.awaitMessages = true
 
 	if w.data.UseResponseTimeout {
-		w.logInfo("run response timeout cron")
-		w.cronHandler = simplecron.NewCronHandler(w.timeIsUp, w.data.WaitResponseTimeout)
-		go w.cronHandler.Run()
+		w.runCron()
 	}
 
 	for w.awaitMessages {
