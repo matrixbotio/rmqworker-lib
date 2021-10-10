@@ -206,7 +206,9 @@ func (w *RMQWorker) Reset() {
 	w.awaitMessages = true
 	w.channels.OnFinished = make(chan struct{}, 1)
 	w.channels.StopCh = make(chan struct{}, 1)
-	w.runCron()
+	if w.data.UseResponseTimeout {
+		w.runCron()
+	}
 }
 
 func (w *RMQWorker) runCron() {
