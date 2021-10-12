@@ -61,7 +61,7 @@ func (w *RMQWorker) logWarn(err APIError) {
 
 func (w *RMQWorker) logInfo(message string) {
 	if w.logger != nil {
-		w.logger.Log(w.getLogWorkerName() + message)
+		w.logger.Verbose(w.getLogWorkerName() + message)
 	} else {
 		log.Println()
 	}
