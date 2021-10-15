@@ -100,6 +100,12 @@ func (w *RMQWorker) GetID() string {
 
 // SetAutoAck - auto accept messages
 func (w *RMQWorker) SetAutoAck(autoAck bool) *RMQWorker {
+	w.data.AutoAckForQueue = autoAck
+	return w
+}
+
+// SetAutoAckByLib - auto accept messages
+func (w *RMQWorker) SetAutoAckByLib(autoAck bool) *RMQWorker {
 	w.data.AutoAckByLib = autoAck
 	return w
 }
