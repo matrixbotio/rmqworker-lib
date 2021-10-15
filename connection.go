@@ -113,7 +113,7 @@ func (r *RMQWorker) reconnect(callback connFunc, connectionDescription string) {
 				// connection is open
 				return
 			}
-			r.logger.Warn(err)
+			r.logger.Warn(convertRMQError(err))
 			time.Sleep(reconnectAfterSeconds * time.Second)
 		}
 		errMsg := "failed to connect to " +

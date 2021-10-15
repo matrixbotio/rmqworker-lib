@@ -52,7 +52,7 @@ func (r *RMQHandler) NewRMQWorker(
 	return &w, nil
 }
 
-func (w *RMQWorker) logWarn(err APIError) {
+func (w *RMQWorker) logWarn(err *constants.APIError) {
 	if w.logger != nil {
 		err.Message = w.getLogWorkerName() + err.Message
 		w.logger.Warn(err)

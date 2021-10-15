@@ -21,3 +21,7 @@ func encodeMessage(message interface{}) ([]byte, APIError) {
 	}
 	return jsonBytes, nil
 }
+
+func convertRMQError(err APIError) *constants.APIError {
+	return (*constants.APIError)(err)
+}
