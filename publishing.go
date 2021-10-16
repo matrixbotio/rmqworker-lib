@@ -89,10 +89,7 @@ func (r *RMQHandler) SendRMQResponse(
 	if err != nil {
 		// check connection is open
 		if err.Name != "DATA_EXISTS" {
-			return constants.Error(
-				"SERVICE_REQ_FAILED",
-				"failed to check RMQ connection: "+err.Message,
-			)
+			return err
 		}
 	}
 	if newChannel != nil {
