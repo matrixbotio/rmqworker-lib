@@ -1,6 +1,8 @@
 package rmqworker
 
 import (
+	"strconv"
+
 	"github.com/matrixbotio/constants-lib"
 	"github.com/streadway/amqp"
 )
@@ -59,14 +61,18 @@ func (r *RMQHandler) SendRMQResponse(
 	var responseBody []byte
 	contentType := "application/json"
 
+	r.Logger.Verbose(errorMsg) // TEMP
+
 	var isErrorFound bool
 	if len(errorMsg) == 0 {
 		isErrorFound = false
 	} else {
 		isErrorFound = errorMsg[0] != nil
 	}
+	r.Logger.Verbose("isErrorFound = " + strconv.FormatBool(isErrorFound)) // // TEMP
 
 	if !isErrorFound {
+		r.Logger.Verbose("no errors found") // TEMP
 		// no errors
 		headers["code"] = 0
 		// encode message
@@ -76,6 +82,7 @@ func (r *RMQHandler) SendRMQResponse(
 			return err
 		}
 	} else {
+		r.Logger.Verbose("add error info to respone: " + errorMsg[0].Name) // TEMP
 		// add error to header & body
 		headers["code"] = errorMsg[0].Code
 		headers["name"] = errorMsg[0].Name
