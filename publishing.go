@@ -56,7 +56,7 @@ func (r *RMQHandler) SendRMQResponse(
 	errorMsg ...*constants.APIError,
 ) APIError {
 	headers := amqp.Table{}
-	var responseToEncode interface{}
+	var responseBody []byte
 	contentType := "application/json"
 
 	var isErrorFound bool
@@ -69,19 +69,18 @@ func (r *RMQHandler) SendRMQResponse(
 	if !isErrorFound {
 		// no errors
 		headers["code"] = 0
-		responseToEncode = task.MessageBody
+		// encode message
+		var err APIError
+		responseBody, err = encodeMessage(task.MessageBody)
+		if err != nil {
+			return err
+		}
 	} else {
 		// add error to header & body
 		headers["code"] = errorMsg[0].Code
 		headers["name"] = errorMsg[0].Name
-		responseToEncode = errorMsg[0].Message
+		responseBody = []byte(errorMsg[0].Message)
 		contentType = "text/plain"
-	}
-
-	// encode message
-	responseBody, err := encodeMessage(responseToEncode)
-	if err != nil {
-		return err
 	}
 
 	// check RMQ connection
