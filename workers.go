@@ -98,7 +98,8 @@ func (w *RMQWorker) GetID() string {
 	return w.data.ID
 }
 
-// SetAutoAck - auto accept messages
+// SetAutoAck - auto accept messages.
+// This will also change the auto-acceptance of messages by the library (!autoAck)
 func (w *RMQWorker) SetAutoAck(autoAck bool) *RMQWorker {
 	w.data.AutoAckForQueue = autoAck
 	w.data.AutoAckByLib = !autoAck
@@ -108,7 +109,6 @@ func (w *RMQWorker) SetAutoAck(autoAck bool) *RMQWorker {
 // SetAutoAckByLib - auto accept messages
 func (w *RMQWorker) SetAutoAckByLib(autoAck bool) *RMQWorker {
 	w.data.AutoAckByLib = autoAck
-	w.data.AutoAckForQueue = !autoAck
 	return w
 }
 
