@@ -32,7 +32,10 @@ func NewRMQHandler(connData RMQConnectionData, logger ...*constants.Logger) (*RM
 	}
 
 	// open connection & channel
-	r.recreateConnection()
+	err := r.recreateConnection()
+	if err != nil {
+		return nil, err
+	}
 
 	// run cron for check connection & channel
 	r.Cron = simplecron.NewCronHandler(
