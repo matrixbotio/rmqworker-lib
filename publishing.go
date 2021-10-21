@@ -69,10 +69,10 @@ func (r *RMQHandler) SendRMQResponse(
 	} else {
 		isErrorFound = errorMsg[0] != nil
 	}
-	r.Logger.Verbose("isErrorFound = " + strconv.FormatBool(isErrorFound)) // // TEMP
+	r.Logger.Verbose("RMQ Handler: isErrorFound = " + strconv.FormatBool(isErrorFound)) // // TEMP
 
 	if !isErrorFound {
-		r.Logger.Verbose("no errors found") // TEMP
+		r.Logger.Verbose("RMQ Handler: no errors found") // TEMP
 		// no errors
 		headers["code"] = 0
 		// encode message
@@ -82,7 +82,7 @@ func (r *RMQHandler) SendRMQResponse(
 			return err
 		}
 	} else {
-		r.Logger.Verbose("add error info to respone: " + errorMsg[0].Name) // TEMP
+		r.Logger.Verbose("RMQ Handler: add error info to respone: " + errorMsg[0].Name) // TEMP
 		// add error to header & body
 		headers["code"] = errorMsg[0].Code
 		headers["name"] = errorMsg[0].Name
