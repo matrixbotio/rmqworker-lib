@@ -91,16 +91,9 @@ func (r *RMQHandler) SendRMQResponse(
 	}
 
 	// check RMQ connection
-	newChannel, err := checkRMQConnection(r.RMQConn, r.ConnectionData)
+	err := checkRMQConnection(r.RMQConn, r.ConnectionData, r.RMQChannel, r.Logger)
 	if err != nil {
-		// check connection is open
-		if err.Name != "DATA_EXISTS" {
-			return err
-		}
-	}
-	if newChannel != nil {
-		// channel updated
-		r.RMQChannel = newChannel
+		return err
 	}
 
 	// push result to rmq

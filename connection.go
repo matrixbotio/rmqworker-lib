@@ -71,31 +71,49 @@ func openRMQChannel(conn *amqp.Connection) (*amqp.Channel, APIError) {
 }
 
 // checkRMQConnection - check RMQ connection is active. open new connection if inactive
-func checkRMQConnection(RMQConn *amqp.Connection, connData RMQConnectionData) (*amqp.Channel, APIError) {
+func checkRMQConnection(RMQConn *amqp.Connection, connData RMQConnectionData, channel *amqp.Channel, logger *constants.Logger) APIError {
 	if !RMQConn.IsClosed() {
-		return nil, constants.Error(
-			"DATA_EXISTS",
-			"rmq connection is active",
-		)
+		return nil
 	}
 	conn, err := rmqConnect(connData)
 	if err != nil {
-		return nil, err
+		return err
 	}
+	var receiver chan *amqp.Error
+	conn.NotifyClose(receiver)
+	go handleNotifyClose(receiver, RMQConn, connData, channel, logger)
 
 	RMQConn = conn
-	RMQChannel, err := openRMQChannel(conn)
+	channel, err = openRMQChannel(conn)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	if RMQChannel == nil {
-		return nil, constants.Error(
+	if channel == nil {
+		return constants.Error(
 			"BASE_INTERNAL_ERROR",
 			"failed to open new rmq channel, new channel is nil",
 		)
 	}
-	return RMQChannel, nil
+	return nil
+}
+
+func handleNotifyClose(receiver chan *amqp.Error, conn *amqp.Connection, connData RMQConnectionData, channel *amqp.Channel, logger *constants.Logger) {
+	for closeError := range receiver {
+		logger.Error("RMQ connection/channel close: " + closeError.Error())
+		if conn.IsClosed() {
+			err := checkRMQConnection(conn, connData, channel, logger)
+			if err != nil {
+				logger.Error("Error checking RMQ connection on close notification: " + err.Message)
+			}
+		} else {
+			newChannel, err := openRMQChannel(conn)
+			if err != nil {
+				logger.Error("Error opening new channel on close notification" + err.Message)
+			}
+			channel = newChannel
+		}
+	}
 }
 
 type connFunc func() APIError

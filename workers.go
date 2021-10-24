@@ -145,12 +145,9 @@ func (w *RMQWorker) HandleReconnect() {
 func (w *RMQWorker) Subscribe() APIError {
 	var err error
 	var aErr APIError
-	w.connections.RMQChannel, aErr = checkRMQConnection(w.connections.RMQConn, w.connectionData)
+	aErr = checkRMQConnection(w.connections.RMQConn, w.connectionData, w.connections.RMQChannel, w.logger)
 	if aErr != nil {
-		// check connection is open
-		if aErr.Name != "DATA_EXISTS" {
-			return aErr
-		}
+		return aErr
 	}
 
 	if w.connections.RMQChannel == nil {
