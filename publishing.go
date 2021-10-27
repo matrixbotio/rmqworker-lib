@@ -45,6 +45,9 @@ func (r *RMQHandler) RMQPublishToQueue(task RMQPublishRequestTask) APIError {
 	)
 	if rmqErr != nil {
 		r.RMQChannel, err = openRMQChannel(r.RMQConn)
+		if err != nil {
+			r.Logger.Warn(convertRMQError(err))
+		}
 		return constants.Error(
 			"SERVICE_REQ_FAILED",
 			"failed to push event to rmq queue: "+rmqErr.Error(),
@@ -111,6 +114,9 @@ func (r *RMQHandler) SendRMQResponse(
 		})
 	if rmqErr != nil {
 		r.RMQChannel, err = openRMQChannel(r.RMQConn)
+		if err != nil {
+			r.Logger.Warn(convertRMQError(err))
+		}
 		return constants.Error(
 			"SERVICE_REQ_FAILED",
 			"failed to push rmq response: "+rmqErr.Error(),
@@ -139,6 +145,9 @@ func (r *RMQHandler) RMQPublishToExchange(message interface{}, exchangeName, rou
 		})
 	if rmqErr != nil {
 		r.RMQChannel, err = openRMQChannel(r.RMQConn)
+		if err != nil {
+			r.Logger.Warn(convertRMQError(err))
+		}
 		return constants.Error(
 			"SERVICE_REQ_FAILED",
 			"failed to push message to exchange: "+rmqErr.Error(),
