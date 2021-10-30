@@ -139,7 +139,6 @@ func (r *RMQWorker) reconnect(callback connFunc, connectionDescription string) {
 						return
 					}
 					r.logger.Warn(convertRMQError(err))
-					time.Sleep(reconnectAfterSeconds * time.Second)
 				},
 			).Run()
 			if isTimeIsUP {
@@ -148,6 +147,7 @@ func (r *RMQWorker) reconnect(callback connFunc, connectionDescription string) {
 					"the connection went into timeout",
 				))
 			}
+			time.Sleep(reconnectAfterSeconds * time.Second)
 
 		}
 
