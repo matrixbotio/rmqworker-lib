@@ -180,10 +180,8 @@ func (w *RMQWorker) Subscribe() APIError {
 // Stop RMQ messages listen
 func (w *RMQWorker) Stop() {
 	if w.cronHandler != nil {
-		w.logInfo("stop cron...")
 		go w.cronHandler.Stop()
 	}
-	w.logInfo("stop signal received")
 	w.channels.StopCh <- struct{}{}
 	w.awaitMessages = false
 	w.channels.OnFinished <- struct{}{}
@@ -217,7 +215,6 @@ func (w *RMQWorker) Reset() {
 }
 
 func (w *RMQWorker) runCron() {
-	w.logInfo("run response timeout cron")
 	w.cronHandler = simplecron.NewCronHandler(w.timeIsUp, w.data.WaitResponseTimeout)
 	go w.cronHandler.Run()
 }
@@ -233,7 +230,6 @@ func (w *RMQWorker) Listen() {
 	for w.awaitMessages {
 		for rmqDelivery := range w.channels.RMQMessages {
 			if !w.awaitMessages {
-				w.logInfo("break")
 				break
 			}
 
@@ -244,12 +240,9 @@ func (w *RMQWorker) Listen() {
 			if w.cronHandler != nil {
 				w.cronHandler.Stop()
 			}
-			w.logInfo("new message found. run handler..")
 			w.handleRMQMessage(rmqDelivery)
 		}
 	}
-
-	w.logInfo("work finished")
 }
 
 func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
@@ -258,7 +251,6 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 
 	// auto accept message if needed
 	if w.data.AutoAckByLib {
-		w.logInfo("ack message")
 		err := delivery.Accept()
 		if err != nil {
 			w.logError(err)
@@ -267,7 +259,6 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 	}
 
 	// check response error
-	w.logInfo("check response error..")
 	if w.data.CheckResponseErrors {
 		aErr := delivery.CheckResponseError()
 		if aErr != nil {
@@ -283,7 +274,6 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 	}
 
 	// run callback
-	w.logInfo("run callback")
 	if w.syncMode {
 		w.deliveryCallback(w, delivery)
 	} else {
@@ -292,7 +282,6 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 }
 
 func (w *RMQWorker) timeIsUp() {
-	w.logInfo("time is up")
 	w.Stop()
 	w.cronHandler.Stop()
 	w.timeoutCallback(w)
