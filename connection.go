@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/matrixbotio/constants-lib"
+	simplecron "github.com/sagleft/simple-cron"
 	"github.com/streadway/amqp"
 )
 
@@ -122,23 +123,46 @@ func (r *RMQWorker) reconnect(callback connFunc, connectionDescription string) {
 	isConnected := false
 	for !isConnected {
 		for i := 0; i < reconnectionAttemptsNumber; i++ {
-			err := callback()
-			if err == nil {
-				// connection established
-				return
+
+			isTimeIsUP := simplecron.NewRuntimeLimitHandler(
+				reconnectionTimeout*time.Second,
+				func() {
+					err := callback()
+					if err == nil {
+						// connection established
+						isConnected = true
+						return
+					}
+					if err.Name == "DATA_EXISTS" {
+						// connection is open
+						isConnected = true
+						return
+					}
+					r.logger.Warn(convertRMQError(err))
+					time.Sleep(reconnectAfterSeconds * time.Second)
+				},
+			).Run()
+			if isTimeIsUP {
+				r.logger.Warn(constants.Error(
+					"SERVICE_CONN_ERR",
+					"the connection went into timeout",
+				))
 			}
-			if err.Name == "DATA_EXISTS" {
-				// connection is open
-				return
-			}
-			r.logger.Warn(convertRMQError(err))
-			time.Sleep(reconnectAfterSeconds * time.Second)
+
 		}
+
+		if isConnected {
+			return
+		}
+
 		errMsg := "failed to connect to " +
 			connectionDescription + " after " +
 			strconv.Itoa(reconnectionAttemptsNumber) + " attempts"
 
 		r.logger.Error(constants.Error("SERVICE_CONN_ERR", errMsg))
-		time.Sleep(time.Second * waitingBetweenAttempts)
+
+		sleepDuration := time.Second * waitingBetweenAttempts
+		r.logger.Verbose("wait " + sleepDuration.String() + " between attempts...")
+		time.Sleep(sleepDuration)
 	}
 }
