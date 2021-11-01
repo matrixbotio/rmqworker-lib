@@ -139,6 +139,19 @@ func (w *RMQWorker) HandleReconnect() {
 // Subscribe to RMQ messages
 func (w *RMQWorker) Subscribe() APIError {
 	w.logger.Verbose("subscribe..")
+
+	if w.connections.RMQChannel != nil {
+		// close old channel
+		w.logger.Verbose("close old channel..")
+		err := w.connections.RMQChannel.Close()
+		if err != nil {
+			return constants.Error(
+				"SERVICE_REQ_FAILED",
+				"failed to close RMQ channel: "+err.Error(),
+			)
+		}
+	}
+
 	var err error
 	var aErr APIError
 	aErr = checkRMQConnection(w.connections.RMQConn, w.connectionData, w.connections.RMQChannel, w.logger)
@@ -154,17 +167,6 @@ func (w *RMQWorker) Subscribe() APIError {
 			return aErr
 		}
 	}*/
-
-	if w.connections.RMQChannel != nil {
-		// close old channel
-		err = w.connections.RMQChannel.Close()
-		if err != nil {
-			return constants.Error(
-				"SERVICE_REQ_FAILED",
-				"failed to close RMQ channel: "+err.Error(),
-			)
-		}
-	}
 
 	w.channels.RMQMessages, err = w.connections.RMQChannel.Consume(
 		w.data.QueueName, // queue
