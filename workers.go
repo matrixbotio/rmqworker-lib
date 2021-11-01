@@ -4,6 +4,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/matrixbotio/constants-lib"
 	simplecron "github.com/sagleft/simple-cron"
 	"github.com/streadway/amqp"
@@ -31,7 +32,6 @@ func (r *RMQHandler) NewRMQWorker(
 		data: rmqWorkerData{
 			Name:                "rmq worker",
 			QueueName:           QueueName,
-			AutoAckForQueue:     false,
 			AutoAckByLib:        true,
 			CheckResponseErrors: true,
 		},
@@ -79,7 +79,7 @@ func (w *RMQWorker) logError(err *constants.APIError) {
 // SetName - set RMQ worker name for logs
 func (w *RMQWorker) SetName(name string) *RMQWorker {
 	w.data.Name = name
-	return w
+	return w.SetConsumerTagFromName()
 }
 
 // GetName - get worker name
@@ -101,13 +101,6 @@ func (w *RMQWorker) GetID() string {
 // SetAutoAck - auto accept messages.
 // This will also change the auto-acceptance of messages by the library (!autoAck)
 func (w *RMQWorker) SetAutoAck(autoAck bool) *RMQWorker {
-	w.data.AutoAckForQueue = autoAck
-	w.data.AutoAckByLib = !autoAck
-	return w
-}
-
-// SetAutoAckByLib - auto accept messages
-func (w *RMQWorker) SetAutoAckByLib(autoAck bool) *RMQWorker {
 	w.data.AutoAckByLib = autoAck
 	return w
 }
@@ -159,13 +152,13 @@ func (w *RMQWorker) Subscribe() APIError {
 		}
 	}
 	w.channels.RMQMessages, err = w.connections.RMQChannel.Consume(
-		w.data.QueueName,       // queue
-		"",                     // consumer. "" > generate random ID
-		w.data.AutoAckForQueue, // auto-ack
-		false,                  // exclusive
-		false,                  // no-local
-		false,                  // no-wait
-		nil,                    // args
+		w.data.QueueName, // queue
+		"",               // consumer. "" > generate random ID
+		false,            // auto-ack by RMQ service
+		false,            // exclusive
+		false,            // no-local
+		false,            // no-wait
+		nil,              // args
 	)
 	if err != nil {
 		e := constants.Error(
@@ -223,6 +216,21 @@ func (w *RMQWorker) Reset() {
 func (w *RMQWorker) runCron() {
 	w.cronHandler = simplecron.NewCronHandler(w.timeIsUp, w.data.WaitResponseTimeout)
 	go w.cronHandler.Run()
+}
+
+// SetConsumerTag - set worker unique consumer tag
+func (w *RMQWorker) SetConsumerTag(uniqueTag string) *RMQWorker {
+	w.data.ConsumerTag = uniqueTag
+	return w
+}
+
+// SetConsumerTagFromName - assign a consumer tag to the worker based on its name and random ID
+func (w *RMQWorker) SetConsumerTagFromName() *RMQWorker {
+	tag := w.data.Name + "-" + uuid.New().String()
+	if w.data.Name == "" {
+		tag = "worker" + w.data.ConsumerTag
+	}
+	return w.SetConsumerTag(tag)
 }
 
 // Listen RMQ messages
