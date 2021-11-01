@@ -146,14 +146,26 @@ func (w *RMQWorker) Subscribe() APIError {
 		return aErr
 	}
 
-	if w.connections.RMQChannel == nil {
+	/*if w.connections.RMQChannel == nil {
 		// channel not created but connection is active
 		// create new channel
 		w.connections.RMQChannel, aErr = openRMQChannel(w.connections.RMQConn)
 		if aErr != nil {
 			return aErr
 		}
+	}*/
+
+	if w.connections.RMQChannel != nil {
+		// close old channel
+		err = w.connections.RMQChannel.Close()
+		if err != nil {
+			return constants.Error(
+				"SERVICE_REQ_FAILED",
+				"failed to close RMQ channel: "+err.Error(),
+			)
+		}
 	}
+
 	w.channels.RMQMessages, err = w.connections.RMQChannel.Consume(
 		w.data.QueueName, // queue
 		"",               // consumer. "" > generate random ID
