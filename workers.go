@@ -130,12 +130,15 @@ func (w *RMQWorker) Serve() {
 
 // HandleReconnect - reconnect to RMQ delivery (messages)
 func (w *RMQWorker) HandleReconnect() {
+	w.logger.Verbose("reconnect..")
 	w.reconnect(w.Subscribe, w.data.Name)
+	w.logger.Verbose("listen..")
 	w.Listen()
 }
 
 // Subscribe to RMQ messages
 func (w *RMQWorker) Subscribe() APIError {
+	w.logger.Verbose("subscribe..")
 	var err error
 	var aErr APIError
 	aErr = checkRMQConnection(w.connections.RMQConn, w.connectionData, w.connections.RMQChannel, w.logger)
