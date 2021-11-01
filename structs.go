@@ -90,9 +90,9 @@ type RMQTimeoutCallback func(w *RMQWorker)
 
 type rmqWorkerData struct {
 	Name                string // worker name
-	QueueName           string
-	AutoAckByLib        bool
-	CheckResponseErrors bool
+	QueueName           string // the name of the queue from which to receive messages
+	AutoAckByLib        bool   // whether or not the worker will accept the message as soon as he receives it
+	CheckResponseErrors bool   // whether to check the error code in the messages
 
 	// if only one response is expected,
 	// then a timeout can be applied
@@ -100,7 +100,8 @@ type rmqWorkerData struct {
 	WaitResponseTimeout time.Duration
 
 	// optional params
-	ID string
+	ID          string // worker ID for logs
+	ConsumerTag string // empty -> random ID
 }
 
 type rmqWorkerConnections struct {
