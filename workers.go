@@ -170,9 +170,15 @@ func (w *RMQWorker) Subscribe() APIError {
 	if err != nil {
 		e := constants.Error(
 			"SERVICE_REQ_FAILED",
-			"failed to consume rmq worker messages: "+err.Error(),
+			"failed to consume rmq worker messages: "+err.Error()+". reopen channel...",
 		)
-		return e
+		w.logWarn(e)
+		// reopen channel
+		var rErr APIError
+		w.connections.RMQChannel, rErr = openRMQChannel(w.connections.RMQConn)
+		if rErr != nil {
+			return rErr
+		}
 	}
 	return nil
 }
