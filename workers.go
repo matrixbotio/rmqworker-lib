@@ -31,7 +31,6 @@ func (r *RMQHandler) NewRMQWorker(
 		data: rmqWorkerData{
 			Name:                "rmq worker",
 			QueueName:           QueueName,
-			AutoAckForQueue:     false,
 			AutoAckByLib:        true,
 			CheckResponseErrors: true,
 		},
@@ -101,13 +100,6 @@ func (w *RMQWorker) GetID() string {
 // SetAutoAck - auto accept messages.
 // This will also change the auto-acceptance of messages by the library (!autoAck)
 func (w *RMQWorker) SetAutoAck(autoAck bool) *RMQWorker {
-	w.data.AutoAckForQueue = autoAck
-	w.data.AutoAckByLib = !autoAck
-	return w
-}
-
-// SetAutoAckByLib - auto accept messages
-func (w *RMQWorker) SetAutoAckByLib(autoAck bool) *RMQWorker {
 	w.data.AutoAckByLib = autoAck
 	return w
 }
@@ -159,13 +151,13 @@ func (w *RMQWorker) Subscribe() APIError {
 		}
 	}
 	w.channels.RMQMessages, err = w.connections.RMQChannel.Consume(
-		w.data.QueueName,       // queue
-		"",                     // consumer. "" > generate random ID
-		w.data.AutoAckForQueue, // auto-ack
-		false,                  // exclusive
-		false,                  // no-local
-		false,                  // no-wait
-		nil,                    // args
+		w.data.QueueName, // queue
+		"",               // consumer. "" > generate random ID
+		false,            // auto-ack by RMQ service
+		false,            // exclusive
+		false,            // no-local
+		false,            // no-wait
+		nil,              // args
 	)
 	if err != nil {
 		e := constants.Error(

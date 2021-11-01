@@ -91,7 +91,6 @@ type RMQTimeoutCallback func(w *RMQWorker)
 type rmqWorkerData struct {
 	Name                string // worker name
 	QueueName           string
-	AutoAckForQueue     bool
 	AutoAckByLib        bool
 	CheckResponseErrors bool
 
