@@ -131,43 +131,41 @@ func (w *RMQWorker) Serve() {
 // HandleReconnect - reconnect to RMQ delivery (messages)
 func (w *RMQWorker) HandleReconnect() {
 	w.logger.Verbose("reconnect..")
-	w.reconnect(w.Subscribe, w.data.Name)
+	w.reconnect(w.openConnection, w.data.Name)
+
+	w.logger.Verbose("subscribe..")
+	err := w.Subscribe()
+	if err != nil {
+		w.logError(err)
+	}
+
 	w.logger.Verbose("listen..")
 	w.Listen()
 }
 
+func (w *RMQWorker) openConnection() APIError {
+	w.logger.Verbose("open RMQ connection..")
+	return checkRMQConnection(
+		w.connections.RMQConn,
+		w.connectionData,
+		w.connections.RMQChannel,
+		w.logger,
+	)
+}
+
 // Subscribe to RMQ messages
 func (w *RMQWorker) Subscribe() APIError {
-	w.logger.Verbose("subscribe..")
-
-	if w.connections.RMQChannel != nil {
-		// close old channel
-		w.logger.Verbose("close old channel..")
-		err := w.connections.RMQChannel.Close()
-		if err != nil {
-			return constants.Error(
-				"SERVICE_REQ_FAILED",
-				"failed to close RMQ channel: "+err.Error(),
-			)
-		}
-	}
-
-	var err error
 	var aErr APIError
-	aErr = checkRMQConnection(w.connections.RMQConn, w.connectionData, w.connections.RMQChannel, w.logger)
-	if aErr != nil {
-		return aErr
-	}
-
-	/*if w.connections.RMQChannel == nil {
+	if w.connections.RMQChannel == nil {
 		// channel not created but connection is active
 		// create new channel
 		w.connections.RMQChannel, aErr = openRMQChannel(w.connections.RMQConn)
 		if aErr != nil {
 			return aErr
 		}
-	}*/
+	}
 
+	var err error
 	w.channels.RMQMessages, err = w.connections.RMQChannel.Consume(
 		w.data.QueueName, // queue
 		"",               // consumer. "" > generate random ID
