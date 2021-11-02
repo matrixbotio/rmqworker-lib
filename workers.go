@@ -44,6 +44,7 @@ func (r *RMQHandler) NewRMQWorker(
 			OnFinished:  make(chan struct{}, 1),
 			StopCh:      make(chan struct{}, 1),
 		},
+		syncMode:         true,
 		deliveryCallback: callback,
 		logger:           r.Logger,
 		awaitMessages:    true,
