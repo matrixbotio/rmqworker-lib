@@ -275,7 +275,7 @@ func (w *RMQWorker) Listen() {
 }
 
 func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
-	w.logger.Verbose("new rmq message founded")
+	w.logger.Verbose("new rmq message found")
 	// create delivery handler
 	delivery := NewRMQDeliveryHandler(rmqDelivery)
 
