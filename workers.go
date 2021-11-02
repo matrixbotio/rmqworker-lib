@@ -19,7 +19,7 @@ func (r *RMQHandler) NewRMQWorker(
 	var wChannel *amqp.Channel
 	if r.RMQConn.IsClosed() {
 		// open new connection
-		wChannel, err = openRMQChannel(r.RMQConn)
+		r.openConnectionNChannel()
 		if err != nil {
 			return nil, err
 		}
@@ -160,7 +160,7 @@ func (w *RMQWorker) Subscribe() APIError {
 	if w.connections.RMQChannel == nil {
 		// channel not created but connection is active
 		// create new channel
-		w.connections.RMQChannel, aErr = openRMQChannel(w.connections.RMQConn)
+		w.connections.RMQChannel, aErr = openRMQChannel(w.connections.RMQConn, w.connectionData, w.logger)
 		if aErr != nil {
 			return aErr
 		}
@@ -184,7 +184,7 @@ func (w *RMQWorker) Subscribe() APIError {
 		w.logError(e)
 		// reopen channel
 		var rErr APIError
-		w.connections.RMQChannel, rErr = openRMQChannel(w.connections.RMQConn)
+		w.connections.RMQChannel, rErr = openRMQChannel(w.connections.RMQConn, w.connectionData, w.logger)
 		if rErr != nil {
 			return rErr
 		}

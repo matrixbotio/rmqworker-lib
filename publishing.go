@@ -44,7 +44,6 @@ func (r *RMQHandler) RMQPublishToQueue(task RMQPublishRequestTask) APIError {
 		},
 	)
 	if rmqErr != nil {
-		r.RMQChannel, err = openRMQChannel(r.RMQConn)
 		if err != nil {
 			r.Logger.Warn(convertRMQError(err))
 		}
@@ -113,7 +112,6 @@ func (r *RMQHandler) SendRMQResponse(
 			CorrelationId: task.CorrelationID,
 		})
 	if rmqErr != nil {
-		r.RMQChannel, err = openRMQChannel(r.RMQConn)
 		if err != nil {
 			r.Logger.Warn(convertRMQError(err))
 		}
@@ -144,7 +142,6 @@ func (r *RMQHandler) RMQPublishToExchange(message interface{}, exchangeName, rou
 			Body:        jsonBytes,
 		})
 	if rmqErr != nil {
-		r.RMQChannel, err = openRMQChannel(r.RMQConn)
 		if err != nil {
 			r.Logger.Warn(convertRMQError(err))
 		}

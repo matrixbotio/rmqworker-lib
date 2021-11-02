@@ -51,7 +51,7 @@ func (r *RMQHandler) openConnectionNChannel() (*amqp.Connection, *amqp.Channel, 
 	}
 
 	// get channel
-	channel, err := openRMQChannel(conn)
+	channel, err := openRMQChannel(conn, r.ConnectionData, r.Logger)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -60,7 +60,7 @@ func (r *RMQHandler) openConnectionNChannel() (*amqp.Connection, *amqp.Channel, 
 }
 
 // openRMQChannel - open new RMQ channel
-func openRMQChannel(conn *amqp.Connection) (*amqp.Channel, APIError) {
+func openRMQChannel(conn *amqp.Connection, connData RMQConnectionData, logger *constants.Logger) (*amqp.Channel, APIError) {
 	channel, rmqErr := conn.Channel()
 	if rmqErr != nil {
 		return nil, constants.Error(
@@ -68,6 +68,10 @@ func openRMQChannel(conn *amqp.Connection) (*amqp.Channel, APIError) {
 			"failed to get amqp channel: "+rmqErr.Error(),
 		)
 	}
+	var closeReceiver chan *amqp.Error
+	conn.NotifyClose(closeReceiver)
+	channel.NotifyClose(closeReceiver)
+	go handleNotifyClose(closeReceiver, conn, connData, channel, logger)
 	err := channel.Qos(1, 0, false)
 	if err != nil {
 		return nil, constants.Error(
@@ -88,13 +92,8 @@ func checkRMQConnection(RMQConn *amqp.Connection, connData RMQConnectionData, ch
 		return err
 	}
 
-	var closeReceiver chan *amqp.Error
-	conn.NotifyClose(closeReceiver)
-	channel.NotifyClose(closeReceiver)
-	go handleNotifyClose(closeReceiver, RMQConn, connData, channel, logger)
-
 	RMQConn = conn
-	channel, err = openRMQChannel(conn)
+	channel, err = openRMQChannel(conn, connData, logger)
 	if err != nil {
 		return err
 	}
@@ -117,14 +116,13 @@ func handleNotifyClose(receiver chan *amqp.Error, conn *amqp.Connection, connDat
 				logger.Error("Error checking RMQ connection on close notification: " + err.Message)
 			}
 		} else {
-			newChannel, err := openRMQChannel(conn)
+			newChannel, err := openRMQChannel(conn, connData, logger)
 			if err != nil {
 				logger.Error("Error opening new channel on close notification" + err.Message)
 			}
 			channel = newChannel
 		}
 	}
-	logger.Log("handleNotifyClose: sorry, i'm out")
 }
 
 type connFunc func() APIError

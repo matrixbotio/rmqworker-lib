@@ -60,7 +60,7 @@ func (r *RMQHandler) NewRMQHandler() (*RMQHandler, APIError) {
 
 	// open new channel
 	var err APIError
-	newHandler.RMQChannel, err = openRMQChannel(newHandler.RMQConn)
+	newHandler.RMQChannel, err = openRMQChannel(newHandler.RMQConn, r.ConnectionData, r.Logger)
 	if err != nil {
 		return nil, err
 	}
