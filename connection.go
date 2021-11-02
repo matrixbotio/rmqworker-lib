@@ -87,9 +87,14 @@ func checkRMQConnection(RMQConn *amqp.Connection, connData RMQConnectionData, ch
 	if err != nil {
 		return err
 	}
-	var receiver chan *amqp.Error
-	conn.NotifyClose(receiver)
-	go handleNotifyClose(receiver, RMQConn, connData, channel, logger)
+
+	var connectionCloseReceiver chan *amqp.Error
+	conn.NotifyClose(connectionCloseReceiver)
+	go handleNotifyClose(connectionCloseReceiver, RMQConn, connData, channel, logger)
+
+	var channelCloseReceiver chan *amqp.Error
+	channel.NotifyClose(channelCloseReceiver)
+	go handleNotifyClose(channelCloseReceiver, RMQConn, connData, channel, logger)
 
 	RMQConn = conn
 	channel, err = openRMQChannel(conn)
