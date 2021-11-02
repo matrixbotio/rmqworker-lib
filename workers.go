@@ -282,7 +282,6 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 
 	// auto accept message if needed
 	if w.data.AutoAckByLib {
-		w.logger.Verbose("ack by lib..")
 		err := delivery.Accept()
 		if err != nil {
 			w.logger.Verbose("error: " + err.Message)
@@ -311,10 +310,8 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 
 	// run callback
 	if w.syncMode {
-		w.logger.Verbose("sync callback...")
 		w.deliveryCallback(w, delivery)
 	} else {
-		w.logger.Verbose("async callback...")
 		go w.deliveryCallback(w, delivery)
 	}
 }
