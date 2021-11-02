@@ -147,12 +147,11 @@ func (r *RMQWorker) reconnect(callback connFunc, connectionDescription string) {
 					r.getLogWorkerName()+" connection timeout",
 				))
 			}
+			if isConnected {
+				return
+			}
 			time.Sleep(reconnectAfterSeconds * time.Second)
 
-		}
-
-		if isConnected {
-			return
 		}
 
 		errMsg := "failed to connect to " +

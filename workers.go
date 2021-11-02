@@ -130,19 +130,32 @@ func (w *RMQWorker) Serve() {
 
 // HandleReconnect - reconnect to RMQ delivery (messages)
 func (w *RMQWorker) HandleReconnect() {
-	w.reconnect(w.Subscribe, w.data.Name)
+	w.logger.Verbose("reconnect..")
+	w.reconnect(w.openConnection, w.data.Name)
+
+	w.logger.Verbose("subscribe..")
+	err := w.Subscribe()
+	if err != nil {
+		w.logError(err)
+	}
+
+	w.logger.Verbose("listen..")
 	w.Listen()
+}
+
+func (w *RMQWorker) openConnection() APIError {
+	w.logger.Verbose("open RMQ connection..")
+	return checkRMQConnection(
+		w.connections.RMQConn,
+		w.connectionData,
+		w.connections.RMQChannel,
+		w.logger,
+	)
 }
 
 // Subscribe to RMQ messages
 func (w *RMQWorker) Subscribe() APIError {
-	var err error
 	var aErr APIError
-	aErr = checkRMQConnection(w.connections.RMQConn, w.connectionData, w.connections.RMQChannel, w.logger)
-	if aErr != nil {
-		return aErr
-	}
-
 	if w.connections.RMQChannel == nil {
 		// channel not created but connection is active
 		// create new channel
@@ -151,6 +164,8 @@ func (w *RMQWorker) Subscribe() APIError {
 			return aErr
 		}
 	}
+
+	var err error
 	w.channels.RMQMessages, err = w.connections.RMQChannel.Consume(
 		w.data.QueueName, // queue
 		"",               // consumer. "" > generate random ID
@@ -260,28 +275,34 @@ func (w *RMQWorker) Listen() {
 }
 
 func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
+	w.logger.Verbose("new rmq message found")
 	// create delivery handler
 	delivery := NewRMQDeliveryHandler(rmqDelivery)
 
 	// auto accept message if needed
 	if w.data.AutoAckByLib {
+		w.logger.Verbose("ack by lib..")
 		err := delivery.Accept()
 		if err != nil {
+			w.logger.Verbose("error: " + err.Message)
 			w.logError(err)
 			return
 		}
 	}
 
 	// check response error
+	w.logger.Verbose("check message errors")
 	if w.data.CheckResponseErrors {
 		aErr := delivery.CheckResponseError()
 		if aErr != nil {
+			w.logger.Verbose("message error: " + aErr.Message)
 			w.logError(aErr)
 			return
 		}
 	}
 
 	// callback
+	w.logger.Verbose("run callback..")
 	if w.deliveryCallback == nil {
 		w.logInfo("callback is not set")
 		w.logError(constants.Error("DATA_HANDLE_ERR", "rmq worker message callback is nil"))
@@ -289,13 +310,16 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 
 	// run callback
 	if w.syncMode {
+		w.logger.Verbose("sync callback...")
 		w.deliveryCallback(w, delivery)
 	} else {
+		w.logger.Verbose("async callback...")
 		go w.deliveryCallback(w, delivery)
 	}
 }
 
 func (w *RMQWorker) timeIsUp() {
+	w.logger.Verbose("time is up")
 	w.Stop()
 	w.cronHandler.Stop()
 	w.timeoutCallback(w)
