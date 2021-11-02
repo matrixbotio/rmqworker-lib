@@ -88,13 +88,10 @@ func checkRMQConnection(RMQConn *amqp.Connection, connData RMQConnectionData, ch
 		return err
 	}
 
-	var connectionCloseReceiver chan *amqp.Error
-	conn.NotifyClose(connectionCloseReceiver)
-	go handleNotifyClose(connectionCloseReceiver, RMQConn, connData, channel, logger)
-
-	var channelCloseReceiver chan *amqp.Error
-	channel.NotifyClose(channelCloseReceiver)
-	go handleNotifyClose(channelCloseReceiver, RMQConn, connData, channel, logger)
+	var closeReceiver chan *amqp.Error
+	conn.NotifyClose(closeReceiver)
+	channel.NotifyClose(closeReceiver)
+	go handleNotifyClose(closeReceiver, RMQConn, connData, channel, logger)
 
 	RMQConn = conn
 	channel, err = openRMQChannel(conn)
@@ -127,6 +124,7 @@ func handleNotifyClose(receiver chan *amqp.Error, conn *amqp.Connection, connDat
 			channel = newChannel
 		}
 	}
+	logger.Log("handleNotifyClose: sorry, i'm out")
 }
 
 type connFunc func() APIError
