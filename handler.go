@@ -10,18 +10,30 @@ import (
 
 // RMQHandler - RMQ connection handler
 type RMQHandler struct {
-	ConnectionData RMQConnectionData
-	RMQConn        *amqp.Connection
-	RMQChannel     *amqp.Channel
-	Logger         *constants.Logger
-	Cron           *simplecron.CronObject
+	Connections handlerConnections
+	Logger      *constants.Logger
+	Cron        *simplecron.CronObject
+}
+
+type handlerConnections struct {
+	Data RMQConnectionData
+
+	Publish connectionPair // connection & channel for publish messages
+	Consume connectionPair // connection & channel for consume messages
+}
+
+type connectionPair struct {
+	Conn    *amqp.Connection
+	Channel *amqp.Channel
 }
 
 // NewRMQHandler - create new RMQHandler
 func NewRMQHandler(connData RMQConnectionData, logger ...*constants.Logger) (*RMQHandler, APIError) {
 	// create handler
 	r := RMQHandler{
-		ConnectionData: connData,
+		Connections: handlerConnections{
+			Data: connData,
+		},
 	}
 
 	// assign logger
@@ -39,7 +51,7 @@ func NewRMQHandler(connData RMQConnectionData, logger ...*constants.Logger) (*RM
 
 	// run cron for check connection & channel
 	r.Cron = simplecron.NewCronHandler(
-		r.checkConnection,
+		r.checkConnections,
 		time.Minute*cronConnectionCheckTimeout,
 	)
 	go r.Cron.Run()
@@ -49,7 +61,14 @@ func NewRMQHandler(connData RMQConnectionData, logger ...*constants.Logger) (*RM
 
 func (r *RMQHandler) recreateConnection() APIError {
 	var err APIError
-	r.RMQConn, r.RMQChannel, err = r.openConnectionNChannel()
+	// set connections for publish messages
+	r.Connections.Publish.Conn, r.Connections.Publish.Channel, err = r.openConnectionNChannel()
+	if err != nil {
+		return err
+	}
+
+	// set connections for consume messages
+	r.Connections.Consume.Conn, r.Connections.Consume.Channel, err = r.openConnectionNChannel()
 	return err
 }
 
@@ -58,9 +77,15 @@ func (r *RMQHandler) NewRMQHandler() (*RMQHandler, APIError) {
 	handlerRoot := *r
 	newHandler := handlerRoot
 
-	// open new channel
+	// open new channel for publish
 	var err APIError
-	newHandler.RMQChannel, err = openRMQChannel(newHandler.RMQConn)
+	newHandler.Connections.Publish.Channel, err = openRMQChannel(newHandler.Connections.Publish.Conn)
+	if err != nil {
+		return nil, err
+	}
+
+	// & consume messages
+	newHandler.Connections.Consume.Channel, err = openRMQChannel(newHandler.Connections.Publish.Conn)
 	if err != nil {
 		return nil, err
 	}
@@ -68,9 +93,13 @@ func (r *RMQHandler) NewRMQHandler() (*RMQHandler, APIError) {
 	return &newHandler, nil
 }
 
-func (r *RMQHandler) checkConnection() {
-	if r.RMQConn.IsClosed() {
-		r.Logger.Verbose("connection is closed, open new..")
+func (r *RMQHandler) checkConnections() {
+	if r.Connections.Publish.Conn.IsClosed() {
+		r.Logger.Verbose("connection (publish conn) is closed, open new..")
+		r.recreateConnection()
+	}
+	if r.Connections.Consume.Conn.IsClosed() {
+		r.Logger.Verbose("connection (consume conn) is closed, open new..")
 		r.recreateConnection()
 	}
 }

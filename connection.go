@@ -45,7 +45,7 @@ func rmqConnect(connData RMQConnectionData) (*amqp.Connection, APIError) {
 // openConnectionNChannel - open new RMQ connection & channel
 func (r *RMQHandler) openConnectionNChannel() (*amqp.Connection, *amqp.Channel, APIError) {
 	// get connection
-	conn, err := rmqConnect(r.ConnectionData)
+	conn, err := rmqConnect(r.Connections.Data)
 	if err != nil {
 		return nil, nil, err
 	}

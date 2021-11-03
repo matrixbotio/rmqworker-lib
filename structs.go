@@ -22,9 +22,9 @@ type RMQConnectionData struct {
 
 // RMQWorker - just RMQ worker
 type RMQWorker struct {
-	connectionData RMQConnectionData
 	data           rmqWorkerData
-	connections    rmqWorkerConnections
+	consumeChannel *amqp.Channel
+	connections    *handlerConnections
 	channels       rmqWorkerChannels
 	paused         bool
 	syncMode       bool
@@ -102,11 +102,6 @@ type rmqWorkerData struct {
 	// optional params
 	ID          string // worker ID for logs
 	ConsumerTag string // empty -> random ID
-}
-
-type rmqWorkerConnections struct {
-	RMQConn    *amqp.Connection
-	RMQChannel *amqp.Channel //channel for worker
 }
 
 type rmqWorkerChannels struct {

@@ -29,7 +29,7 @@ func (r *RMQHandler) rmqExchangeDeclare(RMQChannel *amqp.Channel, exchangeName, 
 // exchange name -> exchange type
 func (r *RMQHandler) DeclareExchanges(exchangeTypes map[string]string) APIError {
 	for exchangeName, exchangeType := range exchangeTypes {
-		err := r.rmqExchangeDeclare(r.RMQChannel, exchangeName, exchangeType)
+		err := r.rmqExchangeDeclare(r.Connections.Publish.Channel, exchangeName, exchangeType)
 		if err != nil {
 			return err
 		}
