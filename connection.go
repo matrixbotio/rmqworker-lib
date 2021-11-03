@@ -68,7 +68,7 @@ func openRMQChannel(conn *amqp.Connection) (*amqp.Channel, APIError) {
 			"failed to get amqp channel: "+rmqErr.Error(),
 		)
 	}
-	err := channel.Qos(0, 0, false)
+	err := channel.Qos(1, 0, false)
 	if err != nil {
 		return nil, constants.Error(
 			"SERVICE_REQ_FAILED",
