@@ -85,7 +85,7 @@ func (r *RMQHandler) NewRMQHandler() (*RMQHandler, APIError) {
 	}
 
 	// & consume messages
-	newHandler.Connections.Consume.Channel, err = openRMQChannel(newHandler.Connections.Publish.Conn)
+	newHandler.Connections.Consume.Channel, err = openRMQChannel(newHandler.Connections.Consume.Conn)
 	if err != nil {
 		return nil, err
 	}
