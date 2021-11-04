@@ -46,23 +46,33 @@ func (r *RMQHandler) rmqQueueBind(RMQChannel *amqp.Channel, fromExchangeName, to
 // RMQQueueDeclareAndBind - declare queue & bind to exchange
 func (r *RMQHandler) RMQQueueDeclareAndBind(task RMQQueueDeclareTask) APIError {
 	// declare
-	err := r.rmqQueueDeclare(r.RMQChannel, task.QueueName, task.Durable, task.AutoDelete)
+	err := r.rmqQueueDeclare(
+		r.Connections.Publish.Channel, // channel
+		task.QueueName,                // queue name
+		task.Durable,                  // is queue durable
+		task.AutoDelete,               // auto-delete queue on consumer quit
+	)
 	if err != nil {
 		return err
 	}
 
 	// bind
-	return r.rmqQueueBind(r.RMQChannel, task.FromExchangeName, task.QueueName, task.RoutingKey)
+	return r.rmqQueueBind(
+		r.Connections.Publish.Channel, // channel
+		task.FromExchangeName,         // exchange name
+		task.QueueName,                // queue name
+		task.RoutingKey,               // routing key
+	)
 }
 
 // DeclareQueues - declare RMQ exchanges list
 func (r *RMQHandler) DeclareQueues(queues []string) APIError {
 	for _, queueName := range queues {
 		err := r.rmqQueueDeclare(
-			r.RMQChannel, // RMQ channel
-			queueName,    // queue name
-			true,         // durable
-			false,        // auto-delete
+			r.Connections.Publish.Channel, // RMQ channel
+			queueName,                     // queue name
+			true,                          // durable
+			false,                         // auto-delete
 		)
 		if err != nil {
 			return err
@@ -76,7 +86,7 @@ func (r *RMQHandler) DeclareQueues(queues []string) APIError {
 func (r *RMQHandler) DeleteQueues(queueNames map[string][]string) APIError {
 	for managerName, queueNames := range queueNames {
 		for _, queueName := range queueNames {
-			_, err := r.RMQChannel.QueueDelete(
+			_, err := r.Connections.Publish.Channel.QueueDelete(
 				queueName, // queue name
 				false,     // if unused
 				false,     // if empty

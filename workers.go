@@ -15,30 +15,29 @@ func (r *RMQHandler) NewRMQWorker(
 	QueueName string,
 	callback RMQDeliveryCallback,
 ) (*RMQWorker, APIError) {
-	var err APIError
-	var wChannel *amqp.Channel
-	if r.RMQConn.IsClosed() {
+	if r.Connections.Publish.Conn.IsClosed() {
 		// open new connection
-		wChannel, err = openRMQChannel(r.RMQConn)
+		err := r.recreateConnection()
 		if err != nil {
 			return nil, err
 		}
-	} else {
-		wChannel = r.RMQChannel
+	}
+
+	// open channel for worker
+	wChannel, err := openRMQChannel(r.Connections.Consume.Conn)
+	if err != nil {
+		return nil, err
 	}
 
 	w := RMQWorker{
-		connectionData: r.ConnectionData,
 		data: rmqWorkerData{
 			Name:                "rmq worker",
 			QueueName:           QueueName,
 			AutoAckByLib:        true,
 			CheckResponseErrors: true,
 		},
-		connections: rmqWorkerConnections{
-			RMQConn:    r.RMQConn,
-			RMQChannel: wChannel,
-		},
+		consumeChannel: wChannel,
+		connections:    &r.Connections,
 		channels: rmqWorkerChannels{
 			RMQMessages: make(<-chan amqp.Delivery),
 			OnFinished:  make(chan struct{}, 1),
@@ -145,29 +144,29 @@ func (w *RMQWorker) HandleReconnect() {
 }
 
 func (w *RMQWorker) openConnection() APIError {
-	w.logger.Verbose("open RMQ connection..")
+	w.logger.Verbose("check RMQ connection..")
 	return checkRMQConnection(
-		w.connections.RMQConn,
-		w.connectionData,
-		w.connections.RMQChannel,
-		w.logger,
+		w.connections.Consume.Conn, // current connection
+		w.connections.Data,         // data for new connection
+		w.consumeChannel,           // current channel
+		w.logger,                   // logger
 	)
 }
 
 // Subscribe to RMQ messages
 func (w *RMQWorker) Subscribe() APIError {
 	var aErr APIError
-	if w.connections.RMQChannel == nil {
+	if w.consumeChannel == nil {
 		// channel not created but connection is active
 		// create new channel
-		w.connections.RMQChannel, aErr = openRMQChannel(w.connections.RMQConn)
+		w.consumeChannel, aErr = openRMQChannel(w.connections.Consume.Conn)
 		if aErr != nil {
 			return aErr
 		}
 	}
 
 	var err error
-	w.channels.RMQMessages, err = w.connections.RMQChannel.Consume(
+	w.channels.RMQMessages, err = w.consumeChannel.Consume(
 		w.data.QueueName, // queue
 		"",               // consumer. "" > generate random ID
 		false,            // auto-ack by RMQ service
@@ -184,7 +183,7 @@ func (w *RMQWorker) Subscribe() APIError {
 		w.logError(e)
 		// reopen channel
 		var rErr APIError
-		w.connections.RMQChannel, rErr = openRMQChannel(w.connections.RMQConn)
+		w.consumeChannel, rErr = openRMQChannel(w.connections.Consume.Conn)
 		if rErr != nil {
 			return rErr
 		}

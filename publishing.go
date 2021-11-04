@@ -30,7 +30,7 @@ func (r *RMQHandler) RMQPublishToQueue(task RMQPublishRequestTask) APIError {
 		return err
 	}
 
-	rmqErr := r.RMQChannel.Publish(
+	rmqErr := r.Connections.Publish.Channel.Publish(
 		"",             // exchange
 		task.QueueName, // queue
 		false,          // mandatory
@@ -44,7 +44,7 @@ func (r *RMQHandler) RMQPublishToQueue(task RMQPublishRequestTask) APIError {
 		},
 	)
 	if rmqErr != nil {
-		r.RMQChannel, err = openRMQChannel(r.RMQConn)
+		r.Connections.Publish.Channel, err = openRMQChannel(r.Connections.Publish.Conn)
 		if err != nil {
 			r.Logger.Warn(convertRMQError(err))
 		}
@@ -95,13 +95,18 @@ func (r *RMQHandler) SendRMQResponse(
 	}
 
 	// check RMQ connection
-	err := checkRMQConnection(r.RMQConn, r.ConnectionData, r.RMQChannel, r.Logger)
+	err := checkRMQConnection(
+		r.Connections.Publish.Conn,    // connection
+		r.Connections.Data,            // data for new connections
+		r.Connections.Publish.Channel, // channel
+		r.Logger,                      // logger
+	)
 	if err != nil {
 		return err
 	}
 
 	// push result to rmq
-	rmqErr := r.RMQChannel.Publish(
+	rmqErr := r.Connections.Publish.Channel.Publish(
 		task.ExchangeName,       // exchange
 		task.ResponseRoutingKey, // routing key
 		false,                   // mandatory
@@ -113,7 +118,7 @@ func (r *RMQHandler) SendRMQResponse(
 			CorrelationId: task.CorrelationID,
 		})
 	if rmqErr != nil {
-		r.RMQChannel, err = openRMQChannel(r.RMQConn)
+		r.Connections.Publish.Channel, err = openRMQChannel(r.Connections.Publish.Conn)
 		if err != nil {
 			r.Logger.Warn(convertRMQError(err))
 		}
@@ -134,7 +139,7 @@ func (r *RMQHandler) RMQPublishToExchange(message interface{}, exchangeName, rou
 	}
 
 	// publish message
-	rmqErr := r.RMQChannel.Publish(
+	rmqErr := r.Connections.Publish.Channel.Publish(
 		exchangeName, // exchange
 		routingKey,   // routing key
 		false,        // mandatory
@@ -144,7 +149,7 @@ func (r *RMQHandler) RMQPublishToExchange(message interface{}, exchangeName, rou
 			Body:        jsonBytes,
 		})
 	if rmqErr != nil {
-		r.RMQChannel, err = openRMQChannel(r.RMQConn)
+		r.Connections.Publish.Channel, err = openRMQChannel(r.Connections.Publish.Conn)
 		if err != nil {
 			r.Logger.Warn(convertRMQError(err))
 		}
