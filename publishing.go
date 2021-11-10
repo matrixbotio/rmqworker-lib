@@ -7,16 +7,6 @@ import (
 	"github.com/streadway/amqp"
 )
 
-// RMQPublishInterfaceToQueue - another version of rmqPublishToQueue. use `message` instead of `task.MessageBody`
-func (r *RMQHandler) RMQPublishInterfaceToQueue(task RMQPublishRequestTask, message interface{}) APIError {
-	var err APIError
-	task.MessageBody, err = encodeMessage(message)
-	if err != nil {
-		return err
-	}
-	return r.RMQPublishToQueue(task)
-}
-
 // RMQPublishToQueue - send request to rmq queue
 func (r *RMQHandler) RMQPublishToQueue(task RMQPublishRequestTask) APIError {
 	headers := amqp.Table{}
