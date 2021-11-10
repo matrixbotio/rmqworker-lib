@@ -109,3 +109,7 @@ type rmqWorkerChannels struct {
 	OnFinished  chan struct{}
 	StopCh      chan struct{}
 }
+
+type consumerChannel struct {
+	channel *amqp.Channel
+}

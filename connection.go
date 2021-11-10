@@ -2,15 +2,41 @@ package rmqworker
 
 import (
 	"crypto/tls"
-	"strconv"
 	"time"
 
 	"github.com/matrixbotio/constants-lib"
-	simplecron "github.com/sagleft/simple-cron"
 	"github.com/streadway/amqp"
 )
 
-func rmqConnect(connData RMQConnectionData) (*amqp.Connection, APIError) {
+// openConnectionNChannel - open new RMQ connection & channel
+func openConnectionNChannel(conn *amqp.Connection, conData RMQConnectionData, logger *constants.Logger, consumeFunc func(channel *amqp.Channel)) (*amqp.Connection, *amqp.Channel, APIError) {
+	// get connection
+	if conn == nil || conn.IsClosed() {
+		var err APIError
+		conn, err = rmqConnect(conData, logger)
+		if err != nil {
+			return nil, nil, err
+		}
+		connCloseReceiver := make(chan *amqp.Error)
+		conn.NotifyClose(connCloseReceiver)
+		go handleNotifyClose(connCloseReceiver, conn, conData, logger, consumeFunc)
+	}
+
+	// get channel
+	channel, err := openRMQChannel(conn, consumeFunc)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	channelCloseReceiver := make(chan *amqp.Error)
+	channel.NotifyClose(channelCloseReceiver)
+	go handleNotifyClose(channelCloseReceiver, conn, conData, logger, consumeFunc)
+
+	return conn, channel, nil
+}
+
+// rmqConnect - open new RMQ connection
+func rmqConnect(connData RMQConnectionData, logger *constants.Logger) (*amqp.Connection, APIError) {
 	var conn *amqp.Connection
 	var err error
 	var useTLS bool = true
@@ -39,28 +65,12 @@ func rmqConnect(connData RMQConnectionData) (*amqp.Connection, APIError) {
 			"Failed to connect to RabbitMQ: "+err.Error(),
 		)
 	}
+
 	return conn, nil
 }
 
-// openConnectionNChannel - open new RMQ connection & channel
-func (r *RMQHandler) openConnectionNChannel() (*amqp.Connection, *amqp.Channel, APIError) {
-	// get connection
-	conn, err := rmqConnect(r.Connections.Data)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// get channel
-	channel, err := openRMQChannel(conn)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return conn, channel, nil
-}
-
 // openRMQChannel - open new RMQ channel
-func openRMQChannel(conn *amqp.Connection) (*amqp.Channel, APIError) {
+func openRMQChannel(conn *amqp.Connection, consumeFunc func(channel *amqp.Channel)) (*amqp.Channel, APIError) {
 	channel, rmqErr := conn.Channel()
 	if rmqErr != nil {
 		return nil, constants.Error(
@@ -75,100 +85,29 @@ func openRMQChannel(conn *amqp.Connection) (*amqp.Channel, APIError) {
 			"failed to set up QOS: "+err.Error(),
 		)
 	}
+
+	if consumeFunc != nil {
+		consumeFunc(channel)
+	}
+
 	return channel, nil
 }
 
-// checkRMQConnection - check RMQ connection is active. open new connection if inactive
-func checkRMQConnection(RMQConn *amqp.Connection, connData RMQConnectionData, channel *amqp.Channel, logger *constants.Logger) APIError {
-	if !RMQConn.IsClosed() {
-		return nil
-	}
-	conn, err := rmqConnect(connData)
-	if err != nil {
-		return err
-	}
-	var receiver chan *amqp.Error
-	conn.NotifyClose(receiver)
-	go handleNotifyClose(receiver, RMQConn, connData, channel, logger)
-
-	RMQConn = conn
-	channel, err = openRMQChannel(conn)
-	if err != nil {
-		return err
-	}
-
-	if channel == nil {
-		return constants.Error(
-			"BASE_INTERNAL_ERROR",
-			"failed to open new rmq channel, new channel is nil",
-		)
-	}
-	return nil
-}
-
-func handleNotifyClose(receiver chan *amqp.Error, conn *amqp.Connection, connData RMQConnectionData, channel *amqp.Channel, logger *constants.Logger) {
+// handleNotifyClose - reconnect when connection is closed
+func handleNotifyClose(receiver chan *amqp.Error, conn *amqp.Connection, connData RMQConnectionData, logger *constants.Logger, consumeFunc func(channel *amqp.Channel)) {
 	for closeError := range receiver {
-		logger.Error("RMQ connection/channel close: " + closeError.Error())
-		if conn.IsClosed() {
-			err := checkRMQConnection(conn, connData, channel, logger)
-			if err != nil {
-				logger.Error("Error checking RMQ connection on close notification: " + err.Message)
+		logger.Error("RMQ connection closed: " + closeError.Error())
+		for {
+			var err APIError
+			// TODO: synchronize
+			conn, _, err = openConnectionNChannel(conn, connData, logger, consumeFunc)
+			if err == nil {
+				logger.Log("RMQ connection/channel recovered")
+				break
+			} else {
+				logger.Error("Exception while trying to recover RMQ connection/channel: " + err.Message)
+				time.Sleep(5 * time.Second)
 			}
-		} else {
-			newChannel, err := openRMQChannel(conn)
-			if err != nil {
-				logger.Error("Error opening new channel on close notification" + err.Message)
-			}
-			channel = newChannel
 		}
-	}
-}
-
-type connFunc func() APIError
-
-func (r *RMQWorker) reconnect(callback connFunc, connectionDescription string) {
-	isConnected := false
-	for !isConnected {
-		for i := 0; i < reconnectionAttemptsNumber; i++ {
-
-			isTimeIsUP := simplecron.NewRuntimeLimitHandler(
-				reconnectionTimeout*time.Second,
-				func() {
-					err := callback()
-					if err == nil {
-						// connection established
-						isConnected = true
-						return
-					}
-					if err.Name == "DATA_EXISTS" {
-						// connection is open
-						isConnected = true
-						return
-					}
-					r.logger.Warn(convertRMQError(err))
-				},
-			).Run()
-			if isTimeIsUP {
-				r.logger.Warn(constants.Error(
-					"SERVICE_CONN_ERR",
-					r.getLogWorkerName()+" connection timeout",
-				))
-			}
-			if isConnected {
-				return
-			}
-			time.Sleep(reconnectAfterSeconds * time.Second)
-
-		}
-
-		errMsg := "failed to connect to " +
-			connectionDescription + " after " +
-			strconv.Itoa(reconnectionAttemptsNumber) + " attempts"
-
-		r.logger.Error(constants.Error("SERVICE_CONN_ERR", errMsg))
-
-		sleepDuration := time.Second * waitingBetweenAttempts
-		r.logger.Verbose("wait " + sleepDuration.String() + " between attempts...")
-		time.Sleep(sleepDuration)
 	}
 }

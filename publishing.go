@@ -44,10 +44,6 @@ func (r *RMQHandler) RMQPublishToQueue(task RMQPublishRequestTask) APIError {
 		},
 	)
 	if rmqErr != nil {
-		r.Connections.Publish.Channel, err = openRMQChannel(r.Connections.Publish.Conn)
-		if err != nil {
-			r.Logger.Warn(convertRMQError(err))
-		}
 		return constants.Error(
 			"SERVICE_REQ_FAILED",
 			"failed to push event to rmq queue: "+rmqErr.Error(),
@@ -94,17 +90,6 @@ func (r *RMQHandler) SendRMQResponse(
 		contentType = "text/plain"
 	}
 
-	// check RMQ connection
-	err := checkRMQConnection(
-		r.Connections.Publish.Conn,    // connection
-		r.Connections.Data,            // data for new connections
-		r.Connections.Publish.Channel, // channel
-		r.Logger,                      // logger
-	)
-	if err != nil {
-		return err
-	}
-
 	// push result to rmq
 	rmqErr := r.Connections.Publish.Channel.Publish(
 		task.ExchangeName,       // exchange
@@ -118,10 +103,6 @@ func (r *RMQHandler) SendRMQResponse(
 			CorrelationId: task.CorrelationID,
 		})
 	if rmqErr != nil {
-		r.Connections.Publish.Channel, err = openRMQChannel(r.Connections.Publish.Conn)
-		if err != nil {
-			r.Logger.Warn(convertRMQError(err))
-		}
 		return constants.Error(
 			"SERVICE_REQ_FAILED",
 			"failed to push rmq response: "+rmqErr.Error(),
@@ -149,10 +130,6 @@ func (r *RMQHandler) RMQPublishToExchange(message interface{}, exchangeName, rou
 			Body:        jsonBytes,
 		})
 	if rmqErr != nil {
-		r.Connections.Publish.Channel, err = openRMQChannel(r.Connections.Publish.Conn)
-		if err != nil {
-			r.Logger.Warn(convertRMQError(err))
-		}
 		return constants.Error(
 			"SERVICE_REQ_FAILED",
 			"failed to push message to exchange: "+rmqErr.Error(),

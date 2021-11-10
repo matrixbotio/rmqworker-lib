@@ -17,14 +17,17 @@ func (r *RMQHandler) NewRMQWorker(
 ) (*RMQWorker, APIError) {
 	if r.Connections.Publish.Conn.IsClosed() {
 		// open new connection
-		err := r.recreateConnection()
+		err := r.openConnectionsAndChannels()
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	// open channel for worker
-	wChannel, err := openRMQChannel(r.Connections.Consume.Conn)
+	var wChannel *amqp.Channel
+	var err APIError
+	r.Connections.Consume.Conn, wChannel, err = openConnectionNChannel(r.Connections.Consume.Conn, r.Connections.Data,
+		r.Logger, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -125,14 +128,6 @@ func (w *RMQWorker) getLogWorkerName() string {
 
 // Serve - listen RMQ messages
 func (w *RMQWorker) Serve() {
-	w.HandleReconnect()
-}
-
-// HandleReconnect - reconnect to RMQ delivery (messages)
-func (w *RMQWorker) HandleReconnect() {
-	w.logger.Verbose("reconnect..")
-	w.reconnect(w.openConnection, w.data.Name)
-
 	w.logger.Verbose("subscribe..")
 	err := w.Subscribe()
 	if err != nil {
@@ -143,50 +138,36 @@ func (w *RMQWorker) HandleReconnect() {
 	w.Listen()
 }
 
-func (w *RMQWorker) openConnection() APIError {
-	w.logger.Verbose("check RMQ connection..")
-	return checkRMQConnection(
-		w.connections.Consume.Conn, // current connection
-		w.connections.Data,         // data for new connection
-		w.consumeChannel,           // current channel
-		w.logger,                   // logger
-	)
-}
-
 // Subscribe to RMQ messages
 func (w *RMQWorker) Subscribe() APIError {
 	var aErr APIError
-	if w.consumeChannel == nil {
-		// channel not created but connection is active
-		// create new channel
-		w.consumeChannel, aErr = openRMQChannel(w.connections.Consume.Conn)
-		if aErr != nil {
-			return aErr
+
+	var consumeFunc = func(channel *amqp.Channel) {
+		var err error
+		w.channels.RMQMessages, err = channel.Consume(
+			w.data.QueueName, // queue
+			"",               // consumer. "" > generate random ID
+			false,            // auto-ack by RMQ service
+			false,            // exclusive
+			false,            // no-local
+			false,            // no-wait
+			nil,              // args
+		)
+		if err != nil {
+			e := constants.Error(
+				"SERVICE_REQ_FAILED",
+				"failed to consume rmq worker messages: "+err.Error(),
+			)
+			w.logError(e)
 		}
 	}
 
-	var err error
-	w.channels.RMQMessages, err = w.consumeChannel.Consume(
-		w.data.QueueName, // queue
-		"",               // consumer. "" > generate random ID
-		false,            // auto-ack by RMQ service
-		false,            // exclusive
-		false,            // no-local
-		false,            // no-wait
-		nil,              // args
-	)
-	if err != nil {
-		e := constants.Error(
-			"SERVICE_REQ_FAILED",
-			"failed to consume rmq worker messages: "+err.Error()+". reopen channel...",
-		)
-		w.logError(e)
-		// reopen channel
-		var rErr APIError
-		w.consumeChannel, rErr = openRMQChannel(w.connections.Consume.Conn)
-		if rErr != nil {
-			return rErr
-		}
+	// channel not created but connection is active
+	// create new channel
+	w.connections.Consume.Conn, w.consumeChannel, aErr = openConnectionNChannel(w.connections.Consume.Conn,
+		w.connections.Data, w.logger, consumeFunc)
+	if aErr != nil {
+		return aErr
 	}
 	return nil
 }
@@ -271,6 +252,8 @@ func (w *RMQWorker) Listen() {
 			}
 			w.handleRMQMessage(rmqDelivery)
 		}
+		w.logger.Verbose("Stopped listening messages: chan is closed")
+		time.Sleep(5 * time.Second)
 	}
 }
 
