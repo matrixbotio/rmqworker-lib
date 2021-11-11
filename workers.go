@@ -355,6 +355,11 @@ func (r *RMQHandler) NewRMQMonitoringWorker(task RMQMonitoringWorkerTask) (*RMQM
 		w.Worker.SetTimeout(task.Timeout, task.TimeoutCallback)
 	}
 
+	// setup worker
+	if task.WorkerName != "" {
+		w.Worker.SetName(task.WorkerName)
+	}
+
 	// run worker
 	go w.Worker.Serve()
 	return &w, nil
