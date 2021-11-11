@@ -15,6 +15,7 @@ import (
 func (r *RMQHandler) NewRMQWorker(
 	QueueName string,
 	callback RMQDeliveryCallback,
+	workerName ...string,
 ) (*RMQWorker, APIError) {
 	if r.Connections.Publish.Conn.IsClosed() {
 		// open new connection
@@ -33,9 +34,15 @@ func (r *RMQHandler) NewRMQWorker(
 		return nil, err
 	}
 
+	// set worker name
+	name := "rmq worker"
+	if len(workerName) > 0 {
+		name = workerName[0]
+	}
+
 	w := RMQWorker{
 		data: rmqWorkerData{
-			Name:                "rmq worker",
+			Name:                name,
 			QueueName:           QueueName,
 			AutoAckByLib:        true,
 			CheckResponseErrors: true,
