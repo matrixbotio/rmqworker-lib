@@ -2,6 +2,7 @@ package rmqworker
 
 import (
 	"log"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -252,8 +253,9 @@ func (w *RMQWorker) Listen() {
 			}
 			w.handleRMQMessage(rmqDelivery)
 		}
-		w.logger.Verbose("Stopped listening messages: chan is closed")
-		time.Sleep(5 * time.Second)
+		w.logger.Verbose("The message cycle has ended. Params: `await messages` = " + strconv.FormatBool(w.awaitMessages))
+		w.logger.Verbose("Sleep " + strconv.Itoa(waitingBetweenMsgSubscription) + " seconds to subscription to new messages")
+		time.Sleep(waitingBetweenMsgSubscription * time.Second)
 	}
 }
 
