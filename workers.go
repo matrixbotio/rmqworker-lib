@@ -70,7 +70,7 @@ func (w *RMQWorker) logWarn(err *constants.APIError) {
 	}
 }
 
-func (w *RMQWorker) logInfo(message string) {
+func (w *RMQWorker) logVerbose(message string) {
 	if w.logger != nil {
 		w.logger.Verbose(w.getLogWorkerName() + message)
 	} else {
@@ -136,13 +136,13 @@ func (w *RMQWorker) getLogWorkerName() string {
 
 // Serve - listen RMQ messages
 func (w *RMQWorker) Serve() {
-	w.logInfo("subscribe..")
+	w.logVerbose("subscribe..")
 	err := w.Subscribe()
 	if err != nil {
 		w.logError(err)
 	}
 
-	w.logInfo("listen..")
+	w.logVerbose("listen..")
 	w.Listen()
 }
 
@@ -188,7 +188,7 @@ func (w *RMQWorker) Stop() {
 	w.channels.StopCh <- struct{}{}
 	w.awaitMessages = false
 	w.channels.OnFinished <- struct{}{}
-	w.logInfo("worker stopped")
+	w.logVerbose("worker stopped")
 }
 
 // Pause RMQ Worker (ignore messages)
@@ -260,14 +260,14 @@ func (w *RMQWorker) Listen() {
 			}
 			w.handleRMQMessage(rmqDelivery)
 		}
-		w.logInfo("The message cycle has ended. Params: `await messages` = " + strconv.FormatBool(w.awaitMessages))
-		w.logInfo("Sleep " + strconv.Itoa(waitingBetweenMsgSubscription) + " seconds to subscription to new messages")
+		w.logVerbose("The message cycle has ended. Params: `await messages` = " + strconv.FormatBool(w.awaitMessages))
+		w.logVerbose("Sleep " + strconv.Itoa(waitingBetweenMsgSubscription) + " seconds to subscription to new messages")
 		time.Sleep(waitingBetweenMsgSubscription * time.Second)
 	}
 }
 
 func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
-	w.logInfo("new rmq message found")
+	w.logVerbose("new rmq message found")
 	// create delivery handler
 	delivery := NewRMQDeliveryHandler(rmqDelivery)
 
@@ -275,27 +275,27 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 	if w.data.AutoAckByLib {
 		err := delivery.Accept()
 		if err != nil {
-			w.logInfo("error: " + err.Message)
+			w.logVerbose("error: " + err.Message)
 			w.logError(err)
 			return
 		}
 	}
 
 	// check response error
-	w.logInfo("check message errors")
+	w.logVerbose("check message errors")
 	if w.data.CheckResponseErrors {
 		aErr := delivery.CheckResponseError()
 		if aErr != nil {
-			w.logInfo("message error: " + aErr.Message)
+			w.logVerbose("message error: " + aErr.Message)
 			w.logError(aErr)
 			return
 		}
 	}
 
 	// callback
-	w.logInfo("run callback..")
+	w.logVerbose("run callback..")
 	if w.deliveryCallback == nil {
-		w.logInfo("callback is not set")
+		w.logVerbose("callback is not set")
 		w.logError(constants.Error("DATA_HANDLE_ERR", "rmq worker message callback is nil"))
 	}
 
@@ -308,7 +308,7 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 }
 
 func (w *RMQWorker) timeIsUp() {
-	w.logInfo("time is up")
+	w.logVerbose("worker cron: response time is up")
 	w.Stop()
 	w.cronHandler.Stop()
 	w.timeoutCallback(w)
