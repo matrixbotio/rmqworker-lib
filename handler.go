@@ -4,6 +4,7 @@ import (
 	"github.com/matrixbotio/constants-lib"
 	simplecron "github.com/sagleft/simple-cron"
 	"github.com/streadway/amqp"
+	"sync"
 )
 
 // RMQHandler - RMQ connection handler
@@ -21,6 +22,7 @@ type handlerConnections struct {
 }
 
 type connectionPair struct {
+	sync.Mutex
 	Conn    *amqp.Connection
 	Channel *amqp.Channel
 }
@@ -51,12 +53,14 @@ func NewRMQHandler(connData RMQConnectionData, logger ...*constants.Logger) (*RM
 
 func (r *RMQHandler) openConnectionsAndChannels() APIError {
 	var err APIError
-	r.Connections.Publish.Conn, r.Connections.Publish.Channel, err = openConnectionNChannel(nil, r.Connections.Data, r.Logger, nil)
+	r.Connections.Publish.Conn, r.Connections.Publish.Channel, err =
+		openConnectionNChannel(nil, r.Connections.Data, r.Logger, nil)
 	if err != nil {
 		return err
 	}
 
-	r.Connections.Consume.Conn, r.Connections.Consume.Channel, err = openConnectionNChannel(nil, r.Connections.Data, r.Logger, nil)
+	r.Connections.Consume.Conn, r.Connections.Consume.Channel, err =
+		openConnectionNChannel(nil, r.Connections.Data, r.Logger, nil)
 	return err
 }
 

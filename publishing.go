@@ -20,10 +20,10 @@ func (r *RMQHandler) RMQPublishToQueue(task RMQPublishRequestTask) APIError {
 		return err
 	}
 
-	rmqErr := r.Connections.Publish.Channel.Publish(
-		"",             // exchange
-		task.QueueName, // queue
-		false,          // mandatory
+	err = r.publishMessage(
+		"",
+		task.QueueName,
+		false,
 		false,
 		amqp.Publishing{
 			CorrelationId: getUUID(),
@@ -31,14 +31,11 @@ func (r *RMQHandler) RMQPublishToQueue(task RMQPublishRequestTask) APIError {
 			DeliveryMode:  amqp.Persistent,
 			ContentType:   "application/json",
 			Body:          body,
-		},
-	)
-	if rmqErr != nil {
-		return constants.Error(
-			"SERVICE_REQ_FAILED",
-			"failed to push event to rmq queue: "+rmqErr.Error(),
-		)
+		})
+	if err != nil {
+		return err
 	}
+
 	return nil
 }
 
@@ -81,44 +78,51 @@ func (r *RMQHandler) SendRMQResponse(
 	}
 
 	// push result to rmq
-	rmqErr := r.Connections.Publish.Channel.Publish(
-		task.ExchangeName,       // exchange
-		task.ResponseRoutingKey, // routing key
-		false,                   // mandatory
-		false,                   // immediate
+	err := r.publishMessage(
+		task.ExchangeName,
+		task.ResponseRoutingKey,
+		false,
+		false,
 		amqp.Publishing{
 			Headers:       headers,
 			ContentType:   contentType,
 			Body:          responseBody,
 			CorrelationId: task.CorrelationID,
 		})
-	if rmqErr != nil {
-		return constants.Error(
-			"SERVICE_REQ_FAILED",
-			"failed to push rmq response: "+rmqErr.Error(),
-		)
+	if err != nil {
+		return err
 	}
 	return nil
 }
 
 // RMQPublishToExchange - publish message to exchange
 func (r *RMQHandler) RMQPublishToExchange(message interface{}, exchangeName, routingKey string) APIError {
-	// encode message
 	jsonBytes, err := encodeMessage(message)
 	if err != nil {
 		return err
 	}
 
-	// publish message
-	rmqErr := r.Connections.Publish.Channel.Publish(
-		exchangeName, // exchange
-		routingKey,   // routing key
-		false,        // mandatory
-		false,        // immediate
+	err = r.publishMessage(
+		exchangeName,
+		routingKey,
+		false,
+		false,
 		amqp.Publishing{
 			ContentType: "application/json",
 			Body:        jsonBytes,
 		})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *RMQHandler) publishMessage(exchangeName string, key string, mandatory bool, immediate bool,
+	publishing amqp.Publishing) APIError {
+	r.Connections.Publish.Lock()
+	defer r.Connections.Publish.Unlock()
+	rmqErr := r.Connections.Publish.Channel.Publish(exchangeName, key, mandatory, immediate, publishing)
 	if rmqErr != nil {
 		return constants.Error(
 			"SERVICE_REQ_FAILED",
