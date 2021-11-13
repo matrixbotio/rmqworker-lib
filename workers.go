@@ -2,6 +2,7 @@ package rmqworker
 
 import (
 	"log"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -14,6 +15,7 @@ import (
 func (r *RMQHandler) NewRMQWorker(
 	QueueName string,
 	callback RMQDeliveryCallback,
+	workerName ...string,
 ) (*RMQWorker, APIError) {
 	if r.Connections.Publish.Conn.IsClosed() {
 		// open new connection
@@ -32,9 +34,15 @@ func (r *RMQHandler) NewRMQWorker(
 		return nil, err
 	}
 
+	// set worker name
+	name := "rmq worker"
+	if len(workerName) > 0 {
+		name = workerName[0]
+	}
+
 	w := RMQWorker{
 		data: rmqWorkerData{
-			Name:                "rmq worker",
+			Name:                name,
 			QueueName:           QueueName,
 			AutoAckByLib:        true,
 			CheckResponseErrors: true,
@@ -62,7 +70,7 @@ func (w *RMQWorker) logWarn(err *constants.APIError) {
 	}
 }
 
-func (w *RMQWorker) logInfo(message string) {
+func (w *RMQWorker) logVerbose(message string) {
 	if w.logger != nil {
 		w.logger.Verbose(w.getLogWorkerName() + message)
 	} else {
@@ -128,13 +136,13 @@ func (w *RMQWorker) getLogWorkerName() string {
 
 // Serve - listen RMQ messages
 func (w *RMQWorker) Serve() {
-	w.logger.Verbose("subscribe..")
+	w.logVerbose("subscribe..")
 	err := w.Subscribe()
 	if err != nil {
 		w.logError(err)
 	}
 
-	w.logger.Verbose("listen..")
+	w.logVerbose("listen..")
 	w.Listen()
 }
 
@@ -180,7 +188,7 @@ func (w *RMQWorker) Stop() {
 	w.channels.StopCh <- struct{}{}
 	w.awaitMessages = false
 	w.channels.OnFinished <- struct{}{}
-	w.logInfo("worker stopped")
+	w.logVerbose("worker stopped")
 }
 
 // Pause RMQ Worker (ignore messages)
@@ -252,13 +260,14 @@ func (w *RMQWorker) Listen() {
 			}
 			w.handleRMQMessage(rmqDelivery)
 		}
-		w.logger.Verbose("Stopped listening messages: chan is closed")
-		time.Sleep(5 * time.Second)
+		w.logVerbose("The message cycle has ended. Params: `await messages` = " + strconv.FormatBool(w.awaitMessages))
+		w.logVerbose("Sleep " + strconv.Itoa(waitingBetweenMsgSubscription) + " seconds to subscription to new messages")
+		time.Sleep(waitingBetweenMsgSubscription * time.Second)
 	}
 }
 
 func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
-	w.logger.Verbose("new rmq message found")
+	w.logVerbose("new rmq message found")
 	// create delivery handler
 	delivery := NewRMQDeliveryHandler(rmqDelivery)
 
@@ -266,27 +275,27 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 	if w.data.AutoAckByLib {
 		err := delivery.Accept()
 		if err != nil {
-			w.logger.Verbose("error: " + err.Message)
+			w.logVerbose("error: " + err.Message)
 			w.logError(err)
 			return
 		}
 	}
 
 	// check response error
-	w.logger.Verbose("check message errors")
+	w.logVerbose("check message errors")
 	if w.data.CheckResponseErrors {
 		aErr := delivery.CheckResponseError()
 		if aErr != nil {
-			w.logger.Verbose("message error: " + aErr.Message)
+			w.logVerbose("message error: " + aErr.Message)
 			w.logError(aErr)
 			return
 		}
 	}
 
 	// callback
-	w.logger.Verbose("run callback..")
+	w.logVerbose("run callback..")
 	if w.deliveryCallback == nil {
-		w.logInfo("callback is not set")
+		w.logVerbose("callback is not set")
 		w.logError(constants.Error("DATA_HANDLE_ERR", "rmq worker message callback is nil"))
 	}
 
@@ -299,7 +308,7 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 }
 
 func (w *RMQWorker) timeIsUp() {
-	w.logger.Verbose("time is up")
+	w.logVerbose("worker cron: response time is up")
 	w.Stop()
 	w.cronHandler.Stop()
 	w.timeoutCallback(w)
@@ -344,6 +353,11 @@ func (r *RMQHandler) NewRMQMonitoringWorker(task RMQMonitoringWorkerTask) (*RMQM
 	}
 	if task.Timeout > 0 {
 		w.Worker.SetTimeout(task.Timeout, task.TimeoutCallback)
+	}
+
+	// setup worker
+	if task.WorkerName != "" {
+		w.Worker.SetName(task.WorkerName)
 	}
 
 	// run worker
