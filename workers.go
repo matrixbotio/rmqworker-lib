@@ -9,6 +9,15 @@ import (
 	"github.com/streadway/amqp"
 )
 
+/*
+      ,  ,  , , ,
+     <(__)> | | |
+     | \/ | \_|_/  I AM RMQ Worker.
+     \^  ^/   |    I hurt in a hundred ways
+     /\--/\  /|
+jgs /  \/  \/ |
+*/
+
 // NewRMQWorker - create new RMQ worker to receive messages
 func (r *RMQHandler) NewRMQWorker(
 	QueueName string,
@@ -311,6 +320,24 @@ func (w *RMQWorker) SetSyncMode(sync bool) *RMQWorker {
 	w.syncMode = sync
 	return w
 }
+
+/*
+
+             __.-/|
+             \`o_O'  +------------------------------------------------------+
+              =( )=  |        RMQ Monitoring Worker (RMQ-M Worker)          |
+                U|   | I accept responses from exchange to the binded queue |
+      /\  /\   / |   +------------------------------------------------------+
+     ) /^\) ^\/ _)\     |
+     )   /^\/   _) \    |
+     )   _ /  / _)  \___|_
+ /\  )/\/ ||  | )_)\___,|))
+<  >      |(,,) )__)    |
+ ||      /    \)___)\
+ | \____(      )___) )____
+  \______(_______;;;)__;;;)
+
+*/
 
 // NewRMQMonitoringWorker - declare queue, bind to exchange, create worker & run.
 // monitoring worker used for create a queue and receive messages from exchange into it
