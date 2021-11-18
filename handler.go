@@ -1,6 +1,7 @@
 package rmqworker
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/matrixbotio/constants-lib"
@@ -104,9 +105,121 @@ func (r *RMQHandler) checkConnection() {
 
 // RequestHandler used for one-time requests.
 // using RMQ-M worker
-type RequestHandler struct{}
+type RequestHandler struct {
+	RMQH *RMQHandler
+	Task RequestHandlerTask
 
-// NewRequestHandler -
-func NewRequestHandler() *RequestHandler {
-	return &RequestHandler{}
+	WorkerID  string
+	Response  *RequestHandlerResponse
+	LastError *constants.APIError
+}
+
+// RequestHandlerTask data
+type RequestHandlerTask struct {
+	ResponseFromExchangeName string
+	RequestToQueueName       string
+	TempQueueName            string
+
+	WorkerName      string
+	ResponseTimeout time.Duration
+	MessageBody     interface{}
+}
+
+// NewRequestHandler - create new handler for one-time request
+func (r *RMQHandler) NewRequestHandler(task RequestHandlerTask) *RequestHandler {
+	return &RequestHandler{
+		RMQH: r,
+		Task: task,
+	}
+}
+
+// SetID for worker
+func (r *RequestHandler) SetID(id string) *RequestHandler {
+	r.WorkerID = id
+	return r
+}
+
+func (r *RequestHandler) resetLastError() *RequestHandler {
+	r.LastError = nil
+	return r
+}
+
+// Send request (sync)
+func (r *RequestHandler) Send() (*RequestHandlerResponse, APIError) {
+	r.resetLastError()
+	// create RMQ-M worker
+	w, err := r.RMQH.NewRMQMonitoringWorker(RMQMonitoringWorkerTask{
+		QueueName:        r.Task.TempQueueName,
+		ISQueueDurable:   false,
+		ISAutoDelete:     true,
+		FromExchangeName: r.Task.ResponseFromExchangeName,
+		RoutingKey:       r.Task.TempQueueName,
+		Callback:         r.handleMessage,
+		ID:               r.WorkerID,
+		Timeout:          r.Task.ResponseTimeout,
+		TimeoutCallback:  r.handleTimeout,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// send request
+	err = r.RMQH.RMQPublishToQueue(RMQPublishRequestTask{
+		QueueName:          r.Task.RequestToQueueName,
+		ResponseRoutingKey: getUUID(),
+		MessageBody:        r.Task.MessageBody,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// await response
+	w.AwaitFinish()
+
+	// delete temp queue
+	err = r.RMQH.DeleteQueues(map[string][]string{
+		"reqHandler": []string{r.Task.TempQueueName},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// stop connections
+	w.StopConnections()
+
+	// return result
+	return r.Response, nil
+}
+
+// request callback
+func (r *RequestHandler) handleMessage(w *RMQWorker, deliveryHandler RMQDeliveryHandler) {
+	r.Response = &RequestHandlerResponse{
+		ResponseBody: deliveryHandler.GetMessageBody(),
+	}
+	w.Stop()
+}
+
+func (r *RequestHandler) handleTimeout(w *RMQWorker) {
+	r.LastError = constants.Error(
+		"SERVICE_REQ_TIMEOUT",
+		"send RMQ request timeout",
+	)
+	w.Stop()
+}
+
+// RequestHandlerResponse - raw RMQ response data
+type RequestHandlerResponse struct {
+	ResponseBody []byte
+}
+
+// Decode response from JSON. pass pointer to struct or map in `destination`
+func (s *RequestHandlerResponse) Decode(destination interface{}) APIError {
+	err := json.Unmarshal(s.ResponseBody, destination)
+	if err != nil {
+		return constants.Error(
+			"DATA_PARSE_ERR",
+			"failed to decode rmq response as json: "+err.Error(),
+		)
+	}
+	return nil
 }

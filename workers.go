@@ -61,6 +61,11 @@ func (r *RMQHandler) NewRMQWorker(
 	return &w, nil
 }
 
+// StopConnections - force stop worker connections
+func (w *RMQWorker) StopConnections() {
+	w.connections.RMQChannel.Close()
+}
+
 func (w *RMQWorker) logWarn(err *constants.APIError) {
 	if w.logger != nil {
 		err.Message = w.getLogWorkerName() + err.Message
@@ -368,6 +373,9 @@ func (r *RMQHandler) NewRMQMonitoringWorker(task RMQMonitoringWorkerTask) (*RMQM
 	if task.Timeout > 0 {
 		w.Worker.SetTimeout(task.Timeout, task.TimeoutCallback)
 	}
+	if task.WorkerName != "" {
+		w.Worker.SetName(task.WorkerName)
+	}
 
 	// run worker
 	go w.Worker.Serve()
@@ -407,4 +415,9 @@ func (w *RMQMonitoringWorker) GetName() string {
 // GetID - get worker ID
 func (w *RMQMonitoringWorker) GetID() string {
 	return w.Worker.GetID()
+}
+
+// StopConnections - force stop worker connections
+func (w *RMQMonitoringWorker) StopConnections() {
+	w.Worker.StopConnections()
 }

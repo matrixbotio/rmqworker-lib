@@ -80,6 +80,7 @@ type RMQMonitoringWorkerTask struct {
 	ID              string
 	Timeout         time.Duration
 	TimeoutCallback RMQTimeoutCallback
+	WorkerName      string
 }
 
 // RMQDeliveryCallback - RMQ delivery callback function
