@@ -219,9 +219,14 @@ func (r *RequestHandler) handleMessage(w *RMQWorker, deliveryHandler RMQDelivery
 }
 
 func (r *RequestHandler) handleTimeout(w *RMQWorker) {
+	message := "send RMQ request timeout"
+	if r.Task.WorkerName != "" {
+		message += " for " + r.Task.WorkerName + " worker"
+	}
+
 	r.LastError = constants.Error(
 		"SERVICE_REQ_TIMEOUT",
-		"send RMQ request timeout",
+		message,
 	)
 	w.Stop()
 }
