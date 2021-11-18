@@ -180,7 +180,7 @@ func (r *RequestHandler) Send() (*RequestHandlerResponse, APIError) {
 	// send request
 	err = r.RMQH.RMQPublishToQueue(RMQPublishRequestTask{
 		QueueName:          r.Task.RequestToQueueName,
-		ResponseRoutingKey: getUUID(),
+		ResponseRoutingKey: r.Task.TempQueueName,
 		MessageBody:        r.Task.MessageBody,
 	})
 	if err != nil {
