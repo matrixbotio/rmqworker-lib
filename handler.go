@@ -99,4 +99,14 @@ func (r *RMQHandler) checkConnection() {
  ||      /    \)___)\                 |_|
  | \____(      )___) )___
   \______(_______;;; __;;;
+
 */
+
+// RequestHandler used for one-time requests.
+// using RMQ-M worker
+type RequestHandler struct{}
+
+// NewRequestHandler -
+func NewRequestHandler() *RequestHandler {
+	return &RequestHandler{}
+}
