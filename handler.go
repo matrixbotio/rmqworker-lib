@@ -201,6 +201,11 @@ func (r *RequestHandler) Send() (*RequestHandlerResponse, APIError) {
 	// stop connections
 	w.StopConnections()
 
+	// check last error
+	if r.LastError != nil {
+		return nil, r.LastError
+	}
+
 	// return result
 	return r.Response, nil
 }
