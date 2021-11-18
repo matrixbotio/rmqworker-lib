@@ -74,7 +74,8 @@ func (r *RMQHandler) NewRMQWorker(
 
 // StopConnections - force stop worker connections
 func (w *RMQWorker) StopConnections() {
-	w.connections.RMQChannel.Close()
+	w.connections.Consume.Channel.Close()
+	w.connections.Publish.Channel.Close()
 }
 
 func (w *RMQWorker) logWarn(err *constants.APIError) {
