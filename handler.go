@@ -140,11 +140,17 @@ type RequestHandlerTask struct {
 }
 
 // NewRequestHandler - create new handler for one-time request
-func (r *RMQHandler) NewRequestHandler(task RequestHandlerTask) *RequestHandler {
-	return &RequestHandler{
-		RMQH: r,
-		Task: task,
+func (r *RMQHandler) NewRequestHandler(task RequestHandlerTask) (*RequestHandler, APIError) {
+	// clone RMQ handler
+	newHandler, err := r.NewRMQHandler()
+	if err != nil {
+		return nil, err
 	}
+
+	return &RequestHandler{
+		RMQH: newHandler,
+		Task: task,
+	}, nil
 }
 
 // SetID for worker
