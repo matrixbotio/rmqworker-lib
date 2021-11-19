@@ -207,13 +207,8 @@ func (r *RequestHandler) Send() (*RequestHandlerResponse, APIError) {
 	// stop connections
 	w.StopConnections()
 
-	// check last error
-	if r.LastError != nil {
-		return nil, r.LastError
-	}
-
 	// return result
-	return r.Response, nil
+	return r.Response, r.LastError
 }
 
 // request callback
@@ -234,7 +229,7 @@ func (r *RequestHandler) handleTimeout(w *RMQWorker) {
 		"SERVICE_REQ_TIMEOUT",
 		message,
 	)
-	w.Stop()
+	//w.Stop()
 }
 
 // RequestHandlerResponse - raw RMQ response data
