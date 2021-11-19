@@ -324,9 +324,9 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 
 func (w *RMQWorker) timeIsUp() {
 	w.logVerbose("worker cron: response time is up")
-	w.Stop()
 	w.cronHandler.Stop()
 	w.timeoutCallback(w)
+	w.Stop()
 }
 
 // AwaitFinish - wait for worker finished
