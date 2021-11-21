@@ -37,7 +37,8 @@ type handlerConnections struct {
 }
 
 type connectionPair struct {
-	sync.Mutex
+	mutex   sync.Mutex
+	rwMutex *sync.RWMutex
 	Conn    *amqp.Connection
 	Channel *amqp.Channel
 }
@@ -68,14 +69,12 @@ func NewRMQHandler(connData RMQConnectionData, logger ...*constants.Logger) (*RM
 
 func (r *RMQHandler) openConnectionsAndChannels() APIError {
 	var err APIError
-	r.Connections.Publish.Conn, r.Connections.Publish.Channel, err =
-		openConnectionNChannel(nil, r.Connections.Data, r.Logger, nil)
+	err = openConnectionNChannel(&r.Connections.Publish, r.Connections.Data, r.Logger, nil)
 	if err != nil {
 		return err
 	}
 
-	r.Connections.Consume.Conn, r.Connections.Consume.Channel, err =
-		openConnectionNChannel(nil, r.Connections.Data, r.Logger, nil)
+	err = openConnectionNChannel(&r.Connections.Consume, r.Connections.Data, r.Logger, nil)
 	return err
 }
 
@@ -86,15 +85,13 @@ func (r *RMQHandler) NewRMQHandler() (*RMQHandler, APIError) {
 
 	// open new channel for publish
 	var err APIError
-	newHandler.Connections.Publish.Conn, newHandler.Connections.Publish.Channel, err =
-		openConnectionNChannel(newHandler.Connections.Publish.Conn, r.Connections.Data, r.Logger, nil)
+	err = openConnectionNChannel(&newHandler.Connections.Publish, r.Connections.Data, r.Logger, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	// & consume messages
-	newHandler.Connections.Consume.Conn, newHandler.Connections.Consume.Channel, err =
-		openConnectionNChannel(newHandler.Connections.Consume.Conn, r.Connections.Data, r.Logger, nil)
+	err = openConnectionNChannel(&newHandler.Connections.Consume, r.Connections.Data, r.Logger, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -198,7 +195,7 @@ func (r *RequestHandler) Send() (*RequestHandlerResponse, APIError) {
 
 	// delete temp queue
 	err = r.RMQH.DeleteQueues(map[string][]string{
-		"reqHandler": []string{r.Task.TempQueueName},
+		"reqHandler": {r.Task.TempQueueName},
 	})
 	if err != nil {
 		return nil, err

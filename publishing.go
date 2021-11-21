@@ -120,8 +120,10 @@ func (r *RMQHandler) RMQPublishToExchange(message interface{}, exchangeName, rou
 
 func (r *RMQHandler) publishMessage(exchangeName string, key string, mandatory bool, immediate bool,
 	publishing amqp.Publishing) APIError {
-	r.Connections.Publish.Lock()
-	defer r.Connections.Publish.Unlock()
+	r.Connections.Publish.mutex.Lock()
+	defer r.Connections.Publish.mutex.Unlock()
+	r.Connections.Publish.rwMutex.RLock()
+	defer r.Connections.Publish.rwMutex.RUnlock()
 	rmqErr := r.Connections.Publish.Channel.Publish(exchangeName, key, mandatory, immediate, publishing)
 	if rmqErr != nil {
 		return constants.Error(

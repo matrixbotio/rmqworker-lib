@@ -37,8 +37,7 @@ func (r *RMQHandler) NewRMQWorker(
 	// open channel for worker
 	var wChannel *amqp.Channel
 	var err APIError
-	r.Connections.Consume.Conn, wChannel, err = openConnectionNChannel(r.Connections.Consume.Conn, r.Connections.Data,
-		r.Logger, nil)
+	err = openConnectionNChannel(&r.Connections.Consume, r.Connections.Data, r.Logger, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -72,10 +71,16 @@ func (r *RMQHandler) NewRMQWorker(
 	return &w, nil
 }
 
-// StopConnections - force stop worker connections
-func (w *RMQWorker) StopConnections() {
-	w.connections.Consume.Channel.Close()
-	w.connections.Publish.Channel.Close()
+// CloseChannels - force close worker's channels
+func (w *RMQWorker) CloseChannels() {
+	err := w.connections.Consume.Channel.Close()
+	if err != nil {
+		w.logWarn(constants.Error("BASE_INTERNAL_ERROR", "Exception closing consumer channel"+err.Error()))
+	}
+	err = w.connections.Publish.Channel.Close()
+	if err != nil {
+		w.logWarn(constants.Error("BASE_INTERNAL_ERROR", "Exception closing publisher channel"+err.Error()))
+	}
 }
 
 func (w *RMQWorker) logWarn(err *constants.APIError) {
@@ -187,8 +192,7 @@ func (w *RMQWorker) Subscribe() APIError {
 
 	// channel not created but connection is active
 	// create new channel
-	w.connections.Consume.Conn, w.consumeChannel, aErr = openConnectionNChannel(w.connections.Consume.Conn,
-		w.connections.Data, w.logger, consumeFunc)
+	aErr = openConnectionNChannel(&w.connections.Consume, w.connections.Data, w.logger, consumeFunc)
 	if aErr != nil {
 		return aErr
 	}
@@ -438,5 +442,5 @@ func (w *RMQMonitoringWorker) GetID() string {
 
 // StopConnections - force stop worker connections
 func (w *RMQMonitoringWorker) StopConnections() {
-	w.Worker.StopConnections()
+	w.Worker.CloseChannels()
 }
