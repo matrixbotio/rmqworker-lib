@@ -38,7 +38,7 @@ type handlerConnections struct {
 
 type connectionPair struct {
 	mutex   sync.Mutex
-	rwMutex *sync.RWMutex
+	rwMutex sync.RWMutex
 	Conn    *amqp.Connection
 	Channel *amqp.Channel
 }
