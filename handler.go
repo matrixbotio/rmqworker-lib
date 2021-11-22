@@ -226,7 +226,6 @@ func (r *RequestHandler) handleTimeout(w *RMQWorker) {
 		"SERVICE_REQ_TIMEOUT",
 		message,
 	)
-	//w.Stop()
 }
 
 // RequestHandlerResponse - raw RMQ response data
