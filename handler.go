@@ -27,6 +27,9 @@ type RMQHandler struct {
 	Connections handlerConnections
 	Logger      *constants.Logger
 	Cron        *simplecron.CronObject
+
+	limitMessagesLifetime bool
+	messagesLifetime      int64 // milliseconds
 }
 
 type handlerConnections struct {
@@ -97,6 +100,14 @@ func (r *RMQHandler) NewRMQHandler() (*RMQHandler, APIError) {
 	}
 
 	return &newHandler, nil
+}
+
+// SetMessagesLifetimeLimit - add a limit to the lifetime of the messages you send (used in queue declare).
+// limit in milliseconds.
+func (r *RMQHandler) SetMessagesLifetimeLimit(limit int64) *RMQHandler {
+	r.limitMessagesLifetime = true
+	r.messagesLifetime = limit
+	return r
 }
 
 /*
