@@ -372,6 +372,7 @@ func (r *RMQHandler) NewRMQMonitoringWorker(task RMQMonitoringWorkerTask) (*RMQM
 		AutoDelete:       task.ISAutoDelete,
 		FromExchangeName: task.FromExchangeName,
 		RoutingKey:       task.RoutingKey,
+		MessagesLifetime: task.MessagesLifetime,
 	})
 	if err != nil {
 		return nil, err

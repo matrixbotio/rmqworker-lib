@@ -47,7 +47,7 @@ type RMQQueueDeclareSimpleTask struct {
 	QueueName        string
 	Durable          bool
 	AutoDelete       bool
-	MessagesLifetime int64 // milliseconds. 0 to disable limit
+	MessagesLifetime int64
 }
 
 // RMQQueueDeclareTask - queue declare task data container
@@ -57,14 +57,14 @@ type RMQQueueDeclareTask struct {
 	AutoDelete       bool
 	FromExchangeName string
 	RoutingKey       string
-	MessagesLifetime int64 // milliseconds. 0 to disable limit
+	MessagesLifetime int64
 }
 
 // RMQExchangeDeclareTask - exchange declare task data container
 type RMQExchangeDeclareTask struct {
 	ExchangeName     string
 	ExchangeType     string
-	MessagesLifetime int64 // milliseconds. 0 to disable limit
+	MessagesLifetime int64
 }
 
 // RMQPublishRequestTask - publish message to RMQ task data container
@@ -93,10 +93,11 @@ type RMQMonitoringWorkerTask struct {
 	Callback         RMQDeliveryCallback
 
 	// optional
-	ID              string
-	Timeout         time.Duration
-	TimeoutCallback RMQTimeoutCallback
-	WorkerName      string
+	ID               string
+	Timeout          time.Duration
+	TimeoutCallback  RMQTimeoutCallback
+	WorkerName       string
+	MessagesLifetime int64 // milliseconds. 0 to disable limit
 }
 
 // RMQDeliveryCallback - RMQ delivery callback function
