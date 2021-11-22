@@ -2,19 +2,26 @@ package rmqworker
 
 import (
 	"github.com/matrixbotio/constants-lib"
+	"github.com/streadway/amqp"
 )
 
 // rmqQueueDeclare - declare RMQ queue
 func (r *RMQHandler) rmqQueueDeclare(connectionPair *connectionPair, queueName string, durable bool, autodelete bool) APIError {
 	connectionPair.rwMutex.RLock()
 	defer connectionPair.rwMutex.RUnlock()
+
+	args := amqp.Table{}
+	if r.limitMessagesLifetime {
+		args["x-message-ttl"] = r.messagesLifetime
+	}
+
 	_, err := connectionPair.Channel.QueueDeclare(
 		queueName,  // name
 		durable,    // durable
 		autodelete, // delete when unused
 		false,      // exclusive
 		false,      // no-wait
-		nil,        // arguments
+		args,       // arguments
 	)
 	if err != nil {
 		return constants.Error(
