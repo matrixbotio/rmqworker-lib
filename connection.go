@@ -2,7 +2,6 @@ package rmqworker
 
 import (
 	"crypto/tls"
-	"sync"
 	"time"
 
 	"github.com/matrixbotio/constants-lib"
@@ -24,7 +23,7 @@ func openConnectionNChannel(connectionPair *connectionPair, conData RMQConnectio
 		connectionPair.Conn.NotifyClose(connCloseReceiver)
 		go func() {
 			for closeErr := range connCloseReceiver {
-				handleNotifyClose(closeErr, connectionPair, conData, logger, consumeFunc, connectionPair.rwMutex)
+				handleNotifyClose(closeErr, connectionPair, conData, logger, consumeFunc)
 			}
 		}()
 	}
@@ -38,7 +37,7 @@ func openConnectionNChannel(connectionPair *connectionPair, conData RMQConnectio
 	connectionPair.Channel.NotifyClose(channelCloseReceiver)
 	go func() {
 		for closeErr := range channelCloseReceiver {
-			handleNotifyClose(closeErr, connectionPair, conData, logger, consumeFunc, connectionPair.rwMutex)
+			handleNotifyClose(closeErr, connectionPair, conData, logger, consumeFunc)
 		}
 	}()
 
@@ -105,10 +104,10 @@ func openRMQChannel(conn *amqp.Connection, consumeFunc func(channel *amqp.Channe
 
 // handleNotifyClose - reconnect when connection is closed
 func handleNotifyClose(closeError *amqp.Error, connectionPair *connectionPair, connData RMQConnectionData,
-	logger *constants.Logger, consumeFunc func(channel *amqp.Channel), rwMutex *sync.RWMutex) {
+	logger *constants.Logger, consumeFunc func(channel *amqp.Channel)) {
 	// Lock all interactions with the connection/channel unless it will be reopened
-	rwMutex.Lock()
-	defer rwMutex.Unlock()
+	connectionPair.rwMutex.Lock()
+	defer connectionPair.rwMutex.Unlock()
 
 	logger.Error("RMQ connection/channel closed: " + closeError.Error())
 	for {
