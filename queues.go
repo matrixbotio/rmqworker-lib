@@ -6,30 +6,35 @@ import (
 )
 
 // rmqQueueDeclare - declare RMQ queue
-func (r *RMQHandler) rmqQueueDeclare(connectionPair *connectionPair, queueName string, durable bool, autodelete bool) APIError {
+func (r *RMQHandler) rmqQueueDeclare(connectionPair *connectionPair, task RMQQueueDeclareSimpleTask) APIError {
 	connectionPair.rwMutex.RLock()
 	defer connectionPair.rwMutex.RUnlock()
 
 	args := amqp.Table{}
-	if r.limitMessagesLifetime {
-		args["x-message-ttl"] = r.messagesLifetime
+	if task.MessagesLifetime > 0 {
+		args["x-message-ttl"] = task.MessagesLifetime
 	}
 
 	_, err := connectionPair.Channel.QueueDeclare(
-		queueName,  // name
-		durable,    // durable
-		autodelete, // delete when unused
-		false,      // exclusive
-		false,      // no-wait
-		args,       // arguments
+		task.QueueName,  // name
+		task.Durable,    // durable
+		task.AutoDelete, // delete when unused
+		false,           // exclusive
+		false,           // no-wait
+		args,            // arguments
 	)
 	if err != nil {
 		return constants.Error(
 			"SERVICE_REQ_FAILED",
-			"failed to declare '"+queueName+"' queue: "+err.Error(),
+			"failed to declare '"+task.QueueName+"' queue: "+err.Error(),
 		)
 	}
 	return nil
+}
+
+// QueueDeclare - declare one RMQ queue
+func (r *RMQHandler) QueueDeclare(task RMQQueueDeclareSimpleTask) APIError {
+	return r.rmqQueueDeclare(&r.Connections.Publish, task)
 }
 
 // rmqQueueBind - bind queue to exchange
@@ -58,9 +63,12 @@ func (r *RMQHandler) RMQQueueDeclareAndBind(task RMQQueueDeclareTask) APIError {
 	// declare
 	err := r.rmqQueueDeclare(
 		&r.Connections.Publish, // channel
-		task.QueueName,         // queue name
-		task.Durable,           // is queue durable
-		task.AutoDelete,        // auto-delete queue on consumer quit
+		RMQQueueDeclareSimpleTask{
+			QueueName:        task.QueueName,  // queue name
+			Durable:          task.Durable,    // is queue durable
+			AutoDelete:       task.AutoDelete, // auto-delete queue on consumer quit
+			MessagesLifetime: task.MessagesLifetime,
+		},
 	)
 	if err != nil {
 		return err
@@ -80,9 +88,11 @@ func (r *RMQHandler) DeclareQueues(queues []string) APIError {
 	for _, queueName := range queues {
 		err := r.rmqQueueDeclare(
 			&r.Connections.Publish, // RMQ channel
-			queueName,              // queue name
-			true,                   // durable
-			false,                  // auto-delete
+			RMQQueueDeclareSimpleTask{
+				QueueName:  queueName,
+				Durable:    true,
+				AutoDelete: false,
+			},
 		)
 		if err != nil {
 			return err
