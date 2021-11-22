@@ -7,6 +7,11 @@ import (
 
 // rmqExchangeDeclare - declare RMQ exchange
 func (r *RMQHandler) rmqExchangeDeclare(RMQChannel *amqp.Channel, exchangeName, exchangeType string) APIError {
+	args := amqp.Table{}
+	if r.limitMessagesLifetime {
+		args["x-message-ttl"] = r.messagesLifetime
+	}
+
 	err := RMQChannel.ExchangeDeclare(
 		exchangeName, // name
 		exchangeType, // type
@@ -14,7 +19,7 @@ func (r *RMQHandler) rmqExchangeDeclare(RMQChannel *amqp.Channel, exchangeName, 
 		false,        // auto-deleted
 		false,        // internal
 		false,        // no-wait
-		nil,          // arguments
+		args,         // arguments
 	)
 	if err != nil {
 		return constants.Error(
