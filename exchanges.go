@@ -28,6 +28,8 @@ func (r *RMQHandler) rmqExchangeDeclare(RMQChannel *amqp.Channel, exchangeName, 
 // DeclareExchanges - declare RMQ exchanges list.
 // exchange name -> exchange type
 func (r *RMQHandler) DeclareExchanges(exchangeTypes map[string]string) APIError {
+	r.Connections.Publish.rwMutex.RLock()
+	defer r.Connections.Publish.rwMutex.RUnlock()
 	for exchangeName, exchangeType := range exchangeTypes {
 		err := r.rmqExchangeDeclare(r.Connections.Publish.Channel, exchangeName, exchangeType)
 		if err != nil {

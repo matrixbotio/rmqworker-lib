@@ -11,6 +11,15 @@ import (
 	"github.com/streadway/amqp"
 )
 
+/*
+      ,  ,  , , ,
+     <(__)> | | |
+     | \/ | \_|_/  I AM RMQ Worker.
+     \^  ^/   |    I hurt in a hundred ways
+     /\--/\  /|
+jgs /  \/  \/ |
+*/
+
 // NewRMQWorker - create new RMQ worker to receive messages
 func (r *RMQHandler) NewRMQWorker(
 	QueueName string,
@@ -28,8 +37,7 @@ func (r *RMQHandler) NewRMQWorker(
 	// open channel for worker
 	var wChannel *amqp.Channel
 	var err APIError
-	r.Connections.Consume.Conn, wChannel, err = openConnectionNChannel(r.Connections.Consume.Conn, r.Connections.Data,
-		r.Logger, nil)
+	err = openConnectionNChannel(&r.Connections.Consume, r.Connections.Data, r.Logger, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -61,6 +69,18 @@ func (r *RMQHandler) NewRMQWorker(
 	}
 
 	return &w, nil
+}
+
+// CloseChannels - force close worker's channels
+func (w *RMQWorker) CloseChannels() {
+	err := w.connections.Consume.Channel.Close()
+	if err != nil {
+		w.logWarn(constants.Error("BASE_INTERNAL_ERROR", "Exception closing consumer channel"+err.Error()))
+	}
+	err = w.connections.Publish.Channel.Close()
+	if err != nil {
+		w.logWarn(constants.Error("BASE_INTERNAL_ERROR", "Exception closing publisher channel"+err.Error()))
+	}
 }
 
 func (w *RMQWorker) logWarn(err *constants.APIError) {
@@ -172,8 +192,7 @@ func (w *RMQWorker) Subscribe() APIError {
 
 	// channel not created but connection is active
 	// create new channel
-	w.connections.Consume.Conn, w.consumeChannel, aErr = openConnectionNChannel(w.connections.Consume.Conn,
-		w.connections.Data, w.logger, consumeFunc)
+	aErr = openConnectionNChannel(&w.connections.Consume, w.connections.Data, w.logger, consumeFunc)
 	if aErr != nil {
 		return aErr
 	}
@@ -309,9 +328,9 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 
 func (w *RMQWorker) timeIsUp() {
 	w.logVerbose("worker cron: response time is up")
-	w.Stop()
 	w.cronHandler.Stop()
 	w.timeoutCallback(w)
+	w.Stop()
 }
 
 // AwaitFinish - wait for worker finished
@@ -324,6 +343,24 @@ func (w *RMQWorker) SetSyncMode(sync bool) *RMQWorker {
 	w.syncMode = sync
 	return w
 }
+
+/*
+
+             __.-/|
+             \`o_O'  +------------------------------------------------------+
+              =( )=  |        RMQ Monitoring Worker (RMQ-M Worker)          |
+                U|   | I accept responses from exchange to the binded queue |
+      /\  /\   / |   +------------------------------------------------------+
+     ) /^\) ^\/ _)\     |
+     )   /^\/   _) \    |
+     )   _ /  / _)  \___|_
+ /\  )/\/ ||  | )_)\___,|))
+<  >      |(,,) )__)    |
+ ||      /    \)___)\
+ | \____(      )___) )____
+  \______(_______;;;)__;;;)
+
+*/
 
 // NewRMQMonitoringWorker - declare queue, bind to exchange, create worker & run.
 // monitoring worker used for create a queue and receive messages from exchange into it
@@ -353,6 +390,9 @@ func (r *RMQHandler) NewRMQMonitoringWorker(task RMQMonitoringWorkerTask) (*RMQM
 	}
 	if task.Timeout > 0 {
 		w.Worker.SetTimeout(task.Timeout, task.TimeoutCallback)
+	}
+	if task.WorkerName != "" {
+		w.Worker.SetName(task.WorkerName)
 	}
 
 	// setup worker
@@ -398,4 +438,9 @@ func (w *RMQMonitoringWorker) GetName() string {
 // GetID - get worker ID
 func (w *RMQMonitoringWorker) GetID() string {
 	return w.Worker.GetID()
+}
+
+// StopConnections - force stop worker connections
+func (w *RMQMonitoringWorker) StopConnections() {
+	w.Worker.CloseChannels()
 }
