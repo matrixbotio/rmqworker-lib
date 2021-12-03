@@ -21,7 +21,7 @@ func (r *RMQHandler) RMQPublishToQueue(task RMQPublishRequestTask) APIError {
 	}
 
 	err = r.publishMessage(
-		"",
+		task.ExchangeName,
 		task.QueueName,
 		false,
 		false,

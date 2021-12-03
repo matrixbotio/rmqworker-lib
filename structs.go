@@ -72,6 +72,9 @@ type RMQPublishRequestTask struct {
 	QueueName          string
 	ResponseRoutingKey string
 	MessageBody        interface{}
+
+	// optional
+	ExchangeName string
 }
 
 // RMQPublishResponseTask - response for publish message to RMQ request
