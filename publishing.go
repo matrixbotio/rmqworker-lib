@@ -95,8 +95,19 @@ func (r *RMQHandler) SendRMQResponse(
 	return nil
 }
 
-// RMQPublishToExchange - publish message to exchange
-func (r *RMQHandler) RMQPublishToExchange(message interface{}, exchangeName, routingKey string) APIError {
+// RMQPublishToExchange - publish message to exchangeю
+// responseRoutingKey is optional to send requests to exchange
+func (r *RMQHandler) RMQPublishToExchange(
+	message interface{},
+	exchangeName,
+	routingKey string,
+	responseRoutingKey ...string,
+) APIError {
+	headers := amqp.Table{}
+	if len(responseRoutingKey) > 0 {
+		headers["responseRoutingKey"] = responseRoutingKey[0]
+	}
+
 	jsonBytes, err := encodeMessage(message)
 	if err != nil {
 		return err
@@ -108,13 +119,13 @@ func (r *RMQHandler) RMQPublishToExchange(message interface{}, exchangeName, rou
 		false,
 		false,
 		amqp.Publishing{
+			Headers:     headers,
 			ContentType: "application/json",
 			Body:        jsonBytes,
 		})
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
