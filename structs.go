@@ -44,10 +44,13 @@ type RMQMonitoringWorker struct {
 
 // RMQQueueDeclareSimpleTask - queue declare task data container
 type RMQQueueDeclareSimpleTask struct {
-	QueueName        string
-	Durable          bool
-	AutoDelete       bool
+	QueueName  string
+	Durable    bool
+	AutoDelete bool
+
+	// optional
 	MessagesLifetime int64
+	QueueLength      int64
 }
 
 // RMQQueueDeclareTask - queue declare task data container

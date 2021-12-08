@@ -14,6 +14,9 @@ func (r *RMQHandler) rmqQueueDeclare(connectionPair *connectionPair, task RMQQue
 	if task.MessagesLifetime > 0 {
 		args["x-message-ttl"] = task.MessagesLifetime
 	}
+	if task.QueueLength > 0 {
+		args["x-max-length"] = task.QueueLength
+	}
 
 	_, err := connectionPair.Channel.QueueDeclare(
 		task.QueueName,  // name
