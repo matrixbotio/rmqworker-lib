@@ -71,6 +71,7 @@ func (r *RMQHandler) RMQQueueDeclareAndBind(task RMQQueueDeclareTask) APIError {
 			Durable:          task.Durable,    // is queue durable
 			AutoDelete:       task.AutoDelete, // auto-delete queue on consumer quit
 			MessagesLifetime: task.MessagesLifetime,
+			QueueLength:      task.QueueLength,
 		},
 	)
 	if err != nil {

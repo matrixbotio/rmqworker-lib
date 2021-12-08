@@ -60,7 +60,10 @@ type RMQQueueDeclareTask struct {
 	AutoDelete       bool
 	FromExchangeName string
 	RoutingKey       string
+
+	// optional
 	MessagesLifetime int64
+	QueueLength      int64
 }
 
 // RMQExchangeDeclareTask - exchange declare task data container
@@ -101,6 +104,7 @@ type RMQMonitoringWorkerTask struct {
 	TimeoutCallback  RMQTimeoutCallback
 	WorkerName       string
 	MessagesLifetime int64 // milliseconds. 0 to disable limit
+	QueueLength      int64 // how many maximum messages to keep in the queue
 }
 
 // RMQDeliveryCallback - RMQ delivery callback function
