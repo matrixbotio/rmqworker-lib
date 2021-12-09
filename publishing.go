@@ -48,8 +48,6 @@ func (r *RMQHandler) SendRMQResponse(
 	var responseBody []byte
 	contentType := "application/json"
 
-	r.Logger.Verbose(errorMsg) // TEMP
-
 	var isErrorFound bool
 	if len(errorMsg) == 0 {
 		isErrorFound = false
