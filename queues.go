@@ -14,6 +14,9 @@ func (r *RMQHandler) rmqQueueDeclare(connectionPair *connectionPair, task RMQQue
 	if task.MessagesLifetime > 0 {
 		args["x-message-ttl"] = task.MessagesLifetime
 	}
+	if task.QueueLength > 0 {
+		args["x-max-length"] = task.QueueLength
+	}
 
 	_, err := connectionPair.Channel.QueueDeclare(
 		task.QueueName,  // name
@@ -68,6 +71,7 @@ func (r *RMQHandler) RMQQueueDeclareAndBind(task RMQQueueDeclareTask) APIError {
 			Durable:          task.Durable,    // is queue durable
 			AutoDelete:       task.AutoDelete, // auto-delete queue on consumer quit
 			MessagesLifetime: task.MessagesLifetime,
+			QueueLength:      task.QueueLength,
 		},
 	)
 	if err != nil {
