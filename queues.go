@@ -105,6 +105,20 @@ func (r *RMQHandler) DeclareQueues(queues []string) APIError {
 	return nil
 }
 
+// DeclareQueuesExtended - declare RMQ queues list
+func (r *RMQHandler) DeclareQueuesExtended(queues []RMQQueueDeclareSimpleTask) APIError {
+	for _, queueData := range queues {
+		err := r.rmqQueueDeclare(
+			&r.Connections.Publish, // RMQ channel
+			queueData,
+		)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // DeleteQueues - delete RMQ queues.
 // map[manager name] -> array of queue names
 func (r *RMQHandler) DeleteQueues(queueNames map[string][]string) APIError {
