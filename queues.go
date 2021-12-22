@@ -87,7 +87,7 @@ func (r *RMQHandler) RMQQueueDeclareAndBind(task RMQQueueDeclareTask) APIError {
 	)
 }
 
-// DeclareQueues - declare RMQ exchanges list
+// DeclareQueues - declare RMQ queues list
 func (r *RMQHandler) DeclareQueues(queues []string) APIError {
 	for _, queueName := range queues {
 		err := r.rmqQueueDeclare(
