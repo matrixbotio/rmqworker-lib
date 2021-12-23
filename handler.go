@@ -181,6 +181,10 @@ func (r *RequestHandler) Send() (*RequestHandlerResponse, APIError) {
 		return nil, err
 	}
 
+	if r.Task.AttemptsNumber == 0 {
+		// value is not set
+		r.Task.AttemptsNumber = 1
+	}
 	for i := 1; i <= r.Task.AttemptsNumber; i++ {
 		// send request
 		err := r.RMQH.RMQPublishToQueue(RMQPublishRequestTask{
