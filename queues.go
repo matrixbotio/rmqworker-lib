@@ -87,7 +87,7 @@ func (r *RMQHandler) RMQQueueDeclareAndBind(task RMQQueueDeclareTask) APIError {
 	)
 }
 
-// DeclareQueues - declare RMQ exchanges list
+// DeclareQueues - declare RMQ queues list
 func (r *RMQHandler) DeclareQueues(queues []string) APIError {
 	for _, queueName := range queues {
 		err := r.rmqQueueDeclare(
@@ -97,6 +97,20 @@ func (r *RMQHandler) DeclareQueues(queues []string) APIError {
 				Durable:    true,
 				AutoDelete: false,
 			},
+		)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// DeclareQueuesExtended - declare RMQ queues list
+func (r *RMQHandler) DeclareQueuesExtended(queues []RMQQueueDeclareSimpleTask) APIError {
+	for _, queueData := range queues {
+		err := r.rmqQueueDeclare(
+			&r.Connections.Publish, // RMQ channel
+			queueData,
 		)
 		if err != nil {
 			return err

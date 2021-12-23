@@ -99,6 +99,12 @@ func (r *RMQHandler) NewRMQHandler() (*RMQHandler, APIError) {
 	return &newHandler, nil
 }
 
+// Close channels
+func (r *RMQHandler) Close() {
+	r.Connections.Consume.Channel.Close()
+	r.Connections.Publish.Channel.Close()
+}
+
 /*
                 \||/
                 |  @___oo
@@ -151,6 +157,11 @@ func (r *RMQHandler) NewRequestHandler(task RequestHandlerTask) (*RequestHandler
 	}, nil
 }
 
+// Close channels
+func (r *RequestHandler) Close() {
+	r.RMQH.Close()
+}
+
 // SetID for worker
 func (r *RequestHandler) SetID(id string) *RequestHandler {
 	r.WorkerID = id
@@ -181,10 +192,14 @@ func (r *RequestHandler) Send() (*RequestHandlerResponse, APIError) {
 		return nil, err
 	}
 
-	if r.Task.AttemptsNumber == 0 {
+  // stop connections
+	defer r.Close()           // request handler channels
+	defer w.StopConnections() // worker channels
+
+  if r.Task.AttemptsNumber == 0 {
 		// value is not set
 		r.Task.AttemptsNumber = 1
-	}
+  }
 	for i := 1; i <= r.Task.AttemptsNumber; i++ {
 		// send request
 		err := r.RMQH.RMQPublishToQueue(RMQPublishRequestTask{
@@ -211,9 +226,6 @@ func (r *RequestHandler) Send() (*RequestHandlerResponse, APIError) {
 	if err != nil {
 		return nil, err
 	}
-
-	// stop connections
-	w.StopConnections()
 
 	// return result
 	return r.Response, r.LastError
