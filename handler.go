@@ -130,6 +130,7 @@ type RequestHandlerTask struct {
 	ResponseFromExchangeName string
 	RequestToQueueName       string
 	TempQueueName            string
+	AttemptsNumber           int
 
 	WorkerName      string
 	ResponseTimeout time.Duration
@@ -180,18 +181,24 @@ func (r *RequestHandler) Send() (*RequestHandlerResponse, APIError) {
 		return nil, err
 	}
 
-	// send request
-	err = r.RMQH.RMQPublishToQueue(RMQPublishRequestTask{
-		QueueName:          r.Task.RequestToQueueName,
-		ResponseRoutingKey: r.Task.TempQueueName,
-		MessageBody:        r.Task.MessageBody,
-	})
-	if err != nil {
-		return nil, err
-	}
+	for i := 1; i <= r.Task.AttemptsNumber; i++ {
+		// send request
+		err := r.RMQH.RMQPublishToQueue(RMQPublishRequestTask{
+			QueueName:          r.Task.RequestToQueueName,
+			ResponseRoutingKey: r.Task.TempQueueName,
+			MessageBody:        r.Task.MessageBody,
+		})
+		if err != nil {
+			return nil, err
+		}
 
-	// await response
-	w.AwaitFinish()
+		// await response
+		w.AwaitFinish()
+
+		if r.LastError == nil {
+			break
+		}
+	}
 
 	// delete temp queue
 	err = r.RMQH.DeleteQueues(map[string][]string{
