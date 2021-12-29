@@ -145,14 +145,8 @@ type RequestHandlerTask struct {
 
 // NewRequestHandler - create new handler for one-time request
 func (r *RMQHandler) NewRequestHandler(task RequestHandlerTask) (*RequestHandler, APIError) {
-	// clone RMQ handler
-	newHandler, err := r.NewRMQHandler()
-	if err != nil {
-		return nil, err
-	}
-
 	return &RequestHandler{
-		RMQH: newHandler,
+		RMQH: r,
 		Task: task,
 	}, nil
 }
@@ -192,14 +186,14 @@ func (r *RequestHandler) Send() (*RequestHandlerResponse, APIError) {
 		return nil, err
 	}
 
-  // stop connections
+	// stop connections
 	defer r.Close()           // request handler channels
 	defer w.StopConnections() // worker channels
 
-  if r.Task.AttemptsNumber == 0 {
+	if r.Task.AttemptsNumber == 0 {
 		// value is not set
 		r.Task.AttemptsNumber = 1
-  }
+	}
 	for i := 1; i <= r.Task.AttemptsNumber; i++ {
 		// send request
 		err := r.RMQH.RMQPublishToQueue(RMQPublishRequestTask{
