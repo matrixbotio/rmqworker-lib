@@ -187,7 +187,6 @@ func (r *RequestHandler) Send() (*RequestHandlerResponse, APIError) {
 	}
 
 	// stop connections
-	defer r.Close()           // request handler channels
 	defer w.StopConnections() // worker channels
 
 	if r.Task.AttemptsNumber == 0 {
