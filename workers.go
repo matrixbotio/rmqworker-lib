@@ -21,11 +21,7 @@ jgs /  \/  \/ |
 */
 
 // NewRMQWorker - create new RMQ worker to receive messages
-func (r *RMQHandler) NewRMQWorker(
-	QueueName string,
-	callback RMQDeliveryCallback,
-	workerName ...string,
-) (*RMQWorker, APIError) {
+func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 	if r.Connections.Publish.Conn.IsClosed() {
 		// open new connection
 		err := r.openConnectionsAndChannels()
@@ -37,21 +33,26 @@ func (r *RMQHandler) NewRMQWorker(
 	// open channel for worker
 	var wChannel *amqp.Channel
 	var err APIError
-	err = openConnectionNChannel(&r.Connections.Consume, r.Connections.Data, r.Logger, nil)
-	if err != nil {
-		return nil, err
+	if task.ReuseChannels {
+		// use existing channel
+		wChannel = r.Connections.Consume.Channel
+	} else {
+		// open new channel
+		err = openConnectionNChannel(&r.Connections.Consume, r.Connections.Data, r.Logger, nil)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// set worker name
-	name := "rmq worker"
-	if len(workerName) > 0 {
-		name = workerName[0]
+	if task.WorkerName == "" {
+		task.WorkerName = "rmq worker"
 	}
 
 	w := RMQWorker{
 		data: rmqWorkerData{
-			Name:                name,
-			QueueName:           QueueName,
+			Name:                task.WorkerName,
+			QueueName:           task.QueueName,
 			AutoAckByLib:        true,
 			CheckResponseErrors: true,
 		},
@@ -63,7 +64,7 @@ func (r *RMQHandler) NewRMQWorker(
 			StopCh:      make(chan struct{}, 1),
 		},
 		syncMode:         true,
-		deliveryCallback: callback,
+		deliveryCallback: task.Callback,
 		logger:           r.Logger,
 		awaitMessages:    true,
 	}
@@ -381,7 +382,12 @@ func (r *RMQHandler) NewRMQMonitoringWorker(task RMQMonitoringWorkerTask) (*RMQM
 
 	// create worker
 	w := RMQMonitoringWorker{}
-	w.Worker, err = r.NewRMQWorker(task.QueueName, task.Callback)
+	w.Worker, err = r.NewRMQWorker(WorkerTask{
+		QueueName:     task.QueueName,
+		Callback:      task.Callback,
+		WorkerName:    task.WorkerName,
+		ReuseChannels: task.ReuseChannels,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -392,14 +398,6 @@ func (r *RMQHandler) NewRMQMonitoringWorker(task RMQMonitoringWorkerTask) (*RMQM
 	}
 	if task.Timeout > 0 {
 		w.Worker.SetTimeout(task.Timeout, task.TimeoutCallback)
-	}
-	if task.WorkerName != "" {
-		w.Worker.SetName(task.WorkerName)
-	}
-
-	// setup worker
-	if task.WorkerName != "" {
-		w.Worker.SetName(task.WorkerName)
 	}
 
 	// run worker

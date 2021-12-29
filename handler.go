@@ -178,6 +178,7 @@ func (r *RequestHandler) Send() (*RequestHandlerResponse, APIError) {
 		FromExchangeName: r.Task.ResponseFromExchangeName,
 		RoutingKey:       r.Task.TempQueueName,
 		Callback:         r.handleMessage,
+		ReuseChannels:    true,
 		ID:               r.WorkerID,
 		Timeout:          r.Task.ResponseTimeout,
 		TimeoutCallback:  r.handleTimeout,
@@ -185,9 +186,6 @@ func (r *RequestHandler) Send() (*RequestHandlerResponse, APIError) {
 	if err != nil {
 		return nil, err
 	}
-
-	// stop connections
-	defer w.StopConnections() // worker channels
 
 	if r.Task.AttemptsNumber == 0 {
 		// value is not set
