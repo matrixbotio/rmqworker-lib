@@ -88,6 +88,14 @@ type RMQPublishResponseTask struct {
 	MessageBody        interface{}
 }
 
+// WorkerTask - new RMQ worker data
+type WorkerTask struct {
+	QueueName     string
+	Callback      RMQDeliveryCallback
+	WorkerName    string
+	ReuseChannels bool
+}
+
 // RMQMonitoringWorkerTask - new RMQ request->response monitoring worker data
 type RMQMonitoringWorkerTask struct {
 	// required
@@ -97,6 +105,7 @@ type RMQMonitoringWorkerTask struct {
 	FromExchangeName string
 	RoutingKey       string // to bind queue to response exchange
 	Callback         RMQDeliveryCallback
+	ReuseChannels    bool // open new channel for worker?
 
 	// optional
 	ID               string
