@@ -8,9 +8,15 @@ import (
 	"github.com/streadway/amqp"
 )
 
+type consumeFunc func(channel *amqp.Channel)
+
 // openConnectionNChannel - open new RMQ connection & channel
-func openConnectionNChannel(connectionPair *connectionPair, conData RMQConnectionData, logger *constants.Logger,
-	consumeFunc func(channel *amqp.Channel)) APIError {
+func openConnectionNChannel(
+	connectionPair *connectionPair,
+	conData RMQConnectionData,
+	logger *constants.Logger,
+	consume consumeFunc,
+) APIError {
 	var err APIError
 
 	// get connection
@@ -23,13 +29,13 @@ func openConnectionNChannel(connectionPair *connectionPair, conData RMQConnectio
 		connectionPair.Conn.NotifyClose(connCloseReceiver)
 		go func() {
 			for closeErr := range connCloseReceiver {
-				handleNotifyClose(closeErr, connectionPair, conData, logger, consumeFunc)
+				handleNotifyClose(closeErr, connectionPair, conData, logger, consume)
 			}
 		}()
 	}
 
 	// get channel
-	connectionPair.Channel, err = openRMQChannel(connectionPair.Conn, consumeFunc)
+	connectionPair.Channel, err = openRMQChannel(connectionPair.Conn, consume)
 	if err != nil {
 		return err
 	}
@@ -37,7 +43,7 @@ func openConnectionNChannel(connectionPair *connectionPair, conData RMQConnectio
 	connectionPair.Channel.NotifyClose(channelCloseReceiver)
 	go func() {
 		for closeErr := range channelCloseReceiver {
-			handleNotifyClose(closeErr, connectionPair, conData, logger, consumeFunc)
+			handleNotifyClose(closeErr, connectionPair, conData, logger, consume)
 		}
 	}()
 
