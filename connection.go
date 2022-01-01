@@ -29,7 +29,7 @@ func openConnectionNChannel(task openConnectionNChannelTask) APIError {
 		}()
 	}
 
-	if !task.skipChannelOpening {
+	if task.skipChannelOpening {
 		// get channel
 		task.connectionPair.Channel, err = openRMQChannel(task.connectionPair.Conn, task.consume)
 		if err != nil {
