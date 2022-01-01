@@ -11,6 +11,15 @@ import (
 // APIError - error data container
 type APIError *constants.APIError
 
+type openConnectionNChannelTask struct {
+	connectionPair *connectionPair
+	connData       RMQConnectionData
+	logger         *constants.Logger
+	consume        consumeFunc
+
+	errorData error
+}
+
 // RMQConnectionData - rmq connection data container
 type RMQConnectionData struct {
 	User     string `json:"user"`

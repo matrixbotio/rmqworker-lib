@@ -11,39 +11,34 @@ import (
 type consumeFunc func(channel *amqp.Channel)
 
 // openConnectionNChannel - open new RMQ connection & channel
-func openConnectionNChannel(
-	connectionPair *connectionPair,
-	conData RMQConnectionData,
-	logger *constants.Logger,
-	consume consumeFunc,
-) APIError {
+func openConnectionNChannel(task openConnectionNChannelTask) APIError {
 	var err APIError
 
 	// get connection
-	if connectionPair.Conn == nil || connectionPair.Conn.IsClosed() {
-		connectionPair.Conn, err = rmqConnect(conData)
+	if task.connectionPair.Conn == nil || task.connectionPair.Conn.IsClosed() {
+		task.connectionPair.Conn, err = rmqConnect(task.connData)
 		if err != nil {
 			return err
 		}
 		connCloseReceiver := make(chan *amqp.Error)
-		connectionPair.Conn.NotifyClose(connCloseReceiver)
+		task.connectionPair.Conn.NotifyClose(connCloseReceiver)
 		go func() {
-			for closeErr := range connCloseReceiver {
-				handleNotifyClose(closeErr, connectionPair, conData, logger, consume)
+			for task.errorData = range connCloseReceiver {
+				handleNotifyClose(task)
 			}
 		}()
 	}
 
 	// get channel
-	connectionPair.Channel, err = openRMQChannel(connectionPair.Conn, consume)
+	task.connectionPair.Channel, err = openRMQChannel(task.connectionPair.Conn, task.consume)
 	if err != nil {
 		return err
 	}
 	channelCloseReceiver := make(chan *amqp.Error)
-	connectionPair.Channel.NotifyClose(channelCloseReceiver)
+	task.connectionPair.Channel.NotifyClose(channelCloseReceiver)
 	go func() {
-		for closeErr := range channelCloseReceiver {
-			handleNotifyClose(closeErr, connectionPair, conData, logger, consume)
+		for task.errorData = range channelCloseReceiver {
+			handleNotifyClose(task)
 		}
 	}()
 
@@ -109,22 +104,21 @@ func openRMQChannel(conn *amqp.Connection, consumeFunc func(channel *amqp.Channe
 }
 
 // handleNotifyClose - reconnect when connection is closed
-func handleNotifyClose(closeError *amqp.Error, connectionPair *connectionPair, connData RMQConnectionData,
-	logger *constants.Logger, consumeFunc func(channel *amqp.Channel)) {
+func handleNotifyClose(task openConnectionNChannelTask) {
 	// Lock all interactions with the connection/channel unless it will be reopened
-	connectionPair.rwMutex.Lock()
-	defer connectionPair.rwMutex.Unlock()
+	task.connectionPair.rwMutex.Lock()
+	defer task.connectionPair.rwMutex.Unlock()
 
-	logger.Error("RMQ connection/channel closed: " + closeError.Error())
+	task.logger.Error("RMQ connection/channel closed: " + task.errorData.Error())
 	for {
 		var err APIError
 		// TODO: synchronize
-		err = openConnectionNChannel(connectionPair, connData, logger, consumeFunc)
+		err = openConnectionNChannel(task)
 		if err == nil {
-			logger.Log("RMQ connection/channel recovered")
+			task.logger.Log("RMQ connection/channel recovered")
 			break
 		} else {
-			logger.Error("Exception while trying to recover RMQ connection/channel: " + err.Message)
+			task.logger.Error("Exception while trying to recover RMQ connection/channel: " + err.Message)
 			time.Sleep(5 * time.Second)
 		}
 	}
