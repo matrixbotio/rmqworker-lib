@@ -35,15 +35,16 @@ func openConnectionNChannel(task openConnectionNChannelTask) APIError {
 		if err != nil {
 			return err
 		}
-		channelCloseReceiver := make(chan *amqp.Error)
-		task.connectionPair.Channel.NotifyClose(channelCloseReceiver)
-		go func() {
-			for task.errorData = range channelCloseReceiver {
-				onConnClosed(task)
-			}
-		}()
 	}
 
+	// setup channel reconnect
+	channelCloseReceiver := make(chan *amqp.Error)
+	task.connectionPair.Channel.NotifyClose(channelCloseReceiver)
+	go func() {
+		for task.errorData = range channelCloseReceiver {
+			onConnClosed(task)
+		}
+	}()
 	return nil
 }
 
