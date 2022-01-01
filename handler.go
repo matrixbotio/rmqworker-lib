@@ -74,8 +74,7 @@ func (r *RMQHandler) openConnectionsAndChannels() APIError {
 		return err
 	}
 
-	err = openConnectionNChannel(&r.Connections.Consume, r.Connections.Data, r.Logger, nil)
-	return err
+	return openConnectionNChannel(&r.Connections.Consume, r.Connections.Data, r.Logger, nil)
 }
 
 // NewRMQHandler - clone handler & open new RMQ channel
