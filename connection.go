@@ -29,18 +29,20 @@ func openConnectionNChannel(task openConnectionNChannelTask) APIError {
 		}()
 	}
 
-	// get channel
-	task.connectionPair.Channel, err = openRMQChannel(task.connectionPair.Conn, task.consume)
-	if err != nil {
-		return err
-	}
-	channelCloseReceiver := make(chan *amqp.Error)
-	task.connectionPair.Channel.NotifyClose(channelCloseReceiver)
-	go func() {
-		for task.errorData = range channelCloseReceiver {
-			onConnClosed(task)
+	if !task.skipChannelOpening {
+		// get channel
+		task.connectionPair.Channel, err = openRMQChannel(task.connectionPair.Conn, task.consume)
+		if err != nil {
+			return err
 		}
-	}()
+		channelCloseReceiver := make(chan *amqp.Error)
+		task.connectionPair.Channel.NotifyClose(channelCloseReceiver)
+		go func() {
+			for task.errorData = range channelCloseReceiver {
+				onConnClosed(task)
+			}
+		}()
+	}
 
 	return nil
 }

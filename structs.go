@@ -12,10 +12,11 @@ import (
 type APIError *constants.APIError
 
 type openConnectionNChannelTask struct {
-	connectionPair *connectionPair
-	connData       RMQConnectionData
-	logger         *constants.Logger
-	consume        consumeFunc
+	connectionPair     *connectionPair
+	connData           RMQConnectionData
+	logger             *constants.Logger
+	consume            consumeFunc
+	skipChannelOpening bool
 
 	errorData error
 }

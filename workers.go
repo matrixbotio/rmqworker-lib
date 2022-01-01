@@ -199,10 +199,11 @@ func (w *RMQWorker) Subscribe() APIError {
 	// channel not created but connection is active
 	// create new channel
 	aErr = openConnectionNChannel(openConnectionNChannelTask{
-		connectionPair: &w.connections.Consume,
-		connData:       w.connections.Data,
-		logger:         w.logger,
-		consume:        consumeFunc,
+		connectionPair:     &w.connections.Consume,
+		connData:           w.connections.Data,
+		logger:             w.logger,
+		consume:            consumeFunc,
+		skipChannelOpening: true, // channel already set in worker constructor
 	})
 	if aErr != nil {
 		return aErr
