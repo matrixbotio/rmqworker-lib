@@ -114,7 +114,6 @@ func onConnClosed(task openConnectionNChannelTask) {
 	}
 	for {
 		var err APIError
-		// TODO: synchronize
 		err = openConnectionNChannel(task)
 		if err == nil {
 			task.logger.Log("RMQ connection/channel recovered")
