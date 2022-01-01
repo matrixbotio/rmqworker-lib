@@ -24,7 +24,7 @@ func openConnectionNChannel(task openConnectionNChannelTask) APIError {
 		task.connectionPair.Conn.NotifyClose(connCloseReceiver)
 		go func() {
 			for task.errorData = range connCloseReceiver {
-				handleNotifyClose(task)
+				onConnClosed(task)
 			}
 		}()
 	}
@@ -38,7 +38,7 @@ func openConnectionNChannel(task openConnectionNChannelTask) APIError {
 	task.connectionPair.Channel.NotifyClose(channelCloseReceiver)
 	go func() {
 		for task.errorData = range channelCloseReceiver {
-			handleNotifyClose(task)
+			onConnClosed(task)
 		}
 	}()
 
@@ -103,8 +103,8 @@ func openRMQChannel(conn *amqp.Connection, consumeFunc func(channel *amqp.Channe
 	return channel, nil
 }
 
-// handleNotifyClose - reconnect when connection is closed
-func handleNotifyClose(task openConnectionNChannelTask) {
+// onConnClosed - reconnect when connection is closed
+func onConnClosed(task openConnectionNChannelTask) {
 	// Lock all interactions with the connection/channel unless it will be reopened
 	task.connectionPair.rwMutex.Lock()
 	defer task.connectionPair.rwMutex.Unlock()
