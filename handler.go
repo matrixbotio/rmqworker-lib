@@ -211,6 +211,9 @@ func (r *RequestHandler) Send() (*RequestHandlerResponse, APIError) {
 		r.Task.AttemptsNumber = 1
 	}
 	for i := 1; i <= r.Task.AttemptsNumber; i++ {
+		if i > 1 {
+			w.Reset()
+		}
 		// send request
 		err := r.RMQH.RMQPublishToQueue(RMQPublishRequestTask{
 			QueueName:          r.Task.RequestToQueueName,

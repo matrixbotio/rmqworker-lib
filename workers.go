@@ -246,6 +246,7 @@ func (w *RMQWorker) Reset() {
 	if w.data.UseResponseTimeout {
 		w.runCron()
 	}
+	go w.Listen()
 }
 
 func (w *RMQWorker) runCron() {
