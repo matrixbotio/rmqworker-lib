@@ -109,7 +109,9 @@ func onConnClosed(task openConnectionNChannelTask) {
 	task.connectionPair.rwMutex.Lock()
 	defer task.connectionPair.rwMutex.Unlock()
 
-	task.logger.Error("RMQ connection/channel closed: " + task.errorData.Error())
+	if task.errorData != nil {
+		task.logger.Error("RMQ connection/channel closed: " + task.errorData.Error())
+	}
 	for {
 		var err APIError
 		// TODO: synchronize
