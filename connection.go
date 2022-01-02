@@ -48,7 +48,6 @@ func openConnectionNChannel(task openConnectionNChannelTask) APIError {
 	task.connectionPair.Channel.NotifyClose(channelCloseReceiver)
 	go func() {
 		for task.errorData = range channelCloseReceiver {
-			task.skipChannelOpening = false
 			onConnClosed(task)
 		}
 	}()
@@ -122,12 +121,14 @@ func onConnClosed(task openConnectionNChannelTask) {
 	// Lock all interactions with the connection/channel unless it will be reopened
 	task.connectionPair.rwMutex.Lock()
 	defer task.connectionPair.rwMutex.Unlock()
+	task.skipChannelOpening = false
 
 	if task.errorData != nil {
 		task.logger.Error("RMQ connection/channel closed: " + task.errorData.Error())
 	}
 	for {
 		var err APIError
+
 		err = openConnectionNChannel(task)
 		if err == nil {
 			task.logger.Log("RMQ connection/channel recovered")
