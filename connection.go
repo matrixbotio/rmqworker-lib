@@ -30,7 +30,7 @@ func openConnectionNChannel(task openConnectionNChannelTask) APIError {
 	}
 
 	if task.skipChannelOpening {
-		// use existing channel, setp messages consume
+		// use existing channel, setup messages consume
 		if task.consume != nil {
 			task.consume(task.connectionPair.Channel)
 		}
@@ -42,7 +42,7 @@ func openConnectionNChannel(task openConnectionNChannelTask) APIError {
 		}
 	}
 
-	// setup channel reconnect
+	// setup channel reconnection
 	channelCloseReceiver := make(chan *amqp.Error)
 	task.connectionPair.Channel.NotifyClose(channelCloseReceiver)
 	go func() {
