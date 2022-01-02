@@ -48,6 +48,7 @@ func openConnectionNChannel(task openConnectionNChannelTask) APIError {
 	task.connectionPair.Channel.NotifyClose(channelCloseReceiver)
 	go func() {
 		for task.errorData = range channelCloseReceiver {
+			task.skipChannelOpening = false
 			onConnClosed(task)
 		}
 	}()
