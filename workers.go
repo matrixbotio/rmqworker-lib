@@ -22,7 +22,7 @@ jgs /  \/  \/ |
 
 // NewRMQWorker - create new RMQ worker to receive messages
 func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
-	if r.Connections.Publish.Conn.IsClosed() {
+	if r.Connections.Consume.Conn.IsClosed() {
 		// open new connection
 		err := r.openConnectionsAndChannels()
 		if err != nil {
@@ -38,7 +38,12 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 		wChannel = r.Connections.Consume.Channel
 	} else {
 		// open new channel
-		err = openConnectionNChannel(&r.Connections.Consume, r.Connections.Data, r.Logger, nil)
+		err = openConnectionNChannel(openConnectionNChannelTask{
+			connectionPair: &r.Connections.Consume,
+			connData:       r.Connections.Data,
+			logger:         r.Logger,
+			consume:        nil,
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -193,7 +198,13 @@ func (w *RMQWorker) Subscribe() APIError {
 
 	// channel not created but connection is active
 	// create new channel
-	aErr = openConnectionNChannel(&w.connections.Consume, w.connections.Data, w.logger, consumeFunc)
+	aErr = openConnectionNChannel(openConnectionNChannelTask{
+		connectionPair:     &w.connections.Consume,
+		connData:           w.connections.Data,
+		logger:             w.logger,
+		consume:            consumeFunc,
+		skipChannelOpening: true, // channel already set in worker constructor
+	})
 	if aErr != nil {
 		return aErr
 	}
@@ -235,6 +246,7 @@ func (w *RMQWorker) Reset() {
 	if w.data.UseResponseTimeout {
 		w.runCron()
 	}
+	go w.Listen()
 }
 
 func (w *RMQWorker) runCron() {

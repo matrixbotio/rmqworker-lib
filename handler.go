@@ -69,13 +69,22 @@ func NewRMQHandler(connData RMQConnectionData, logger ...*constants.Logger) (*RM
 
 func (r *RMQHandler) openConnectionsAndChannels() APIError {
 	var err APIError
-	err = openConnectionNChannel(&r.Connections.Publish, r.Connections.Data, r.Logger, nil)
+	err = openConnectionNChannel(openConnectionNChannelTask{
+		connectionPair: &r.Connections.Publish,
+		connData:       r.Connections.Data,
+		logger:         r.Logger,
+		consume:        nil,
+	})
 	if err != nil {
 		return err
 	}
 
-	err = openConnectionNChannel(&r.Connections.Consume, r.Connections.Data, r.Logger, nil)
-	return err
+	return openConnectionNChannel(openConnectionNChannelTask{
+		connectionPair: &r.Connections.Consume,
+		connData:       r.Connections.Data,
+		logger:         r.Logger,
+		consume:        nil,
+	})
 }
 
 // NewRMQHandler - clone handler & open new RMQ channel
@@ -85,13 +94,23 @@ func (r *RMQHandler) NewRMQHandler() (*RMQHandler, APIError) {
 
 	// open new channel for publish
 	var err APIError
-	err = openConnectionNChannel(&newHandler.Connections.Publish, r.Connections.Data, r.Logger, nil)
+	err = openConnectionNChannel(openConnectionNChannelTask{
+		connectionPair: &r.Connections.Publish,
+		connData:       r.Connections.Data,
+		logger:         r.Logger,
+		consume:        nil,
+	})
 	if err != nil {
 		return nil, err
 	}
 
 	// & consume messages
-	err = openConnectionNChannel(&newHandler.Connections.Consume, r.Connections.Data, r.Logger, nil)
+	err = openConnectionNChannel(openConnectionNChannelTask{
+		connectionPair: &r.Connections.Consume,
+		connData:       r.Connections.Data,
+		logger:         r.Logger,
+		consume:        nil,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -192,6 +211,9 @@ func (r *RequestHandler) Send() (*RequestHandlerResponse, APIError) {
 		r.Task.AttemptsNumber = 1
 	}
 	for i := 1; i <= r.Task.AttemptsNumber; i++ {
+		if i > 1 {
+			w.Reset()
+		}
 		// send request
 		err := r.RMQH.RMQPublishToQueue(RMQPublishRequestTask{
 			QueueName:          r.Task.RequestToQueueName,
