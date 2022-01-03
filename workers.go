@@ -333,13 +333,16 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 
 	// run callback
 	if w.syncMode {
-		limitDeliveryCallbackTime(w, delivery, deliveryCallbackTimeout*time.Second)
+		err := limitDeliveryCallbackTime(w, delivery, deliveryCallbackTimeout*time.Second)
+		if err != nil {
+			w.logWarn(err)
+		}
 	} else {
 		go w.deliveryCallback(w, delivery)
 	}
 }
 
-func limitDeliveryCallbackTime(w *RMQWorker, delivery RMQDeliveryHandler, timeLimit time.Duration) APIError {
+func limitDeliveryCallbackTime(w *RMQWorker, delivery RMQDeliveryHandler, timeLimit time.Duration) *constants.APIError {
 	timeIsUp := simplecron.NewRuntimeLimitHandler(timeLimit, func() {
 		w.deliveryCallback(w, delivery)
 	}).Run()
