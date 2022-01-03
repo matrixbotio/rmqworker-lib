@@ -333,10 +333,23 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 
 	// run callback
 	if w.syncMode {
-		w.deliveryCallback(w, delivery)
+		limitDeliveryCallbackTime(w, delivery, deliveryCallbackTimeout*time.Second)
 	} else {
 		go w.deliveryCallback(w, delivery)
 	}
+}
+
+func limitDeliveryCallbackTime(w *RMQWorker, delivery RMQDeliveryHandler, timeLimit time.Duration) APIError {
+	timeIsUp := simplecron.NewRuntimeLimitHandler(timeLimit, func() {
+		w.deliveryCallback(w, delivery)
+	}).Run()
+	if timeIsUp {
+		return constants.Error(
+			"SERVICE_REQ_TIMEOUT",
+			w.GetName()+" handle task (from delivery) timed out",
+		)
+	}
+	return nil
 }
 
 func (w *RMQWorker) timeIsUp() {

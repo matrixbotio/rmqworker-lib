@@ -7,4 +7,5 @@ const (
 	waitingBetweenAttempts        = 60 // seconds
 	waitingBetweenMsgSubscription = 5  // seconds
 	cronConnectionCheckTimeout    = 3  // minutes
+	deliveryCallbackTimeout       = 90 // seconds
 )
