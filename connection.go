@@ -30,9 +30,10 @@ func openConnectionNChannel(task openConnectionNChannelTask) APIError {
 	}
 
 	if task.skipChannelOpening {
-		// use existing channel, setp messages consume
-		if task.consume != nil {
-			task.consume(task.connectionPair.Channel)
+		// use existing channel, setup messages consume
+		err := setupConsume(task.connectionPair.Channel, task.consume)
+		if err != nil {
+			return err
 		}
 	} else {
 		// get new channel
@@ -42,7 +43,7 @@ func openConnectionNChannel(task openConnectionNChannelTask) APIError {
 		}
 	}
 
-	// setup channel reconnect
+	// setup channel reconnection
 	channelCloseReceiver := make(chan *amqp.Error)
 	task.connectionPair.Channel.NotifyClose(channelCloseReceiver)
 	go func() {
@@ -88,7 +89,7 @@ func rmqConnect(connData RMQConnectionData) (*amqp.Connection, APIError) {
 }
 
 // openRMQChannel - open new RMQ channel
-func openRMQChannel(conn *amqp.Connection, consumeFunc func(channel *amqp.Channel)) (*amqp.Channel, APIError) {
+func openRMQChannel(conn *amqp.Connection, consume consumeFunc) (*amqp.Channel, APIError) {
 	channel, rmqErr := conn.Channel()
 	if rmqErr != nil {
 		return nil, constants.Error(
@@ -96,19 +97,23 @@ func openRMQChannel(conn *amqp.Connection, consumeFunc func(channel *amqp.Channe
 			"failed to get amqp channel: "+rmqErr.Error(),
 		)
 	}
+
+	return channel, setupConsume(channel, consume)
+}
+
+func setupConsume(channel *amqp.Channel, consume consumeFunc) APIError {
 	err := channel.Qos(1, 0, false)
 	if err != nil {
-		return nil, constants.Error(
+		return constants.Error(
 			"SERVICE_REQ_FAILED",
 			"failed to set up QOS: "+err.Error(),
 		)
 	}
 
-	if consumeFunc != nil {
-		consumeFunc(channel)
+	if consume != nil {
+		consume(channel)
 	}
-
-	return channel, nil
+	return nil
 }
 
 // onConnClosed - reconnect when connection is closed
@@ -116,12 +121,14 @@ func onConnClosed(task openConnectionNChannelTask) {
 	// Lock all interactions with the connection/channel unless it will be reopened
 	task.connectionPair.rwMutex.Lock()
 	defer task.connectionPair.rwMutex.Unlock()
+	task.skipChannelOpening = false
 
 	if task.errorData != nil {
 		task.logger.Error("RMQ connection/channel closed: " + task.errorData.Error())
 	}
 	for {
 		var err APIError
+
 		err = openConnectionNChannel(task)
 		if err == nil {
 			task.logger.Log("RMQ connection/channel recovered")
