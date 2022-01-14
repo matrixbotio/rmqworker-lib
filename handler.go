@@ -152,14 +152,17 @@ type RequestHandler struct {
 
 // RequestHandlerTask data
 type RequestHandlerTask struct {
+	// required
 	ResponseFromExchangeName string
 	RequestToQueueName       string
 	TempQueueName            string
 	AttemptsNumber           int
+	MessageBody              interface{}
 
-	WorkerName      string
-	ResponseTimeout time.Duration
-	MessageBody     interface{}
+	// optional
+	ExchangeInsteadOfQueue bool
+	WorkerName             string
+	ResponseTimeout        time.Duration
 }
 
 // NewRequestHandler - create new handler for one-time request
@@ -184,6 +187,22 @@ func (r *RequestHandler) SetID(id string) *RequestHandler {
 func (r *RequestHandler) resetLastError() *RequestHandler {
 	r.LastError = nil
 	return r
+}
+
+func (r *RequestHandler) sendRequest() APIError {
+	if r.Task.ExchangeInsteadOfQueue {
+		return r.RMQH.RMQPublishToExchange(
+			r.Task.MessageBody,        // request message
+			r.Task.RequestToQueueName, // exchange name
+			"",                        // routing key
+			r.Task.TempQueueName,      // response routing key
+		)
+	}
+	return r.RMQH.RMQPublishToQueue(RMQPublishRequestTask{
+		QueueName:          r.Task.RequestToQueueName,
+		ResponseRoutingKey: r.Task.TempQueueName,
+		MessageBody:        r.Task.MessageBody,
+	})
 }
 
 // Send request (sync)
@@ -215,11 +234,7 @@ func (r *RequestHandler) Send() (*RequestHandlerResponse, APIError) {
 			w.Reset()
 		}
 		// send request
-		err := r.RMQH.RMQPublishToQueue(RMQPublishRequestTask{
-			QueueName:          r.Task.RequestToQueueName,
-			ResponseRoutingKey: r.Task.TempQueueName,
-			MessageBody:        r.Task.MessageBody,
-		})
+		err := r.sendRequest()
 		if err != nil {
 			return nil, err
 		}
