@@ -91,31 +91,7 @@ func (r *RMQHandler) openConnectionsAndChannels() APIError {
 func (r *RMQHandler) NewRMQHandler() (*RMQHandler, APIError) {
 	handlerRoot := *r
 	newHandler := handlerRoot
-
-	// open new channel for publish
-	var err APIError
-	err = openConnectionNChannel(openConnectionNChannelTask{
-		connectionPair: &r.Connections.Publish,
-		connData:       r.Connections.Data,
-		logger:         r.Logger,
-		consume:        nil,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	// & consume messages
-	err = openConnectionNChannel(openConnectionNChannelTask{
-		connectionPair: &r.Connections.Consume,
-		connData:       r.Connections.Data,
-		logger:         r.Logger,
-		consume:        nil,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return &newHandler, nil
+	return &newHandler, r.openConnectionsAndChannels()
 }
 
 // Close channels
