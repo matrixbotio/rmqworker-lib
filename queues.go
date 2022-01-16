@@ -18,7 +18,12 @@ func (r *RMQHandler) rmqQueueDeclare(connectionPair *connectionPair, task RMQQue
 		args["x-max-length"] = task.QueueLength
 	}
 
-	_, err := connectionPair.Channel.QueueDeclare(
+	err := r.checkConnection()
+	if err != nil {
+		return err
+	}
+
+	_, rmqErr := connectionPair.Channel.QueueDeclare(
 		task.QueueName,  // name
 		task.Durable,    // durable
 		task.AutoDelete, // delete when unused
@@ -26,10 +31,10 @@ func (r *RMQHandler) rmqQueueDeclare(connectionPair *connectionPair, task RMQQue
 		false,           // no-wait
 		args,            // arguments
 	)
-	if err != nil {
+	if rmqErr != nil {
 		return constants.Error(
 			"SERVICE_REQ_FAILED",
-			"failed to declare '"+task.QueueName+"' queue: "+err.Error(),
+			"failed to declare '"+task.QueueName+"' queue: "+rmqErr.Error(),
 		)
 	}
 	return nil
@@ -44,18 +49,24 @@ func (r *RMQHandler) QueueDeclare(task RMQQueueDeclareSimpleTask) APIError {
 func (r *RMQHandler) rmqQueueBind(connectionPair *connectionPair, fromExchangeName, toQueueName, routingKey string) APIError {
 	connectionPair.rwMutex.RLock()
 	defer connectionPair.rwMutex.RUnlock()
-	err := connectionPair.Channel.QueueBind(
+
+	err := r.checkConnection()
+	if err != nil {
+		return err
+	}
+
+	rmqErr := connectionPair.Channel.QueueBind(
 		toQueueName,      // queue name
 		routingKey,       // routing key
 		fromExchangeName, // exchange
 		false,
 		nil,
 	)
-	if err != nil {
+	if rmqErr != nil {
 		return constants.Error(
 			"SERVICE_REQ_FAILED",
 			"failed to bind '"+toQueueName+"' queue to '"+
-				fromExchangeName+"' exchange: "+err.Error(),
+				fromExchangeName+"' exchange: "+rmqErr.Error(),
 		)
 	}
 	return nil
@@ -124,6 +135,12 @@ func (r *RMQHandler) DeclareQueuesExtended(queues []RMQQueueDeclareSimpleTask) A
 func (r *RMQHandler) DeleteQueues(queueNames map[string][]string) APIError {
 	r.Connections.Publish.rwMutex.RLock()
 	defer r.Connections.Publish.rwMutex.RUnlock()
+
+	err := r.checkConnection()
+	if err != nil {
+		return err
+	}
+
 	for managerName, queueNames := range queueNames {
 		for _, queueName := range queueNames {
 			_, err := r.Connections.Publish.Channel.QueueDelete(

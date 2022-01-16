@@ -127,6 +127,12 @@ func (r *RMQHandler) publishMessage(exchangeName string, key string, mandatory b
 	defer r.Connections.Publish.mutex.Unlock()
 	r.Connections.Publish.rwMutex.RLock()
 	defer r.Connections.Publish.rwMutex.RUnlock()
+
+	err := r.checkConnection()
+	if err != nil {
+		return err
+	}
+
 	rmqErr := r.Connections.Publish.Channel.Publish(exchangeName, key, mandatory, immediate, publishing)
 	if rmqErr != nil {
 		return constants.Error(
