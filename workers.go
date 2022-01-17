@@ -22,17 +22,13 @@ jgs /  \/  \/ |
 
 // NewRMQWorker - create new RMQ worker to receive messages
 func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
-	if r.Connections.Publish.Conn.IsClosed() {
-		// open new connection
-		err := r.openConnectionsAndChannels()
-		if err != nil {
-			return nil, err
-		}
+	err := r.checkConnection()
+	if err != nil {
+		return nil, err
 	}
 
 	// open channel for worker
 	var wChannel *amqp.Channel
-	var err APIError
 	if task.ReuseChannels {
 		// use existing channel
 		wChannel = r.Connections.Consume.Channel

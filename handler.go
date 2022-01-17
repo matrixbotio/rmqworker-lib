@@ -67,6 +67,17 @@ func NewRMQHandler(connData RMQConnectionData, logger ...*constants.Logger) (*RM
 	return &r, nil
 }
 
+func (r *RMQHandler) checkConnection() APIError {
+	if r.Connections.Publish.Conn.IsClosed() {
+		// open new connection
+		err := r.openConnectionsAndChannels()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (r *RMQHandler) openConnectionsAndChannels() APIError {
 	var err APIError
 	err = openConnectionNChannel(openConnectionNChannelTask{

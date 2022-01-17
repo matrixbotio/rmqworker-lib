@@ -12,7 +12,12 @@ func (r *RMQHandler) rmqExchangeDeclare(RMQChannel *amqp.Channel, task RMQExchan
 		args["x-message-ttl"] = task.MessagesLifetime
 	}
 
-	err := RMQChannel.ExchangeDeclare(
+	err := r.checkConnection()
+	if err != nil {
+		return err
+	}
+
+	rmqErr := RMQChannel.ExchangeDeclare(
 		task.ExchangeName, // name
 		task.ExchangeType, // type
 		true,              // durable
@@ -21,10 +26,10 @@ func (r *RMQHandler) rmqExchangeDeclare(RMQChannel *amqp.Channel, task RMQExchan
 		false,             // no-wait
 		args,              // arguments
 	)
-	if err != nil {
+	if rmqErr != nil {
 		return constants.Error(
 			"SERVICE_REQ_FAILED",
-			"failed to declare "+task.ExchangeName+" rmq exchange: "+err.Error(),
+			"failed to declare "+task.ExchangeName+" rmq exchange: "+rmqErr.Error(),
 		)
 	}
 	return nil
