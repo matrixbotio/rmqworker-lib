@@ -36,6 +36,7 @@ func openConnectionNChannel(task openConnectionNChannelTask) APIError {
 			channel:  task.connectionPair.Channel,
 			consume:  task.consume,
 			connData: task.connData,
+			conn:     task.connectionPair.Conn,
 		})
 		if err != nil {
 			return err
@@ -107,6 +108,7 @@ func openRMQChannel(conn *amqp.Connection, connData RMQConnectionData, consume c
 		channel:  channel,
 		consume:  consume,
 		connData: connData,
+		conn:     conn,
 	})
 }
 
@@ -115,12 +117,17 @@ func setupConsume(task consumeTask) APIError {
 	if err != nil {
 		if strings.Contains(err.Error(), "channel/connection is not open") {
 			// reopen connection
-			// TODO
+			conn, err := rmqConnect(task.connData)
+			if err != nil {
+				return err
+			}
+			task.conn = conn
+		} else {
+			return constants.Error(
+				"SERVICE_REQ_FAILED",
+				"failed to set up QOS: "+err.Error(),
+			)
 		}
-		return constants.Error(
-			"SERVICE_REQ_FAILED",
-			"failed to set up QOS: "+err.Error(),
-		)
 	}
 
 	if task.consume != nil {

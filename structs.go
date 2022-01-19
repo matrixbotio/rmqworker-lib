@@ -159,4 +159,5 @@ type consumeTask struct {
 	consume consumeFunc
 
 	connData RMQConnectionData
+	conn     *amqp.Connection // to recreate connection
 }
