@@ -199,7 +199,7 @@ func (r *RequestHandler) Send() (*RequestHandlerResponse, APIError) {
 	w, err := r.RMQH.NewRMQMonitoringWorker(RMQMonitoringWorkerTask{
 		QueueName:        r.Task.TempQueueName,
 		ISQueueDurable:   false,
-		ISAutoDelete:     true,
+		ISAutoDelete:     false,
 		FromExchangeName: r.Task.ResponseFromExchangeName,
 		RoutingKey:       r.Task.TempQueueName,
 		Callback:         r.handleMessage,
