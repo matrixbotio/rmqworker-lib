@@ -2,6 +2,7 @@ package rmqworker
 
 import (
 	"crypto/tls"
+	"strconv"
 	"strings"
 	"time"
 
@@ -124,7 +125,7 @@ func setupConsume(task consumeTask) APIError {
 		} else {
 			return constants.Error(
 				"SERVICE_REQ_FAILED",
-				"failed to set up QOS: "+err.Error(),
+				"failed to set up QOS: "+err.Error()+", conn active: "+strconv.FormatBool(task.conn.IsClosed()),
 			)
 		}
 	}
@@ -143,7 +144,8 @@ func onConnClosed(task openConnectionNChannelTask) {
 	task.skipChannelOpening = false
 
 	if task.errorData != nil {
-		task.logger.Error("RMQ connection/channel closed: " + task.errorData.Error())
+		task.logger.Error("RMQ connection/channel closed: " + task.errorData.Error() +
+			", conn active: " + strconv.FormatBool(task.connectionPair.Conn.IsClosed()))
 	}
 	for {
 		var err APIError
