@@ -153,3 +153,11 @@ type rmqWorkerChannels struct {
 	OnFinished  chan struct{}
 	StopCh      chan struct{}
 }
+
+type consumeTask struct {
+	channel *amqp.Channel
+	consume consumeFunc
+
+	connData RMQConnectionData
+	conn     *amqp.Connection // to recreate connection
+}
