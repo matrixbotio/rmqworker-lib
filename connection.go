@@ -122,6 +122,11 @@ func setupConsume(task consumeTask) APIError {
 				return err
 			}
 			task.conn = conn
+			// open channel
+			task.channel, err = openRMQChannel(task.conn, task.connData, task.consume)
+			if err != nil {
+				return err
+			}
 		} else {
 			return constants.Error(
 				"SERVICE_REQ_FAILED",
