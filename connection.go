@@ -34,10 +34,9 @@ func openConnectionNChannel(task openConnectionNChannelTask) APIError {
 	if task.skipChannelOpening {
 		// use existing channel, setup messages consume
 		err := setupConsume(consumeTask{
-			channel:  task.connectionPair.Channel,
-			consume:  task.consume,
-			connData: task.connData,
-			conn:     task.connectionPair.Conn,
+			consume:        task.consume,
+			connData:       task.connData,
+			connectionPair: task.connectionPair,
 		})
 		if err != nil {
 			return err
@@ -105,15 +104,20 @@ func openRMQChannel(conn *amqp.Connection, connData RMQConnectionData, consume c
 	}
 
 	return channel, setupConsume(consumeTask{
-		channel:  channel,
 		consume:  consume,
 		connData: connData,
-		conn:     conn,
+		connectionPair: &connectionPair{
+			Conn:    conn,
+			Channel: channel,
+		},
 	})
 }
 
 func setupConsume(task consumeTask) APIError {
-	err := task.channel.Qos(1, 0, false)
+	task.connectionPair.rwMutex.Lock()
+	defer task.connectionPair.rwMutex.Unlock()
+
+	err := task.connectionPair.Channel.Qos(1, 0, false)
 	if err != nil {
 		if strings.Contains(err.Error(), "channel/connection is not open") {
 			// reopen connection
@@ -121,22 +125,23 @@ func setupConsume(task consumeTask) APIError {
 			if err != nil {
 				return err
 			}
-			task.conn = conn
+			task.connectionPair.Conn = conn
 			// open channel
-			task.channel, err = openRMQChannel(task.conn, task.connData, task.consume)
+			task.connectionPair.Channel, err = openRMQChannel(task.connectionPair.Conn, task.connData, task.consume)
 			if err != nil {
 				return err
 			}
 		} else {
 			return constants.Error(
 				"SERVICE_REQ_FAILED",
-				"failed to set up QOS: "+err.Error()+", conn active: "+strconv.FormatBool(task.conn.IsClosed()),
+				"failed to set up QOS: "+err.Error()+
+					", conn active: "+strconv.FormatBool(task.connectionPair.Conn.IsClosed()),
 			)
 		}
 	}
 
 	if task.consume != nil {
-		task.consume(task.channel)
+		task.consume(task.connectionPair.Channel)
 	}
 	return nil
 }

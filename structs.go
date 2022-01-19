@@ -155,9 +155,8 @@ type rmqWorkerChannels struct {
 }
 
 type consumeTask struct {
-	channel *amqp.Channel
 	consume consumeFunc
 
-	connData RMQConnectionData
-	conn     *amqp.Connection // to recreate connection
+	connData       RMQConnectionData
+	connectionPair *connectionPair // to recreate connection
 }
