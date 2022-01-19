@@ -2,6 +2,7 @@ package rmqworker
 
 import (
 	"crypto/tls"
+	"strings"
 	"time"
 
 	"github.com/matrixbotio/constants-lib"
@@ -31,13 +32,17 @@ func openConnectionNChannel(task openConnectionNChannelTask) APIError {
 
 	if task.skipChannelOpening {
 		// use existing channel, setup messages consume
-		err := setupConsume(task.connectionPair.Channel, task.consume)
+		err := setupConsume(consumeTask{
+			channel:  task.connectionPair.Channel,
+			consume:  task.consume,
+			connData: task.connData,
+		})
 		if err != nil {
 			return err
 		}
 	} else {
 		// get new channel
-		task.connectionPair.Channel, err = openRMQChannel(task.connectionPair.Conn, task.consume)
+		task.connectionPair.Channel, err = openRMQChannel(task.connectionPair.Conn, task.connData, task.consume)
 		if err != nil {
 			return err
 		}
@@ -89,7 +94,7 @@ func rmqConnect(connData RMQConnectionData) (*amqp.Connection, APIError) {
 }
 
 // openRMQChannel - open new RMQ channel
-func openRMQChannel(conn *amqp.Connection, consume consumeFunc) (*amqp.Channel, APIError) {
+func openRMQChannel(conn *amqp.Connection, connData RMQConnectionData, consume consumeFunc) (*amqp.Channel, APIError) {
 	channel, rmqErr := conn.Channel()
 	if rmqErr != nil {
 		return nil, constants.Error(
@@ -98,20 +103,28 @@ func openRMQChannel(conn *amqp.Connection, consume consumeFunc) (*amqp.Channel, 
 		)
 	}
 
-	return channel, setupConsume(channel, consume)
+	return channel, setupConsume(consumeTask{
+		channel:  channel,
+		consume:  consume,
+		connData: connData,
+	})
 }
 
-func setupConsume(channel *amqp.Channel, consume consumeFunc) APIError {
-	err := channel.Qos(1, 0, false)
+func setupConsume(task consumeTask) APIError {
+	err := task.channel.Qos(1, 0, false)
 	if err != nil {
+		if strings.Contains(err.Error(), "channel/connection is not open") {
+			// reopen connection
+			// TODO
+		}
 		return constants.Error(
 			"SERVICE_REQ_FAILED",
 			"failed to set up QOS: "+err.Error(),
 		)
 	}
 
-	if consume != nil {
-		consume(channel)
+	if task.consume != nil {
+		task.consume(task.channel)
 	}
 	return nil
 }
