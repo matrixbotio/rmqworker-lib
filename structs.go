@@ -44,7 +44,8 @@ type RMQWorker struct {
 	timeoutCallback  RMQTimeoutCallback
 	cronHandler      *simplecron.CronObject
 
-	logger *constants.Logger
+	logger      *constants.Logger
+	verboseMode bool
 }
 
 // RMQMonitoringWorker - rmq extended worker
@@ -104,6 +105,7 @@ type WorkerTask struct {
 	Callback      RMQDeliveryCallback
 	WorkerName    string
 	ReuseChannels bool
+	VerboseMode   bool
 }
 
 // RMQMonitoringWorkerTask - new RMQ request->response monitoring worker data
