@@ -2,6 +2,8 @@ package rmqworker
 
 import (
 	"crypto/tls"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/matrixbotio/constants-lib"
@@ -31,26 +33,29 @@ func openConnectionNChannel(task openConnectionNChannelTask) APIError {
 
 	if task.skipChannelOpening {
 		// use existing channel, setup messages consume
-		err := setupConsume(task.connectionPair.Channel, task.consume)
+		err := setupConsume(consumeTask{
+			consume:        task.consume,
+			connData:       task.connData,
+			connectionPair: task.connectionPair,
+		})
 		if err != nil {
 			return err
 		}
 	} else {
 		// get new channel
-		task.connectionPair.Channel, err = openRMQChannel(task.connectionPair.Conn, task.consume)
+		task.connectionPair.Channel, err = openRMQChannel(task.connectionPair.Conn, task.connData, task.consume)
 		if err != nil {
 			return err
 		}
+		// setup channel reconnection
+		channelCloseReceiver := make(chan *amqp.Error)
+		task.connectionPair.Channel.NotifyClose(channelCloseReceiver)
+		go func() {
+			for task.errorData = range channelCloseReceiver {
+				onConnClosed(task)
+			}
+		}()
 	}
-
-	// setup channel reconnection
-	channelCloseReceiver := make(chan *amqp.Error)
-	task.connectionPair.Channel.NotifyClose(channelCloseReceiver)
-	go func() {
-		for task.errorData = range channelCloseReceiver {
-			onConnClosed(task)
-		}
-	}()
 	return nil
 }
 
@@ -89,7 +94,7 @@ func rmqConnect(connData RMQConnectionData) (*amqp.Connection, APIError) {
 }
 
 // openRMQChannel - open new RMQ channel
-func openRMQChannel(conn *amqp.Connection, consume consumeFunc) (*amqp.Channel, APIError) {
+func openRMQChannel(conn *amqp.Connection, connData RMQConnectionData, consume consumeFunc) (*amqp.Channel, APIError) {
 	channel, rmqErr := conn.Channel()
 	if rmqErr != nil {
 		return nil, constants.Error(
@@ -98,20 +103,45 @@ func openRMQChannel(conn *amqp.Connection, consume consumeFunc) (*amqp.Channel, 
 		)
 	}
 
-	return channel, setupConsume(channel, consume)
+	return channel, setupConsume(consumeTask{
+		consume:  consume,
+		connData: connData,
+		connectionPair: &connectionPair{
+			Conn:    conn,
+			Channel: channel,
+		},
+	})
 }
 
-func setupConsume(channel *amqp.Channel, consume consumeFunc) APIError {
-	err := channel.Qos(1, 0, false)
+func setupConsume(task consumeTask) APIError {
+	task.connectionPair.rwMutex.Lock()
+	defer task.connectionPair.rwMutex.Unlock()
+
+	err := task.connectionPair.Channel.Qos(1, 0, false)
 	if err != nil {
-		return constants.Error(
-			"SERVICE_REQ_FAILED",
-			"failed to set up QOS: "+err.Error(),
-		)
+		if strings.Contains(err.Error(), "channel/connection is not open") {
+			// reopen connection
+			conn, err := rmqConnect(task.connData)
+			if err != nil {
+				return err
+			}
+			task.connectionPair.Conn = conn
+			// open channel
+			task.connectionPair.Channel, err = openRMQChannel(task.connectionPair.Conn, task.connData, task.consume)
+			if err != nil {
+				return err
+			}
+		} else {
+			return constants.Error(
+				"SERVICE_REQ_FAILED",
+				"failed to set up QOS: "+err.Error()+
+					", conn active: "+strconv.FormatBool(task.connectionPair.Conn.IsClosed()),
+			)
+		}
 	}
 
-	if consume != nil {
-		consume(channel)
+	if task.consume != nil {
+		task.consume(task.connectionPair.Channel)
 	}
 	return nil
 }
@@ -124,7 +154,8 @@ func onConnClosed(task openConnectionNChannelTask) {
 	task.skipChannelOpening = false
 
 	if task.errorData != nil {
-		task.logger.Error("RMQ connection/channel closed: " + task.errorData.Error())
+		task.logger.Error("RMQ connection/channel closed: " + task.errorData.Error() +
+			", conn active: " + strconv.FormatBool(task.connectionPair.Conn.IsClosed()))
 	}
 	for {
 		var err APIError
