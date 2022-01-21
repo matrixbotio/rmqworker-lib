@@ -174,14 +174,17 @@ func (w *RMQWorker) Subscribe() APIError {
 
 	var consumeFunc = func(channel *amqp.Channel) {
 		var err error
+		if w.data.ConsumerId == "" {
+			w.data.ConsumerId = getUUID()
+		}
 		w.channels.RMQMessages, err = channel.Consume(
-			w.data.QueueName, // queue
-			"",               // consumer. "" > generate random ID
-			false,            // auto-ack by RMQ service
-			false,            // exclusive
-			false,            // no-local
-			false,            // no-wait
-			nil,              // args
+			w.data.QueueName,  // queue
+			w.data.ConsumerId, // consumer. "" > generate random ID
+			false,             // auto-ack by RMQ service
+			false,             // exclusive
+			false,             // no-local
+			false,             // no-wait
+			nil,               // args
 		)
 		if err != nil {
 			e := constants.Error(
@@ -215,6 +218,14 @@ func (w *RMQWorker) Stop() {
 	w.channels.StopCh <- struct{}{}
 	w.awaitMessages = false
 	w.channels.OnFinished <- struct{}{}
+
+	w.connections.Consume.rwMutex.RLock()
+	err := w.consumeChannel.Cancel(w.data.ConsumerId, true)
+	if err != nil {
+		w.logError(constants.Error("BASE_INTERNAL_ERROR", "Exception stopping consumer: "+err.Error()))
+	}
+	w.connections.Consume.rwMutex.RUnlock()
+
 	w.logVerbose("worker stopped")
 }
 
@@ -276,7 +287,7 @@ func (w *RMQWorker) Listen() {
 	for w.awaitMessages {
 		for rmqDelivery := range w.channels.RMQMessages {
 			if !w.awaitMessages {
-				break
+				return
 			}
 
 			if w.paused {
