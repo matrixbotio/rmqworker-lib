@@ -146,6 +146,7 @@ type rmqWorkerData struct {
 	// optional params
 	ID          string // worker ID for logs
 	ConsumerTag string // empty -> random ID
+	ConsumerId  string // empty -> random ID
 }
 
 type rmqWorkerChannels struct {
