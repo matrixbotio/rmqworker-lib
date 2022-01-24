@@ -174,9 +174,7 @@ func (w *RMQWorker) Subscribe() APIError {
 
 	var consumeFunc = func(channel *amqp.Channel) {
 		var err error
-		if w.data.ConsumerId == "" {
-			w.data.ConsumerId = getUUID()
-		}
+		w.data.ConsumerId = getUUID()
 		w.channels.RMQMessages, err = channel.Consume(
 			w.data.QueueName,  // queue
 			w.data.ConsumerId, // consumer. "" > generate random ID
