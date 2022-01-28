@@ -3,6 +3,7 @@ package rmqworker
 import (
 	"log"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -219,7 +220,9 @@ func (w *RMQWorker) Stop() {
 	w.connections.Consume.rwMutex.RLock()
 	err := w.consumeChannel.Cancel(w.data.ConsumerId, true)
 	if err != nil {
-		w.logError(constants.Error("BASE_INTERNAL_ERROR", "Exception stopping consumer: "+err.Error()))
+		if !strings.Contains(err.Error(), "channel/connection is not open") {
+			w.logError(constants.Error("BASE_INTERNAL_ERROR", "Exception stopping consumer: "+err.Error()))
+		}
 	}
 	w.connections.Consume.rwMutex.RUnlock()
 
