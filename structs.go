@@ -41,6 +41,7 @@ type RMQWorker struct {
 	awaitMessages  bool
 
 	deliveryCallback RMQDeliveryCallback
+	errorCallback    RMQErrorCallback
 	timeoutCallback  RMQTimeoutCallback
 	cronHandler      *simplecron.CronObject
 
@@ -104,6 +105,7 @@ type WorkerTask struct {
 	Callback      RMQDeliveryCallback
 	WorkerName    string
 	ReuseChannels bool
+	ErrorCallback RMQErrorCallback
 }
 
 // RMQMonitoringWorkerTask - new RMQ request->response monitoring worker data
@@ -122,12 +124,16 @@ type RMQMonitoringWorkerTask struct {
 	Timeout          time.Duration
 	TimeoutCallback  RMQTimeoutCallback
 	WorkerName       string
-	MessagesLifetime int64 // milliseconds. 0 to disable limit
-	QueueLength      int64 // how many maximum messages to keep in the queue
+	MessagesLifetime int64            // milliseconds. 0 to disable limit
+	QueueLength      int64            // how many maximum messages to keep in the queue
+	ErrorCallback    RMQErrorCallback // error handler func for RMQ-Worker errors
 }
 
 // RMQDeliveryCallback - RMQ delivery callback function
 type RMQDeliveryCallback func(w *RMQWorker, deliveryHandler RMQDeliveryHandler)
+
+// RMQErrorCallback - RMQ error callback function
+type RMQErrorCallback func(w *RMQWorker, err *constants.APIError)
 
 // RMQTimeoutCallback - RMQ response timeout callback function
 type RMQTimeoutCallback func(w *RMQWorker)
