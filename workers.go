@@ -66,6 +66,7 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 		},
 		syncMode:         true,
 		deliveryCallback: task.Callback,
+		errorCallback:    task.ErrorCallback,
 		logger:           r.Logger,
 		awaitMessages:    true,
 	}
@@ -297,7 +298,6 @@ func (w *RMQWorker) Listen() {
 			}
 			w.handleRMQMessage(rmqDelivery)
 		}
-		w.logVerbose("The message cycle has ended. Params: `await messages` = " + strconv.FormatBool(w.awaitMessages))
 		w.logVerbose("Sleep " + strconv.Itoa(waitingBetweenMsgSubscription) + " seconds to subscription to new messages")
 		time.Sleep(waitingBetweenMsgSubscription * time.Second)
 	}
@@ -312,7 +312,6 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 	if w.data.AutoAckByLib {
 		err := delivery.Accept()
 		if err != nil {
-			w.logVerbose("error: " + err.Message)
 			w.logError(err)
 			return
 		}
@@ -323,7 +322,6 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 	if w.data.CheckResponseErrors {
 		aErr := delivery.CheckResponseError()
 		if aErr != nil {
-			w.logVerbose("message error: " + aErr.Message)
 			w.logError(aErr)
 			return
 		}
@@ -332,8 +330,8 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 	// callback
 	w.logVerbose("run callback..")
 	if w.deliveryCallback == nil {
-		w.logVerbose("callback is not set")
 		w.logError(constants.Error("DATA_HANDLE_ERR", "rmq worker message callback is nil"))
+		return
 	}
 
 	// run callback
