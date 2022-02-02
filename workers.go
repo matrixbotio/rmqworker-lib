@@ -303,6 +303,13 @@ func (w *RMQWorker) Listen() {
 	}
 }
 
+func (w *RMQWorker) handleError(err *constants.APIError) {
+	if w.errorCallback == nil {
+		return
+	}
+	w.errorCallback(w, err)
+}
+
 func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 	w.logVerbose("new rmq message found")
 	// create delivery handler
@@ -312,7 +319,7 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 	if w.data.AutoAckByLib {
 		err := delivery.Accept()
 		if err != nil {
-			w.logError(err)
+			w.handleError(err)
 			return
 		}
 	}
@@ -322,7 +329,7 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 	if w.data.CheckResponseErrors {
 		aErr := delivery.CheckResponseError()
 		if aErr != nil {
-			w.logError(aErr)
+			w.handleError(aErr)
 			return
 		}
 	}
@@ -330,7 +337,7 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 	// callback
 	w.logVerbose("run callback..")
 	if w.deliveryCallback == nil {
-		w.logError(constants.Error("DATA_HANDLE_ERR", "rmq worker message callback is nil"))
+		w.handleError(constants.Error("DATA_HANDLE_ERR", "rmq worker message callback is nil"))
 		return
 	}
 
@@ -338,7 +345,7 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 	if w.syncMode {
 		err := limitDeliveryCallbackTime(w, delivery, deliveryCallbackTimeout*time.Second)
 		if err != nil {
-			w.logWarn(err)
+			w.handleError(err)
 		}
 	} else {
 		go w.deliveryCallback(w, delivery)
