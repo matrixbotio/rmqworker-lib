@@ -3,6 +3,7 @@ package rmqworker
 import (
 	"log"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -66,6 +67,7 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 		},
 		syncMode:         true,
 		deliveryCallback: task.Callback,
+		errorCallback:    task.ErrorCallback,
 		logger:           r.Logger,
 		awaitMessages:    true,
 	}
@@ -168,38 +170,37 @@ func (w *RMQWorker) Serve() {
 	w.Listen()
 }
 
+func (w *RMQWorker) setupConsume(channel *amqp.Channel) {
+	var err error
+	w.data.ConsumerId = getUUID()
+	w.channels.RMQMessages, err = channel.Consume(
+		w.data.QueueName,  // queue
+		w.data.ConsumerId, // consumer. "" > generate random ID
+		false,             // auto-ack by RMQ service
+		false,             // exclusive
+		false,             // no-local
+		false,             // no-wait
+		nil,               // args
+	)
+	if err != nil {
+		e := constants.Error(
+			"SERVICE_REQ_FAILED",
+			"failed to consume rmq worker messages: "+err.Error(),
+		)
+		w.logError(e)
+	}
+}
+
 // Subscribe to RMQ messages
 func (w *RMQWorker) Subscribe() APIError {
 	var aErr APIError
-
-	var consumeFunc = func(channel *amqp.Channel) {
-		var err error
-		w.data.ConsumerId = getUUID()
-		w.channels.RMQMessages, err = channel.Consume(
-			w.data.QueueName,  // queue
-			w.data.ConsumerId, // consumer. "" > generate random ID
-			false,             // auto-ack by RMQ service
-			false,             // exclusive
-			false,             // no-local
-			false,             // no-wait
-			nil,               // args
-		)
-		if err != nil {
-			e := constants.Error(
-				"SERVICE_REQ_FAILED",
-				"failed to consume rmq worker messages: "+err.Error(),
-			)
-			w.logError(e)
-		}
-	}
-
 	// channel not created but connection is active
 	// create new channel
 	aErr = openConnectionNChannel(openConnectionNChannelTask{
 		connectionPair:     &w.connections.Consume,
 		connData:           w.connections.Data,
 		logger:             w.logger,
-		consume:            consumeFunc,
+		consume:            w.setupConsume,
 		skipChannelOpening: true, // channel already set in worker constructor
 	})
 	if aErr != nil {
@@ -220,7 +221,9 @@ func (w *RMQWorker) Stop() {
 	w.connections.Consume.rwMutex.RLock()
 	err := w.consumeChannel.Cancel(w.data.ConsumerId, true)
 	if err != nil {
-		w.logError(constants.Error("BASE_INTERNAL_ERROR", "Exception stopping consumer: "+err.Error()))
+		if !strings.Contains(err.Error(), "channel/connection is not open") {
+			w.logError(constants.Error("BASE_INTERNAL_ERROR", "Exception stopping consumer: "+err.Error()))
+		}
 	}
 	w.connections.Consume.rwMutex.RUnlock()
 
@@ -251,6 +254,18 @@ func (w *RMQWorker) Reset() {
 	if w.data.UseResponseTimeout {
 		w.runCron()
 	}
+
+	// re-consume
+	err := setupConsume(consumeTask{
+		consume:        w.setupConsume,
+		connData:       w.connections.Data,
+		connectionPair: &w.connections.Consume,
+	})
+	if err != nil {
+		w.logError(err)
+		return
+	}
+
 	go w.Listen()
 }
 
@@ -297,10 +312,17 @@ func (w *RMQWorker) Listen() {
 			}
 			w.handleRMQMessage(rmqDelivery)
 		}
-		w.logVerbose("The message cycle has ended. Params: `await messages` = " + strconv.FormatBool(w.awaitMessages))
 		w.logVerbose("Sleep " + strconv.Itoa(waitingBetweenMsgSubscription) + " seconds to subscription to new messages")
 		time.Sleep(waitingBetweenMsgSubscription * time.Second)
 	}
+}
+
+func (w *RMQWorker) handleError(err *constants.APIError) {
+	if w.errorCallback == nil {
+		w.logError(err)
+		return
+	}
+	w.errorCallback(w, err)
 }
 
 func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
@@ -312,8 +334,7 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 	if w.data.AutoAckByLib {
 		err := delivery.Accept()
 		if err != nil {
-			w.logVerbose("error: " + err.Message)
-			w.logError(err)
+			w.handleError(err)
 			return
 		}
 	}
@@ -323,8 +344,7 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 	if w.data.CheckResponseErrors {
 		aErr := delivery.CheckResponseError()
 		if aErr != nil {
-			w.logVerbose("message error: " + aErr.Message)
-			w.logError(aErr)
+			w.handleError(aErr)
 			return
 		}
 	}
@@ -332,15 +352,15 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 	// callback
 	w.logVerbose("run callback..")
 	if w.deliveryCallback == nil {
-		w.logVerbose("callback is not set")
-		w.logError(constants.Error("DATA_HANDLE_ERR", "rmq worker message callback is nil"))
+		w.handleError(constants.Error("DATA_HANDLE_ERR", "rmq worker message callback is nil"))
+		return
 	}
 
 	// run callback
 	if w.syncMode {
 		err := limitDeliveryCallbackTime(w, delivery, deliveryCallbackTimeout*time.Second)
 		if err != nil {
-			w.logWarn(err)
+			w.handleError(err)
 		}
 	} else {
 		go w.deliveryCallback(w, delivery)
@@ -420,6 +440,7 @@ func (r *RMQHandler) NewRMQMonitoringWorker(task RMQMonitoringWorkerTask) (*RMQM
 		Callback:      task.Callback,
 		WorkerName:    task.WorkerName,
 		ReuseChannels: task.ReuseChannels,
+		ErrorCallback: task.ErrorCallback,
 	})
 	if err != nil {
 		return nil, err

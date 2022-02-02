@@ -207,6 +207,7 @@ func (r *RequestHandler) Send() (*RequestHandlerResponse, APIError) {
 		ID:               r.WorkerID,
 		Timeout:          r.Task.ResponseTimeout,
 		TimeoutCallback:  r.handleTimeout,
+		ErrorCallback:    r.onError,
 	})
 	if err != nil {
 		return nil, err
@@ -251,6 +252,11 @@ func (r *RequestHandler) handleMessage(w *RMQWorker, deliveryHandler RMQDelivery
 	r.Response = &RequestHandlerResponse{
 		ResponseBody: deliveryHandler.GetMessageBody(),
 	}
+	w.Stop()
+}
+
+func (r *RequestHandler) onError(w *RMQWorker, err *constants.APIError) {
+	r.LastError = err
 	w.Stop()
 }
 
