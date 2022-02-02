@@ -305,6 +305,7 @@ func (w *RMQWorker) Listen() {
 
 func (w *RMQWorker) handleError(err *constants.APIError) {
 	if w.errorCallback == nil {
+		w.logError(err)
 		return
 	}
 	w.errorCallback(w, err)
