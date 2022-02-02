@@ -440,6 +440,7 @@ func (r *RMQHandler) NewRMQMonitoringWorker(task RMQMonitoringWorkerTask) (*RMQM
 		Callback:      task.Callback,
 		WorkerName:    task.WorkerName,
 		ReuseChannels: task.ReuseChannels,
+		ErrorCallback: task.ErrorCallback,
 	})
 	if err != nil {
 		return nil, err
