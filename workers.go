@@ -218,14 +218,16 @@ func (w *RMQWorker) Stop() {
 	w.awaitMessages = false
 	w.channels.OnFinished <- struct{}{}
 
-	w.connections.Consume.rwMutex.RLock()
-	err := w.consumeChannel.Cancel(w.data.ConsumerId, true)
-	if err != nil {
-		if !strings.Contains(err.Error(), "channel/connection is not open") {
-			w.logError(constants.Error("BASE_INTERNAL_ERROR", "Exception stopping consumer: "+err.Error()))
+	if w.consumeChannel != nil {
+		w.connections.Consume.rwMutex.RLock()
+		err := w.consumeChannel.Cancel(w.data.ConsumerId, true)
+		if err != nil {
+			if !strings.Contains(err.Error(), "channel/connection is not open") {
+				w.logError(constants.Error("BASE_INTERNAL_ERROR", "Exception stopping consumer: "+err.Error()))
+			}
 		}
+		w.connections.Consume.rwMutex.RUnlock()
 	}
-	w.connections.Consume.rwMutex.RUnlock()
 
 	w.logVerbose("worker stopped")
 }
