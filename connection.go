@@ -13,15 +13,20 @@ import (
 type consumeFunc func(channel *amqp.Channel)
 
 // openConnectionNChannel - open new RMQ connection & channel
-func openConnectionNChannel(task openConnectionNChannelTask) APIError {
+func openConnectionNChannel(task openConnectionNChannelTask, forceHandleNotifyCLose bool) APIError {
 	var err APIError
 
+	handleConnectionNotifyClose := forceHandleNotifyCLose
 	// get connection
 	if task.connectionPair.Conn == nil || task.connectionPair.Conn.IsClosed() {
 		task.connectionPair.Conn, err = rmqConnect(task.connData)
 		if err != nil {
 			return err
 		}
+		handleConnectionNotifyClose = true
+	}
+
+	if handleConnectionNotifyClose {
 		connCloseReceiver := make(chan *amqp.Error)
 		task.connectionPair.Conn.NotifyClose(connCloseReceiver)
 		go func() {
@@ -77,8 +82,8 @@ func rmqConnect(connData RMQConnectionData) (*amqp.Connection, APIError) {
 		"@" + connData.Host + ":" + connData.Port + "/"
 
 	if useTLS {
-		tls := &tls.Config{MinVersion: tls.VersionTLS12}
-		conn, err = amqp.DialTLS(dsn, tls)
+		tlsConfig := &tls.Config{MinVersion: tls.VersionTLS12}
+		conn, err = amqp.DialTLS(dsn, tlsConfig)
 	} else {
 		conn, err = amqp.Dial(dsn)
 	}
@@ -160,7 +165,7 @@ func onConnClosed(task openConnectionNChannelTask) {
 	for {
 		var err APIError
 
-		err = openConnectionNChannel(task)
+		err = openConnectionNChannel(task, false)
 		if err == nil {
 			task.logger.Log("RMQ connection/channel recovered")
 			break

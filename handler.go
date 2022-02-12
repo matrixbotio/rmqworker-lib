@@ -85,7 +85,7 @@ func (r *RMQHandler) openConnectionsAndChannels() APIError {
 		connData:       r.Connections.Data,
 		logger:         r.Logger,
 		consume:        nil,
-	})
+	}, false)
 	if err != nil {
 		return err
 	}
@@ -95,7 +95,7 @@ func (r *RMQHandler) openConnectionsAndChannels() APIError {
 		connData:       r.Connections.Data,
 		logger:         r.Logger,
 		consume:        nil,
-	})
+	}, false)
 }
 
 // NewRMQHandler - clone handler & open new RMQ channel
@@ -107,8 +107,19 @@ func (r *RMQHandler) NewRMQHandler() (*RMQHandler, APIError) {
 
 // Close channels
 func (r *RMQHandler) Close() {
-	r.Connections.Consume.Channel.Close()
-	r.Connections.Publish.Channel.Close()
+	err := r.Connections.Consume.Channel.Close()
+	if err != nil {
+		r.Logger.Error(constants.Error(baseInternalError,
+			"Error when closing consumer channel",
+			err.Error()))
+		err = nil
+	}
+	err = r.Connections.Publish.Channel.Close()
+	if err != nil {
+		r.Logger.Error(constants.Error(baseInternalError,
+			"Error when closing publisher channel",
+			err.Error()))
+	}
 }
 
 /*
@@ -260,7 +271,7 @@ func (r *RequestHandler) onError(w *RMQWorker, err *constants.APIError) {
 	w.Stop()
 }
 
-func (r *RequestHandler) handleTimeout(w *RMQWorker) {
+func (r *RequestHandler) handleTimeout(_ *RMQWorker) {
 	message := "send RMQ request timeout"
 	if r.Task.WorkerName != "" {
 		message += " for " + r.Task.WorkerName + " worker"
