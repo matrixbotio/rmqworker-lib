@@ -32,13 +32,12 @@ type RMQConnectionData struct {
 
 // RMQWorker - just RMQ worker
 type RMQWorker struct {
-	data           rmqWorkerData
-	consumeChannel *amqp.Channel
-	connections    *handlerConnections
-	channels       rmqWorkerChannels
-	paused         bool
-	syncMode       bool
-	awaitMessages  bool
+	data          rmqWorkerData
+	connections   *handlerConnections
+	channels      rmqWorkerChannels
+	paused        bool
+	syncMode      bool
+	awaitMessages bool
 
 	deliveryCallback RMQDeliveryCallback
 	errorCallback    RMQErrorCallback

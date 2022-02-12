@@ -28,24 +28,6 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 		return nil, err
 	}
 
-	// open channel for worker
-	var wChannel *amqp.Channel
-	if task.ReuseChannels {
-		// use existing channel
-		wChannel = r.Connections.Consume.Channel
-	} else {
-		// open new channel
-		err = openConnectionNChannel(openConnectionNChannelTask{
-			connectionPair: &r.Connections.Consume,
-			connData:       r.Connections.Data,
-			logger:         r.Logger,
-			consume:        nil,
-		})
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	// set worker name
 	if task.WorkerName == "" {
 		task.WorkerName = "rmq worker"
@@ -58,8 +40,7 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 			AutoAckByLib:        true,
 			CheckResponseErrors: true,
 		},
-		consumeChannel: wChannel,
-		connections:    &r.Connections,
+		connections: &r.Connections,
 		channels: rmqWorkerChannels{
 			RMQMessages: make(<-chan amqp.Delivery),
 			OnFinished:  make(chan struct{}, 1),
@@ -79,11 +60,11 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 func (w *RMQWorker) CloseChannels() {
 	err := w.connections.Consume.Channel.Close()
 	if err != nil {
-		w.logWarn(constants.Error("BASE_INTERNAL_ERROR", "Exception closing consumer channel"+err.Error()))
+		w.logWarn(constants.Error(baseInternalError, "Exception closing consumer channel"+err.Error()))
 	}
 	err = w.connections.Publish.Channel.Close()
 	if err != nil {
-		w.logWarn(constants.Error("BASE_INTERNAL_ERROR", "Exception closing publisher channel"+err.Error()))
+		w.logWarn(constants.Error(baseInternalError, "Exception closing publisher channel"+err.Error()))
 	}
 }
 
@@ -202,7 +183,7 @@ func (w *RMQWorker) Subscribe() APIError {
 		logger:             w.logger,
 		consume:            w.setupConsume,
 		skipChannelOpening: true, // channel already set in worker constructor
-	})
+	}, true)
 	if aErr != nil {
 		return aErr
 	}
@@ -218,12 +199,12 @@ func (w *RMQWorker) Stop() {
 	w.awaitMessages = false
 	w.channels.OnFinished <- struct{}{}
 
-	if w.consumeChannel != nil {
+	if w.connections.Consume.Channel != nil {
 		w.connections.Consume.rwMutex.RLock()
-		err := w.consumeChannel.Cancel(w.data.ConsumerId, true)
+		err := w.connections.Consume.Channel.Cancel(w.data.ConsumerId, true)
 		if err != nil {
 			if !strings.Contains(err.Error(), "channel/connection is not open") {
-				w.logError(constants.Error("BASE_INTERNAL_ERROR", "Exception stopping consumer: "+err.Error()))
+				w.logError(constants.Error(baseInternalError, "Exception stopping consumer: "+err.Error()))
 			}
 		}
 		w.connections.Consume.rwMutex.RUnlock()
