@@ -36,7 +36,6 @@ type RMQWorker struct {
 	connections   *handlerConnections
 	channels      rmqWorkerChannels
 	paused        bool
-	syncMode      bool
 	awaitMessages bool
 
 	deliveryCallback RMQDeliveryCallback
