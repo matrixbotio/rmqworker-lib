@@ -46,7 +46,6 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 			OnFinished:  make(chan struct{}, 1),
 			StopCh:      make(chan struct{}, 1),
 		},
-		syncMode:         true,
 		deliveryCallback: task.Callback,
 		errorCallback:    task.ErrorCallback,
 		logger:           r.Logger,
@@ -340,27 +339,7 @@ func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
 	}
 
 	// run callback
-	if w.syncMode {
-		err := limitDeliveryCallbackTime(w, delivery, deliveryCallbackTimeout*time.Second)
-		if err != nil {
-			w.handleError(err)
-		}
-	} else {
-		go w.deliveryCallback(w, delivery)
-	}
-}
-
-func limitDeliveryCallbackTime(w *RMQWorker, delivery RMQDeliveryHandler, timeLimit time.Duration) *constants.APIError {
-	timeIsUp := simplecron.NewRuntimeLimitHandler(timeLimit, func() {
-		w.deliveryCallback(w, delivery)
-	}).Run()
-	if timeIsUp {
-		return constants.Error(
-			"SERVICE_REQ_TIMEOUT",
-			w.GetName()+" handle task (from delivery) timed out",
-		)
-	}
-	return nil
+	w.deliveryCallback(w, delivery)
 }
 
 func (w *RMQWorker) timeIsUp() {
@@ -373,12 +352,6 @@ func (w *RMQWorker) timeIsUp() {
 // AwaitFinish - wait for worker finished
 func (w *RMQWorker) AwaitFinish() {
 	<-w.channels.OnFinished
-}
-
-// SetSyncMode - whether to run the callback of task processing synchronously
-func (w *RMQWorker) SetSyncMode(sync bool) *RMQWorker {
-	w.syncMode = sync
-	return w
 }
 
 /*
