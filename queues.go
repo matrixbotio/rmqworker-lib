@@ -7,6 +7,8 @@ import (
 
 // rmqQueueDeclare - declare RMQ queue
 func (r *RMQHandler) rmqQueueDeclare(connectionPair *connectionPair, task RMQQueueDeclareSimpleTask) APIError {
+	connectionPair.mutex.Lock()
+	defer connectionPair.mutex.Unlock()
 	connectionPair.rwMutex.RLock()
 	defer connectionPair.rwMutex.RUnlock()
 
