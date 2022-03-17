@@ -161,6 +161,7 @@ type RequestHandlerTask struct {
 	ExchangeInsteadOfQueue bool
 	WorkerName             string
 	ResponseTimeout        time.Duration
+	ForceQueueToDurable    bool
 }
 
 // NewRequestHandler - create new handler for one-time request
@@ -209,7 +210,7 @@ func (r *RequestHandler) Send() (*RequestHandlerResponse, APIError) {
 	// create RMQ-M worker
 	w, err := r.RMQH.NewRMQMonitoringWorker(RMQMonitoringWorkerTask{
 		QueueName:        r.Task.TempQueueName,
-		ISQueueDurable:   false,
+		ISQueueDurable:   r.Task.ForceQueueToDurable,
 		ISAutoDelete:     false,
 		FromExchangeName: r.Task.ResponseFromExchangeName,
 		RoutingKey:       r.Task.TempQueueName,
