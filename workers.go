@@ -113,6 +113,16 @@ func (w *RMQWorker) GetID() string {
 	return w.data.ID
 }
 
+// IsPaused - return worker paused state
+func (w *RMQWorker) IsPaused() bool {
+	return w.paused
+}
+
+// IsActive - return worker paused state
+func (w *RMQWorker) IsActive() bool {
+	return w.awaitMessages
+}
+
 // SetAutoAck - auto accept messages.
 // This will also change the auto-acceptance of messages by the library (!autoAck)
 func (w *RMQWorker) SetAutoAck(autoAck bool) *RMQWorker {
@@ -453,4 +463,14 @@ func (w *RMQMonitoringWorker) GetID() string {
 // StopConnections - force stop worker connections
 func (w *RMQMonitoringWorker) StopConnections() {
 	w.Worker.CloseChannels()
+}
+
+// IsPaused - return worker paused state
+func (w *RMQMonitoringWorker) IsPaused() bool {
+	return w.Worker.IsPaused()
+}
+
+// IsActive - return worker paused state
+func (w *RMQMonitoringWorker) IsActive() bool {
+	return w.Worker.IsActive()
 }
