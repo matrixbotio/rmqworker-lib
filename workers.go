@@ -91,6 +91,15 @@ func (w *RMQWorker) logError(err *constants.APIError) {
 	}
 }
 
+// IsConnAlive - check that the connection is established
+func (w *RMQWorker) IsConnAlive() bool {
+	if w.connections == nil || w.connections.Consume.Conn == nil {
+		return false
+	}
+
+	return !w.connections.Consume.Conn.IsClosed()
+}
+
 // SetName - set RMQ worker name for logs
 func (w *RMQWorker) SetName(name string) *RMQWorker {
 	w.data.Name = name
@@ -473,4 +482,9 @@ func (w *RMQMonitoringWorker) IsPaused() bool {
 // IsActive - return worker paused state
 func (w *RMQMonitoringWorker) IsActive() bool {
 	return w.Worker.IsActive()
+}
+
+// IsConnAlive - check that the connection is established
+func (w *RMQMonitoringWorker) IsConnAlive() bool {
+	return w.Worker.IsConnAlive()
 }
