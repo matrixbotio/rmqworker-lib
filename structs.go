@@ -60,6 +60,7 @@ type RMQQueueDeclareSimpleTask struct {
 	// optional
 	MessagesLifetime int64
 	QueueLength      int64
+	DisableOverflow  bool
 }
 
 // RMQQueueDeclareTask - queue declare task data container
@@ -73,6 +74,7 @@ type RMQQueueDeclareTask struct {
 	// optional
 	MessagesLifetime int64
 	QueueLength      int64
+	DisableOverflow  bool
 }
 
 // RMQExchangeDeclareTask - exchange declare task data container
