@@ -403,6 +403,7 @@ func (r *RMQHandler) NewRMQMonitoringWorker(task RMQMonitoringWorkerTask) (*RMQM
 		RoutingKey:       task.RoutingKey,
 		MessagesLifetime: task.MessagesLifetime,
 		QueueLength:      task.QueueLength,
+		DisableOverflow:  task.DisableOverflow,
 	})
 	if err != nil {
 		return nil, err

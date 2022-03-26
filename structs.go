@@ -124,8 +124,9 @@ type RMQMonitoringWorkerTask struct {
 	Timeout          time.Duration
 	TimeoutCallback  RMQTimeoutCallback
 	WorkerName       string
-	MessagesLifetime int64            // milliseconds. 0 to disable limit
-	QueueLength      int64            // how many maximum messages to keep in the queue
+	MessagesLifetime int64 // milliseconds. 0 to disable limit
+	QueueLength      int64 // how many maximum messages to keep in the queue
+	DisableOverflow  bool
 	ErrorCallback    RMQErrorCallback // error handler func for RMQ-Worker errors
 }
 
