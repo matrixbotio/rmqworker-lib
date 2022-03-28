@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/beefsack/go-rate"
 	"github.com/google/uuid"
 	"github.com/matrixbotio/constants-lib"
 	simplecron "github.com/sagleft/simple-cron"
@@ -50,6 +51,9 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 		errorCallback:    task.ErrorCallback,
 		logger:           r.Logger,
 		awaitMessages:    true,
+	}
+	if task.EnableRateLimiter && task.MaxEventsPerSecond > 0 {
+		w.rateLimiter = rate.New(task.MaxEventsPerSecond, time.Second)
 	}
 
 	return &w, nil
@@ -290,6 +294,18 @@ func (w *RMQWorker) SetConsumerTagFromName() *RMQWorker {
 	return w.SetConsumerTag(tag)
 }
 
+func (w *RMQWorker) stopCron() {
+	if w.cronHandler != nil {
+		w.cronHandler.Stop()
+	}
+}
+
+func (w *RMQWorker) limitHandleRate() {
+	if w.rateLimiter != nil {
+		w.rateLimiter.Wait()
+	}
+}
+
 // Listen RMQ messages
 func (w *RMQWorker) Listen() {
 	w.awaitMessages = true
@@ -308,9 +324,8 @@ func (w *RMQWorker) Listen() {
 				continue // ignore message
 			}
 
-			if w.cronHandler != nil {
-				w.cronHandler.Stop()
-			}
+			w.limitHandleRate()
+			w.stopCron()
 			w.handleRMQMessage(rmqDelivery)
 		}
 		w.logVerbose("Sleep " + strconv.Itoa(waitingBetweenMsgSubscription) + " seconds to subscription to new messages")
@@ -412,11 +427,13 @@ func (r *RMQHandler) NewRMQMonitoringWorker(task RMQMonitoringWorkerTask) (*RMQM
 	// create worker
 	w := RMQMonitoringWorker{}
 	w.Worker, err = r.NewRMQWorker(WorkerTask{
-		QueueName:     task.QueueName,
-		Callback:      task.Callback,
-		WorkerName:    task.WorkerName,
-		ReuseChannels: task.ReuseChannels,
-		ErrorCallback: task.ErrorCallback,
+		QueueName:          task.QueueName,
+		Callback:           task.Callback,
+		WorkerName:         task.WorkerName,
+		ReuseChannels:      task.ReuseChannels,
+		ErrorCallback:      task.ErrorCallback,
+		EnableRateLimiter:  task.EnableRateLimiter,
+		MaxEventsPerSecond: task.MaxEventsPerSecond,
 	})
 	if err != nil {
 		return nil, err
