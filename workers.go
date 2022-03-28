@@ -52,7 +52,7 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 		logger:           r.Logger,
 		awaitMessages:    true,
 	}
-	if task.EnableRateLimiter {
+	if task.EnableRateLimiter && task.MaxEventsPerSecond > 0 {
 		w.rateLimiter = rate.New(task.MaxEventsPerSecond, time.Second)
 	}
 
