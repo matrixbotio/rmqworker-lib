@@ -121,6 +121,23 @@ func (d *RMQDeliveryHandler) CheckResponseError() APIError {
 			)
 		}
 	}
+
+	var errorStack string
+	errorStackRaw, _ := d.GetHeader("stack")
+	errorStack, isConvertable = errorStackRaw.(string)
+	if !isConvertable {
+		errorStack = ""
+	}
 	errMessage := string(d.GetMessageBody())
+
+	if errorStack != "" {
+		return &constants.APIError{
+			Message: errMessage,
+			Code:    int(responseCode),
+			Name:    errName,
+			Stack:   errorStack,
+		}
+	}
+
 	return constants.Error(errName, errMessage)
 }
