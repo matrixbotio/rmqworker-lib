@@ -3,6 +3,7 @@ package rmqworker
 import (
 	"time"
 
+	"github.com/beefsack/go-rate"
 	"github.com/matrixbotio/constants-lib"
 	simplecron "github.com/sagleft/simple-cron"
 	"github.com/streadway/amqp"
@@ -43,7 +44,8 @@ type RMQWorker struct {
 	timeoutCallback  RMQTimeoutCallback
 	cronHandler      *simplecron.CronObject
 
-	logger *constants.Logger
+	logger      *constants.Logger
+	rateLimiter *rate.RateLimiter
 }
 
 // RMQMonitoringWorker - rmq extended worker
@@ -99,11 +101,16 @@ type RMQPublishResponseTask struct {
 
 // WorkerTask - new RMQ worker data
 type WorkerTask struct {
+	// required
 	QueueName     string
 	Callback      RMQDeliveryCallback
-	WorkerName    string
-	ReuseChannels bool
 	ErrorCallback RMQErrorCallback
+
+	// optional
+	WorkerName         string
+	ReuseChannels      bool
+	EnableRateLimiter  bool
+	MaxEventsPerSecond int // for limiter
 }
 
 // RMQMonitoringWorkerTask - new RMQ request->response monitoring worker data
@@ -115,16 +122,18 @@ type RMQMonitoringWorkerTask struct {
 	FromExchangeName string
 	RoutingKey       string // to bind queue to response exchange
 	Callback         RMQDeliveryCallback
-	ReuseChannels    bool // open new channel for worker?
+	ErrorCallback    RMQErrorCallback // error handler func for RMQ-Worker errors
 
 	// optional
-	ID               string
-	Timeout          time.Duration
-	TimeoutCallback  RMQTimeoutCallback
-	WorkerName       string
-	MessagesLifetime int64            // milliseconds. 0 to disable limit
-	QueueLength      int64            // how many maximum messages to keep in the queue
-	ErrorCallback    RMQErrorCallback // error handler func for RMQ-Worker errors
+	ID                 string
+	Timeout            time.Duration
+	TimeoutCallback    RMQTimeoutCallback
+	WorkerName         string
+	ReuseChannels      bool  // open new channel for worker?
+	MessagesLifetime   int64 // milliseconds. 0 to disable limit
+	QueueLength        int64 // how many maximum messages to keep in the queue
+	EnableRateLimiter  bool
+	MaxEventsPerSecond int // for limiter
 }
 
 // RMQDeliveryCallback - RMQ delivery callback function
