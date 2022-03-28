@@ -62,6 +62,7 @@ type RMQQueueDeclareSimpleTask struct {
 	// optional
 	MessagesLifetime int64
 	QueueLength      int64
+	DisableOverflow  bool
 }
 
 // RMQQueueDeclareTask - queue declare task data container
@@ -75,6 +76,7 @@ type RMQQueueDeclareTask struct {
 	// optional
 	MessagesLifetime int64
 	QueueLength      int64
+	DisableOverflow  bool
 }
 
 // RMQExchangeDeclareTask - exchange declare task data container
@@ -134,6 +136,7 @@ type RMQMonitoringWorkerTask struct {
 	QueueLength        int64 // how many maximum messages to keep in the queue
 	EnableRateLimiter  bool
 	MaxEventsPerSecond int // for limiter
+  DisableOverflow  bool
 }
 
 // RMQDeliveryCallback - RMQ delivery callback function

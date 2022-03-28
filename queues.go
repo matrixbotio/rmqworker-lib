@@ -19,6 +19,9 @@ func (r *RMQHandler) rmqQueueDeclare(connectionPair *connectionPair, task RMQQue
 	if task.QueueLength > 0 {
 		args["x-max-length"] = task.QueueLength
 	}
+	if task.DisableOverflow {
+		args["x-overflow"] = "reject-publish"
+	}
 
 	err := r.checkConnection()
 	if err != nil {
@@ -85,6 +88,7 @@ func (r *RMQHandler) RMQQueueDeclareAndBind(task RMQQueueDeclareTask) APIError {
 			AutoDelete:       task.AutoDelete, // auto-delete queue on consumer quit
 			MessagesLifetime: task.MessagesLifetime,
 			QueueLength:      task.QueueLength,
+			DisableOverflow:  task.DisableOverflow,
 		},
 	)
 	if err != nil {
