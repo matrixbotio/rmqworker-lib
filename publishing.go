@@ -65,6 +65,7 @@ func (r *RMQHandler) SendRMQResponse(
 		// add error to header & body
 		headers["code"] = errorMsg[0].Code
 		headers["name"] = errorMsg[0].Name
+		headers["stack"] = errorMsg[0].Stack
 		responseBody = []byte(errorMsg[0].Message)
 		contentType = "text/plain"
 	}
