@@ -17,6 +17,7 @@ type openConnectionNChannelTask struct {
 	connData           RMQConnectionData
 	logger             *constants.Logger
 	consume            consumeFunc
+	reconsumeAll       bool
 	skipChannelOpening bool
 
 	errorData error
@@ -110,7 +111,6 @@ type WorkerTask struct {
 
 	// optional
 	WorkerName         string
-	ReuseChannels      bool
 	EnableRateLimiter  bool
 	MaxEventsPerSecond int // for limiter
 }
@@ -131,12 +131,11 @@ type RMQMonitoringWorkerTask struct {
 	Timeout            time.Duration
 	TimeoutCallback    RMQTimeoutCallback
 	WorkerName         string
-	ReuseChannels      bool  // open new channel for worker?
 	MessagesLifetime   int64 // milliseconds. 0 to disable limit
 	QueueLength        int64 // how many maximum messages to keep in the queue
 	EnableRateLimiter  bool
 	MaxEventsPerSecond int // for limiter
-  DisableOverflow  bool
+	DisableOverflow    bool
 }
 
 // RMQDeliveryCallback - RMQ delivery callback function
@@ -169,11 +168,13 @@ type rmqWorkerChannels struct {
 	RMQMessages <-chan amqp.Delivery
 	OnFinished  chan struct{}
 	StopCh      chan struct{}
+
+	msgChanOpened bool
 }
 
 type consumeTask struct {
-	consume consumeFunc
-
+	consume        consumeFunc
 	connData       RMQConnectionData
 	connectionPair *connectionPair // to recreate connection
+	reconsumeAll   bool
 }

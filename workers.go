@@ -175,22 +175,25 @@ func (w *RMQWorker) Serve() {
 
 func (w *RMQWorker) setupConsume(channel *amqp.Channel) {
 	var err error
-	w.data.ConsumerId = getUUID()
-	w.channels.RMQMessages, err = channel.Consume(
-		w.data.QueueName,  // queue
-		w.data.ConsumerId, // consumer. "" > generate random ID
-		false,             // auto-ack by RMQ service
-		false,             // exclusive
-		false,             // no-local
-		false,             // no-wait
-		nil,               // args
-	)
-	if err != nil {
-		e := constants.Error(
-			"SERVICE_REQ_FAILED",
-			"failed to consume rmq worker messages: "+err.Error(),
+	if w.channels.RMQMessages == nil || !w.channels.msgChanOpened {
+		w.data.ConsumerId = getUUID()
+		w.channels.RMQMessages, err = channel.Consume(
+			w.data.QueueName,  // queue
+			w.data.ConsumerId, // consumer. "" > generate random ID
+			false,             // auto-ack by RMQ service
+			false,             // exclusive
+			false,             // no-local
+			false,             // no-wait
+			nil,               // args
 		)
-		w.logError(e)
+		if err != nil {
+			e := constants.Error(
+				"SERVICE_REQ_FAILED",
+				"failed to consume rmq worker messages: "+err.Error(),
+			)
+			w.logError(e)
+		}
+		w.channels.msgChanOpened = true
 	}
 }
 
@@ -199,13 +202,22 @@ func (w *RMQWorker) Subscribe() APIError {
 	var aErr APIError
 	// channel not created but connection is active
 	// create new channel
+	consume := w.setupConsume
+	consumerConnectionPair := &w.connections.Consume
+	if consumerConnectionPair.consumes == nil {
+		consumerConnectionPair.consumes = make(map[string]consumeFunc)
+	}
+	if w.data.ConsumerTag == "" {
+		w.data.ConsumerTag = getUUID()
+	}
+	consumerConnectionPair.consumes[w.data.ConsumerTag] = consume
 	aErr = openConnectionNChannel(openConnectionNChannelTask{
-		connectionPair:     &w.connections.Consume,
+		connectionPair:     consumerConnectionPair,
 		connData:           w.connections.Data,
 		logger:             w.logger,
 		consume:            w.setupConsume,
 		skipChannelOpening: true, // channel already set in worker constructor
-	}, true)
+	})
 	if aErr != nil {
 		return aErr
 	}
@@ -229,6 +241,7 @@ func (w *RMQWorker) Stop() {
 				w.logError(constants.Error(baseInternalError, "Exception stopping consumer: "+err.Error()))
 			}
 		}
+		delete(w.connections.Consume.consumes, w.data.ConsumerTag)
 		w.connections.Consume.rwMutex.RUnlock()
 	}
 
@@ -261,7 +274,7 @@ func (w *RMQWorker) Reset() {
 	}
 
 	// re-consume
-	err := setupConsume(consumeTask{
+	err := startConsumer(consumeTask{
 		consume:        w.setupConsume,
 		connData:       w.connections.Data,
 		connectionPair: &w.connections.Consume,
@@ -328,7 +341,8 @@ func (w *RMQWorker) Listen() {
 			w.stopCron()
 			w.handleRMQMessage(rmqDelivery)
 		}
-		w.logVerbose("Sleep " + strconv.Itoa(waitingBetweenMsgSubscription) + " seconds to subscription to new messages")
+		w.channels.msgChanOpened = false
+		w.logVerbose("Sleep " + strconv.Itoa(waitingBetweenMsgSubscription) + " seconds before re-consuming")
 		time.Sleep(waitingBetweenMsgSubscription * time.Second)
 	}
 }
@@ -430,7 +444,6 @@ func (r *RMQHandler) NewRMQMonitoringWorker(task RMQMonitoringWorkerTask) (*RMQM
 		QueueName:          task.QueueName,
 		Callback:           task.Callback,
 		WorkerName:         task.WorkerName,
-		ReuseChannels:      task.ReuseChannels,
 		ErrorCallback:      task.ErrorCallback,
 		EnableRateLimiter:  task.EnableRateLimiter,
 		MaxEventsPerSecond: task.MaxEventsPerSecond,

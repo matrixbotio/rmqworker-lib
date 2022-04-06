@@ -37,10 +37,11 @@ type handlerConnections struct {
 }
 
 type connectionPair struct {
-	mutex   sync.Mutex
-	rwMutex sync.RWMutex
-	Conn    *amqp.Connection
-	Channel *amqp.Channel
+	mutex    sync.Mutex
+	rwMutex  sync.RWMutex
+	Conn     *amqp.Connection
+	Channel  *amqp.Channel
+	consumes map[string]consumeFunc
 }
 
 // NewRMQHandler - create new RMQHandler
@@ -85,7 +86,7 @@ func (r *RMQHandler) openConnectionsAndChannels() APIError {
 		connData:       r.Connections.Data,
 		logger:         r.Logger,
 		consume:        nil,
-	}, false)
+	})
 	if err != nil {
 		return err
 	}
@@ -95,7 +96,7 @@ func (r *RMQHandler) openConnectionsAndChannels() APIError {
 		connData:       r.Connections.Data,
 		logger:         r.Logger,
 		consume:        nil,
-	}, false)
+	})
 }
 
 // NewRMQHandler - clone handler & open new RMQ channel
@@ -215,7 +216,6 @@ func (r *RequestHandler) Send() (*RequestHandlerResponse, APIError) {
 		FromExchangeName: r.Task.ResponseFromExchangeName,
 		RoutingKey:       r.Task.TempQueueName,
 		Callback:         r.handleMessage,
-		ReuseChannels:    true,
 		ID:               r.WorkerID,
 		Timeout:          r.Task.ResponseTimeout,
 		TimeoutCallback:  r.handleTimeout,

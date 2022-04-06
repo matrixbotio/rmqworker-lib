@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/matrixbotio/constants-lib"
@@ -13,20 +14,21 @@ import (
 type consumeFunc func(channel *amqp.Channel)
 
 // openConnectionNChannel - open new RMQ connection & channel
-func openConnectionNChannel(task openConnectionNChannelTask, forceHandleNotifyCLose bool) APIError {
+func openConnectionNChannel(task openConnectionNChannelTask) APIError {
 	var err APIError
 
-	handleConnectionNotifyClose := forceHandleNotifyCLose
+	if task.connectionPair == nil {
+		task.connectionPair = &connectionPair{
+			mutex:   sync.Mutex{},
+			rwMutex: sync.RWMutex{},
+		}
+	}
 	// get connection
 	if task.connectionPair.Conn == nil || task.connectionPair.Conn.IsClosed() {
 		task.connectionPair.Conn, err = rmqConnect(task.connData)
 		if err != nil {
 			return err
 		}
-		handleConnectionNotifyClose = true
-	}
-
-	if handleConnectionNotifyClose {
 		connCloseReceiver := make(chan *amqp.Error)
 		task.connectionPair.Conn.NotifyClose(connCloseReceiver)
 		go func() {
@@ -38,17 +40,18 @@ func openConnectionNChannel(task openConnectionNChannelTask, forceHandleNotifyCL
 
 	if task.skipChannelOpening {
 		// use existing channel, setup messages consume
-		err := setupConsume(consumeTask{
+		err := startConsumer(consumeTask{
 			consume:        task.consume,
 			connData:       task.connData,
 			connectionPair: task.connectionPair,
+			reconsumeAll:   task.reconsumeAll,
 		})
 		if err != nil {
 			return err
 		}
 	} else {
 		// get new channel
-		task.connectionPair.Channel, err = openRMQChannel(task.connectionPair.Conn, task.connData, task.consume)
+		err = openRMQChannel(task.connectionPair, task.connData, task.consume, task.reconsumeAll)
 		if err != nil {
 			return err
 		}
@@ -99,28 +102,34 @@ func rmqConnect(connData RMQConnectionData) (*amqp.Connection, APIError) {
 }
 
 // openRMQChannel - open new RMQ channel
-func openRMQChannel(conn *amqp.Connection, connData RMQConnectionData, consume consumeFunc) (*amqp.Channel, APIError) {
-	channel, rmqErr := conn.Channel()
+func openRMQChannel(connectionPair *connectionPair, connData RMQConnectionData, consume consumeFunc, reconsumeAll bool,
+) APIError {
+	channel, rmqErr := connectionPair.Conn.Channel()
 	if rmqErr != nil {
-		return nil, constants.Error(
+		return constants.Error(
 			"SERVICE_REQ_FAILED",
 			"failed to get amqp channel: "+rmqErr.Error(),
 		)
 	}
 
-	return channel, setupConsume(consumeTask{
-		consume:  consume,
-		connData: connData,
-		connectionPair: &connectionPair{
-			Conn:    conn,
-			Channel: channel,
-		},
+	connectionPair.Channel = channel
+
+	err := startConsumer(consumeTask{
+		consume:        consume,
+		connData:       connData,
+		connectionPair: connectionPair,
+		reconsumeAll:   reconsumeAll,
 	})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func setupConsume(task consumeTask) APIError {
-	task.connectionPair.rwMutex.Lock()
-	defer task.connectionPair.rwMutex.Unlock()
+func startConsumer(task consumeTask) APIError {
+	task.connectionPair.mutex.Lock()
+	defer task.connectionPair.mutex.Unlock()
 
 	err := task.connectionPair.Channel.Qos(1, 0, false)
 	if err != nil {
@@ -132,7 +141,7 @@ func setupConsume(task consumeTask) APIError {
 			}
 			task.connectionPair.Conn = conn
 			// open channel
-			task.connectionPair.Channel, err = openRMQChannel(task.connectionPair.Conn, task.connData, task.consume)
+			err = openRMQChannel(task.connectionPair, task.connData, task.consume, false)
 			if err != nil {
 				return err
 			}
@@ -145,7 +154,11 @@ func setupConsume(task consumeTask) APIError {
 		}
 	}
 
-	if task.consume != nil {
+	if task.reconsumeAll {
+		for _, consume := range task.connectionPair.consumes {
+			consume(task.connectionPair.Channel)
+		}
+	} else if task.consume != nil {
 		task.consume(task.connectionPair.Channel)
 	}
 	return nil
@@ -157,6 +170,7 @@ func onConnClosed(task openConnectionNChannelTask) {
 	task.connectionPair.rwMutex.Lock()
 	defer task.connectionPair.rwMutex.Unlock()
 	task.skipChannelOpening = false
+	task.reconsumeAll = true
 
 	if task.errorData != nil {
 		task.logger.Error("RMQ connection/channel closed: " + task.errorData.Error() +
@@ -165,7 +179,7 @@ func onConnClosed(task openConnectionNChannelTask) {
 	for {
 		var err APIError
 
-		err = openConnectionNChannel(task, false)
+		err = openConnectionNChannel(task)
 		if err == nil {
 			task.logger.Log("RMQ connection/channel recovered")
 			break
