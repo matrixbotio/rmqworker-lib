@@ -334,6 +334,10 @@ func (w *RMQWorker) Listen() {
 			}
 
 			if w.paused {
+				err := rmqDelivery.Reject(true)
+				if err != nil {
+					w.logWarn(constants.Error("SERVICE_REQ_FAILED", err.Error()))
+				}
 				continue // ignore message
 			}
 
