@@ -47,10 +47,11 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 			OnFinished:  make(chan struct{}, 1),
 			StopCh:      make(chan struct{}, 1),
 		},
-		deliveryCallback: task.Callback,
-		errorCallback:    task.ErrorCallback,
-		logger:           r.Logger,
-		awaitMessages:    true,
+		deliveryCallback:      task.Callback,
+		errorCallback:         task.ErrorCallback,
+		logger:                r.Logger,
+		awaitMessages:         true,
+		rejectDeliveryOnPause: task.RejectDeliveryOnPause,
 	}
 	if task.EnableRateLimiter && task.MaxEventsPerSecond > 0 {
 		w.rateLimiter = rate.New(task.MaxEventsPerSecond, time.Second)
@@ -329,25 +330,38 @@ func (w *RMQWorker) Listen() {
 
 	for w.awaitMessages {
 		for rmqDelivery := range w.channels.RMQMessages {
+			// create delivery handler
+			delivery := NewRMQDeliveryHandler(rmqDelivery)
+
 			if !w.awaitMessages {
+				w.handleDeliveryOnPause(delivery)
 				return
 			}
 
 			if w.paused {
-				err := rmqDelivery.Reject(true)
-				if err != nil {
-					w.logWarn(constants.Error("SERVICE_REQ_FAILED", err.Error()))
-				}
+				w.handleDeliveryOnPause(delivery)
 				continue // ignore message
 			}
 
 			w.limitHandleRate()
 			w.stopCron()
-			w.handleRMQMessage(rmqDelivery)
+			w.handleRMQMessage(delivery)
 		}
 		w.channels.msgChanOpened = false
 		w.logVerbose("Sleep " + strconv.Itoa(waitingBetweenMsgSubscription) + " seconds before re-consuming")
 		time.Sleep(waitingBetweenMsgSubscription * time.Second)
+	}
+}
+
+func (w *RMQWorker) handleDeliveryOnPause(delivery RMQDeliveryHandler) {
+	var err APIError
+	if w.rejectDeliveryOnPause {
+		err = delivery.Reject(true)
+	} else {
+		err = delivery.Accept()
+	}
+	if err != nil {
+		w.logWarn(err)
 	}
 }
 
@@ -359,10 +373,8 @@ func (w *RMQWorker) handleError(err *constants.APIError) {
 	w.errorCallback(w, err)
 }
 
-func (w *RMQWorker) handleRMQMessage(rmqDelivery amqp.Delivery) {
+func (w *RMQWorker) handleRMQMessage(delivery RMQDeliveryHandler) {
 	w.logVerbose("new rmq message found")
-	// create delivery handler
-	delivery := NewRMQDeliveryHandler(rmqDelivery)
 
 	// auto accept message if needed
 	if w.data.AutoAckByLib {
@@ -445,12 +457,13 @@ func (r *RMQHandler) NewRMQMonitoringWorker(task RMQMonitoringWorkerTask) (*RMQM
 	// create worker
 	w := RMQMonitoringWorker{}
 	w.Worker, err = r.NewRMQWorker(WorkerTask{
-		QueueName:          task.QueueName,
-		Callback:           task.Callback,
-		WorkerName:         task.WorkerName,
-		ErrorCallback:      task.ErrorCallback,
-		EnableRateLimiter:  task.EnableRateLimiter,
-		MaxEventsPerSecond: task.MaxEventsPerSecond,
+		QueueName:             task.QueueName,
+		Callback:              task.Callback,
+		WorkerName:            task.WorkerName,
+		ErrorCallback:         task.ErrorCallback,
+		EnableRateLimiter:     task.EnableRateLimiter,
+		MaxEventsPerSecond:    task.MaxEventsPerSecond,
+		RejectDeliveryOnPause: task.RejectDeliveryOnPause,
 	})
 	if err != nil {
 		return nil, err
