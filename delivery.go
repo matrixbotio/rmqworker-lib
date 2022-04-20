@@ -84,6 +84,18 @@ func (d *RMQDeliveryHandler) Accept() APIError {
 	return nil
 }
 
+// Reject RMQ message delivery
+func (d *RMQDeliveryHandler) Reject(requeue bool) APIError {
+	err := d.rmqDelivery.Reject(requeue)
+	if err != nil {
+		return constants.Error(
+			"SERVICE_REQ_FAILED",
+			"failed to reject delivery: "+err.Error(),
+		)
+	}
+	return nil
+}
+
 // CheckResponseError - check RMQ response error
 func (d *RMQDeliveryHandler) CheckResponseError() APIError {
 	responseCodeRaw, isFieldFound := d.GetHeader("code")

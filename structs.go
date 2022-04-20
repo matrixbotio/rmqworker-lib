@@ -34,11 +34,12 @@ type RMQConnectionData struct {
 
 // RMQWorker - just RMQ worker
 type RMQWorker struct {
-	data          rmqWorkerData
-	connections   *handlerConnections
-	channels      rmqWorkerChannels
-	paused        bool
-	awaitMessages bool
+	data                  rmqWorkerData
+	connections           *handlerConnections
+	channels              rmqWorkerChannels
+	paused                bool
+	awaitMessages         bool
+	rejectDeliveryOnPause bool
 
 	deliveryCallback RMQDeliveryCallback
 	errorCallback    RMQErrorCallback
@@ -110,9 +111,10 @@ type WorkerTask struct {
 	ErrorCallback RMQErrorCallback
 
 	// optional
-	WorkerName         string
-	EnableRateLimiter  bool
-	MaxEventsPerSecond int // for limiter
+	WorkerName            string
+	EnableRateLimiter     bool
+	MaxEventsPerSecond    int // for limiter
+	RejectDeliveryOnPause bool
 }
 
 // RMQMonitoringWorkerTask - new RMQ request->response monitoring worker data
@@ -127,15 +129,16 @@ type RMQMonitoringWorkerTask struct {
 	ErrorCallback    RMQErrorCallback // error handler func for RMQ-Worker errors
 
 	// optional
-	ID                 string
-	Timeout            time.Duration
-	TimeoutCallback    RMQTimeoutCallback
-	WorkerName         string
-	MessagesLifetime   int64 // milliseconds. 0 to disable limit
-	QueueLength        int64 // how many maximum messages to keep in the queue
-	EnableRateLimiter  bool
-	MaxEventsPerSecond int // for limiter
-	DisableOverflow    bool
+	ID                    string
+	Timeout               time.Duration
+	TimeoutCallback       RMQTimeoutCallback
+	WorkerName            string
+	MessagesLifetime      int64 // milliseconds. 0 to disable limit
+	QueueLength           int64 // how many maximum messages to keep in the queue
+	EnableRateLimiter     bool
+	MaxEventsPerSecond    int // for limiter
+	DisableOverflow       bool
+	RejectDeliveryOnPause bool
 }
 
 // RMQDeliveryCallback - RMQ delivery callback function
