@@ -236,7 +236,7 @@ func (w *RMQWorker) Stop() {
 
 	if w.connections.Consume.Channel != nil {
 		w.connections.Consume.rwMutex.RLock()
-		err := w.connections.Consume.Channel.Cancel(w.data.ConsumerId, true)
+		err := w.connections.Consume.Channel.Cancel(w.data.ConsumerId, false)
 		if err != nil {
 			if !strings.Contains(err.Error(), "channel/connection is not open") {
 				w.logError(constants.Error(baseInternalError, "Exception stopping consumer: "+err.Error()))
