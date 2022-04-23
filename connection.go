@@ -173,8 +173,11 @@ func onConnClosed(task openConnectionNChannelTask) {
 	task.reconsumeAll = true
 
 	if task.errorData != nil {
-		task.logger.Error("RMQ connection/channel closed: " + task.errorData.Error() +
-			", conn active: " + strconv.FormatBool(task.connectionPair.Conn.IsClosed()))
+		task.logger.Error(constants.Error(
+			"SERVICE_CONN_ERR",
+			"RMQ connection/channel closed: "+task.errorData.Error()+
+				", conn active: "+strconv.FormatBool(task.connectionPair.Conn.IsClosed()),
+		))
 	}
 	for {
 		var err APIError
@@ -184,7 +187,10 @@ func onConnClosed(task openConnectionNChannelTask) {
 			task.logger.Log("RMQ connection/channel recovered")
 			break
 		} else {
-			task.logger.Error("Exception while trying to recover RMQ connection/channel: " + err.Message)
+			task.logger.Error(constants.Error(
+				"SERVICE_REQ_FAILED",
+				"Exception while trying to recover RMQ connection/channel: "+err.Message,
+			))
 			time.Sleep(5 * time.Second)
 		}
 	}
