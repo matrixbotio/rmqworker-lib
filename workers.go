@@ -9,8 +9,8 @@ import (
 	"github.com/beefsack/go-rate"
 	"github.com/google/uuid"
 	"github.com/matrixbotio/constants-lib"
+	amqp "github.com/rabbitmq/amqp091-go"
 	simplecron "github.com/sagleft/simple-cron"
-	"github.com/streadway/amqp"
 )
 
 /*

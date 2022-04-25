@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/matrixbotio/constants-lib"
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 // RMQDeliveryHandler - RMQ delivery data container
