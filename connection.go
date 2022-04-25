@@ -195,7 +195,7 @@ func onConnClosed(task openConnectionNChannelTask) {
 			if task.logger == nil {
 				log.Println(logMsg)
 			} else {
-				task.logger.Log(task.logger)
+				task.logger.Log(logMsg)
 			}
 			break
 		} else {
