@@ -192,7 +192,7 @@ func (w *RMQWorker) setupConsume(channel *amqp.Channel) {
 				"SERVICE_REQ_FAILED",
 				"failed to consume rmq worker messages: "+err.Error(),
 			)
-			w.logError(e)
+			w.handleError(e)
 		}
 		w.channels.msgChanOpened = true
 	}
@@ -277,7 +277,7 @@ func (w *RMQWorker) Reset() {
 		connectionPair: &w.connections.Consume,
 	})
 	if err != nil {
-		w.logError(err)
+		w.handleError(err)
 		return
 	}
 
