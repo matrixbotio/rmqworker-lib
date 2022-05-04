@@ -2,7 +2,6 @@ package rmqworker
 
 import (
 	"log"
-	"strconv"
 	"strings"
 	"time"
 
@@ -324,29 +323,29 @@ func (w *RMQWorker) Listen() {
 		w.runCron()
 	}
 
-	for w.awaitMessages {
-		for rmqDelivery := range w.channels.RMQMessages {
-			// create delivery handler
-			delivery := NewRMQDeliveryHandler(rmqDelivery)
+	//for w.awaitMessages {
+	for rmqDelivery := range w.channels.RMQMessages {
+		// create delivery handler
+		delivery := NewRMQDeliveryHandler(rmqDelivery)
 
-			if !w.awaitMessages {
-				w.handleDeliveryOnPause(delivery)
-				return
-			}
-
-			if w.paused {
-				w.handleDeliveryOnPause(delivery)
-				continue // ignore message
-			}
-
-			w.limitHandleRate()
-			w.stopCron()
-			w.handleRMQMessage(delivery)
+		if !w.awaitMessages {
+			w.handleDeliveryOnPause(delivery)
+			return
 		}
-		w.channels.msgChanOpened = false
-		w.logVerbose("Sleep " + strconv.Itoa(waitingBetweenMsgSubscription) + " seconds before re-consuming")
-		time.Sleep(waitingBetweenMsgSubscription * time.Second)
+
+		if w.paused {
+			w.handleDeliveryOnPause(delivery)
+			continue // ignore message
+		}
+
+		w.limitHandleRate()
+		w.stopCron()
+		w.handleRMQMessage(delivery)
 	}
+	w.channels.msgChanOpened = false
+	//w.logVerbose("Sleep " + strconv.Itoa(waitingBetweenMsgSubscription) + " seconds before re-consuming")
+	//time.Sleep(waitingBetweenMsgSubscription * time.Second)
+	//}
 }
 
 func (w *RMQWorker) handleDeliveryOnPause(delivery RMQDeliveryHandler) {
