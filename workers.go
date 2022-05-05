@@ -234,7 +234,6 @@ func (w *RMQWorker) Stop() {
 	w.channels.OnFinished <- struct{}{}
 
 	if w.connections.Consume.Channel != nil {
-		w.connections.Consume.rwMutex.RLock()
 		err := w.connections.Consume.Channel.Cancel(w.data.ConsumerId, false)
 		if err != nil {
 			if !strings.Contains(err.Error(), "channel/connection is not open") {
@@ -242,7 +241,6 @@ func (w *RMQWorker) Stop() {
 			}
 		}
 		delete(w.connections.Consume.consumes, w.data.ConsumerTag)
-		w.connections.Consume.rwMutex.RUnlock()
 	}
 
 	w.logVerbose("worker stopped")
