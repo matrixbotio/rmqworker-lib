@@ -2,7 +2,6 @@ package rmqworker
 
 import (
 	"log"
-	"strconv"
 	"strings"
 	"time"
 
@@ -235,7 +234,6 @@ func (w *RMQWorker) Stop() {
 	w.channels.OnFinished <- struct{}{}
 
 	if w.connections.Consume.Channel != nil {
-		w.connections.Consume.rwMutex.RLock()
 		err := w.connections.Consume.Channel.Cancel(w.data.ConsumerId, false)
 		if err != nil {
 			if !strings.Contains(err.Error(), "channel/connection is not open") {
@@ -243,7 +241,6 @@ func (w *RMQWorker) Stop() {
 			}
 		}
 		delete(w.connections.Consume.consumes, w.data.ConsumerTag)
-		w.connections.Consume.rwMutex.RUnlock()
 	}
 
 	w.logVerbose("worker stopped")
@@ -324,29 +321,25 @@ func (w *RMQWorker) Listen() {
 		w.runCron()
 	}
 
-	for w.awaitMessages {
-		for rmqDelivery := range w.channels.RMQMessages {
-			// create delivery handler
-			delivery := NewRMQDeliveryHandler(rmqDelivery)
+	for rmqDelivery := range w.channels.RMQMessages {
+		// create delivery handler
+		delivery := NewRMQDeliveryHandler(rmqDelivery)
 
-			if !w.awaitMessages {
-				w.handleDeliveryOnPause(delivery)
-				return
-			}
-
-			if w.paused {
-				w.handleDeliveryOnPause(delivery)
-				continue // ignore message
-			}
-
-			w.limitHandleRate()
-			w.stopCron()
-			w.handleRMQMessage(delivery)
+		if !w.awaitMessages {
+			w.handleDeliveryOnPause(delivery)
+			return
 		}
-		w.channels.msgChanOpened = false
-		w.logVerbose("Sleep " + strconv.Itoa(waitingBetweenMsgSubscription) + " seconds before re-consuming")
-		time.Sleep(waitingBetweenMsgSubscription * time.Second)
+
+		if w.paused {
+			w.handleDeliveryOnPause(delivery)
+			continue // ignore message
+		}
+
+		w.limitHandleRate()
+		w.stopCron()
+		w.handleRMQMessage(delivery)
 	}
+	w.channels.msgChanOpened = false
 }
 
 func (w *RMQWorker) handleDeliveryOnPause(delivery RMQDeliveryHandler) {
