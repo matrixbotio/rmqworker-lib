@@ -340,9 +340,6 @@ func (w *RMQWorker) Listen() {
 		w.handleRMQMessage(delivery)
 	}
 	w.channels.msgChanOpened = false
-	//w.logVerbose("Sleep " + strconv.Itoa(waitingBetweenMsgSubscription) + " seconds before re-consuming")
-	//time.Sleep(waitingBetweenMsgSubscription * time.Second)
-	//}
 }
 
 func (w *RMQWorker) handleDeliveryOnPause(delivery RMQDeliveryHandler) {
