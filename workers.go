@@ -1,11 +1,13 @@
 package rmqworker
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"log"
 	"time"
 
 	"github.com/beefsack/go-rate"
-	"github.com/google/uuid"
 	"github.com/matrixbotio/constants-lib"
 	simplecron "github.com/sagleft/simple-cron"
 	"github.com/streadway/amqp"
@@ -39,6 +41,7 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 			AutoAckByLib:        true,
 			CheckResponseErrors: true,
 		},
+		rmqConsumer: consumer{},
 		//connections: &r.Connections,
 		channels: rmqWorkerChannels{
 			RMQMessages: make(<-chan amqp.Delivery),
@@ -106,7 +109,8 @@ func (w *RMQWorker) logError(err *constants.APIError) {
 // SetName - set RMQ worker name for logs
 func (w *RMQWorker) SetName(name string) *RMQWorker {
 	w.data.Name = name
-	return w.SetConsumerTagFromName()
+	//return w.SetConsumerTagFromName()
+	return w
 }
 
 // GetName - get worker name
@@ -158,6 +162,98 @@ func (w *RMQWorker) SetTimeout(timeout time.Duration, callback RMQTimeoutCallbac
 
 func (w *RMQWorker) getLogWorkerName() string {
 	return "RMQ Worker " + w.data.Name + ": "
+}
+
+// Declare implement darkmq.Consumer.(Declare) interface method
+func (c *consumer) Declare(ctx context.Context, ch *amqp.Channel) error {
+	if c.ExchangeName != "" {
+		err := ch.ExchangeDeclare(
+			c.ExchangeName, // name
+			"direct",       // type
+			true,           // durable
+			false,          // auto-deleted
+			false,          // internal
+			false,          // no-wait
+			nil,            // arguments
+		)
+		if err != nil {
+			return errors.New("failed to declare exchange: " + err.Error())
+		}
+	}
+
+	_, err := ch.QueueDeclare(
+		c.QueueName, // name
+		true,        // durable
+		false,       // delete when unused
+		false,       // exclusive
+		false,       // no-wait
+		nil,         // arguments
+	)
+	if err != nil {
+		return errors.New("failed to declare queue: " + err.Error())
+	}
+
+	/*err = ch.QueueBind(
+		c.QueueName,    // queue name
+		c.QueueName,    // routing key
+		c.ExchangeName, // exchange
+		false,          // no-wait
+		nil,            // arguments
+	)
+	if err != nil {
+		log.Printf("failed to bind queue %v: %v", c.QueueName, err)
+
+		return err
+	}*/
+
+	return nil
+}
+
+// Consume implement darkmq.Consumer.(Consume) interface method
+func (c *consumer) Consume(ctx context.Context, ch *amqp.Channel) error {
+	err := ch.Qos(
+		1,     // prefetch count
+		0,     // prefetch size
+		false, // global
+	)
+	if err != nil {
+		log.Printf("failed to set qos: %v", err)
+
+		return err
+	}
+
+	msgs, err := ch.Consume(
+		c.QueueName, // queue
+		getUUID(),   // consumer name
+		false,       // auto-ack
+		false,       // exclusive
+		false,       // no-local
+		false,       // no-wait
+		nil,         // args
+	)
+	if err != nil {
+		log.Printf("failed to consume %v: %v", c.QueueName, err)
+
+		return err
+	}
+
+	for {
+		select {
+		case msg, ok := <-msgs:
+			if !ok {
+				return amqp.ErrClosed
+			}
+
+			err := msg.Ack(false)
+			if err != nil {
+				log.Printf("failed to Ack message: %v", err)
+			}
+
+			fmt.Println("New message:", string(msg.Body))
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
 }
 
 // Serve - listen RMQ messages
@@ -219,19 +315,19 @@ func (w *RMQWorker) runCron() {
 }
 
 // SetConsumerTag - set worker unique consumer tag
-func (w *RMQWorker) SetConsumerTag(uniqueTag string) *RMQWorker {
+/*func (w *RMQWorker) SetConsumerTag(uniqueTag string) *RMQWorker {
 	w.data.ConsumerTag = uniqueTag
 	return w
-}
+}*/
 
 // SetConsumerTagFromName - assign a consumer tag to the worker based on its name and random ID
-func (w *RMQWorker) SetConsumerTagFromName() *RMQWorker {
+/*func (w *RMQWorker) SetConsumerTagFromName() *RMQWorker {
 	tag := w.data.Name + "-" + uuid.New().String()
 	if w.data.Name == "" {
 		tag = "worker" + w.data.ConsumerTag
 	}
 	return w.SetConsumerTag(tag)
-}
+}*/
 
 func (w *RMQWorker) stopCron() {
 	if w.cronHandler != nil {

@@ -33,9 +33,16 @@ type RMQConnectionData struct {
 	UseTLS   string `json:"tls"`
 }
 
+// consumer implement darkmq.Consumer interface
+type consumer struct {
+	ExchangeName string
+	QueueName    string
+}
+
 // RMQWorker - just RMQ worker
 type RMQWorker struct {
-	data rmqWorkerData
+	data        rmqWorkerData
+	rmqConsumer consumer
 	//connections           *handlerConnections
 	channels rmqWorkerChannels
 	//paused                bool

@@ -57,7 +57,7 @@ func (r *RMQHandler) rmqConnect() {
 	}
 
 	if !r.UseErrorCallback {
-		log.Println(err)
+		log.Println("[rmq handler error callback is not set] error: " + err.Error())
 		return
 	}
 
