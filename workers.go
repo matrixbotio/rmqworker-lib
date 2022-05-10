@@ -321,7 +321,6 @@ func (w *RMQWorker) Listen() {
 		w.runCron()
 	}
 
-	//for w.awaitMessages {
 	for rmqDelivery := range w.channels.RMQMessages {
 		// create delivery handler
 		delivery := NewRMQDeliveryHandler(rmqDelivery)
