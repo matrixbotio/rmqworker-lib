@@ -52,6 +52,9 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 		errorCallback:    task.ErrorCallback,
 		logger:           r.logger,
 	}
+
+	w.remakeStopChannel()
+
 	if task.EnableRateLimiter && task.MaxEventsPerSecond > 0 {
 		w.rateLimiter = rate.New(task.MaxEventsPerSecond, time.Second)
 	}
@@ -265,7 +268,12 @@ func (w *RMQWorker) Serve() {
 	w.logVerbose("listen..")
 	w.Listen()*/
 
-	w.conn.StartMultipleConsumers(context.Background(), w.rmqConsumer, w.consumersCount) // TODO
+	err := w.conn.StartMultipleConsumers(context.Background(), w.rmqConsumer, w.consumersCount, w.stopCh)
+	if err != nil {
+		w.handleError(constants.Error(
+			"SERVICE_REQ_FAILED", "failed to start consumer(s): "+err.Error(),
+		))
+	}
 }
 
 // Stop RMQ messages listen
@@ -288,6 +296,8 @@ func (w *RMQWorker) Stop() {
 	}
 
 	w.logVerbose("worker stopped")*/
+
+	w.stopCh <- struct{}{}
 }
 
 // Reset worker channels
@@ -307,6 +317,12 @@ func (w *RMQWorker) Reset() {
 	}
 
 	go w.Listen()*/
+
+	w.remakeStopChannel()
+}
+
+func (w *RMQWorker) remakeStopChannel() {
+	w.stopCh = make(chan struct{}, 1)
 }
 
 func (w *RMQWorker) runCron() {

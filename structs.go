@@ -55,6 +55,8 @@ type RMQWorker struct {
 
 	logger      *constants.Logger
 	rateLimiter *rate.RateLimiter
+
+	stopCh chan struct{}
 }
 
 // RMQMonitoringWorker - rmq extended worker
