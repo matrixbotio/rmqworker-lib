@@ -1,13 +1,13 @@
 package rmqworker
 
 import (
+	"context"
 	"encoding/json"
-	"sync"
+	"log"
 	"time"
 
 	"github.com/matrixbotio/constants-lib"
-	simplecron "github.com/sagleft/simple-cron"
-	"github.com/streadway/amqp"
+	darkmq "github.com/sagleft/darkrmq"
 )
 
 /*
@@ -22,105 +22,73 @@ import (
 jgs  {}  /  \_/\=/\_/  \
 */
 
-// RMQHandler - RMQ connection handler
-type RMQHandler struct {
-	Connections handlerConnections
-	Logger      *constants.Logger
-	Cron        *simplecron.CronObject
-}
-
-type handlerConnections struct {
-	Data RMQConnectionData
-
-	Publish connectionPair // connection & channel for publish messages
-	Consume connectionPair // connection & channel for consume messages
-}
-
-type connectionPair struct {
-	mutex    sync.Mutex
-	rwMutex  sync.RWMutex
-	Conn     *amqp.Connection
-	Channel  *amqp.Channel
-	consumes map[string]consumeFunc
-}
-
 // NewRMQHandler - create new RMQHandler
 func NewRMQHandler(connData RMQConnectionData, logger ...*constants.Logger) (*RMQHandler, APIError) {
 	// create handler
 	r := RMQHandler{
-		Connections: handlerConnections{
-			Data: connData,
-		},
+		data: connData,
 	}
+	r.rmqInit()
 
 	// assign logger
 	if len(logger) > 0 {
 		if logger[0] != nil {
-			r.Logger = logger[0]
+			r.logger = logger[0]
 		}
-	}
-
-	err := r.openConnectionsAndChannels()
-	if err != nil {
-		return nil, err
 	}
 
 	return &r, nil
 }
 
-func (r *RMQHandler) checkConnection() APIError {
-	if r.Connections.Publish.Conn == nil || r.Connections.Publish.Conn.IsClosed() {
-		// open new connection
-		err := r.openConnectionsAndChannels()
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+func (r *RMQHandler) rmqInit() {
+	r.conn = darkmq.NewConnector(darkmq.Config{
+		Wait: waitBetweenReconnect,
+	})
+
+	go r.rmqConnect()
 }
 
-func (r *RMQHandler) openConnectionsAndChannels() APIError {
-	var err APIError
-	err = openConnectionNChannel(openConnectionNChannelTask{
-		connectionPair: &r.Connections.Publish,
-		connData:       r.Connections.Data,
-		logger:         r.Logger,
-		consume:        nil,
-	})
-	if err != nil {
-		return err
+func (r *RMQHandler) rmqConnect() {
+	dsn := getRMQConnectionURL(r.data)
+
+	err := r.conn.Dial(context.Background(), dsn)
+	if err == nil {
+		return
 	}
 
-	return openConnectionNChannel(openConnectionNChannelTask{
-		connectionPair: &r.Connections.Consume,
-		connData:       r.Connections.Data,
-		logger:         r.Logger,
-		consume:        nil,
-	})
+	if !r.UseErrorCallback {
+		log.Println(err)
+		return
+	}
+
+	r.ConnectionErrorCallback(constants.Error(
+		"SERVICE_CONN_ERR", "failed to connect: "+err.Error(),
+	))
 }
 
 // NewRMQHandler - clone handler & open new RMQ channel
-func (r *RMQHandler) NewRMQHandler() (*RMQHandler, APIError) {
+func (r *RMQHandler) NewRMQHandler() *RMQHandler {
 	handlerRoot := *r
 	newHandler := handlerRoot
-	return &newHandler, r.openConnectionsAndChannels()
+	newHandler.rmqInit()
+	return &newHandler
 }
 
 // Close channels
 func (r *RMQHandler) Close() {
-	err := r.Connections.Consume.Channel.Close()
+	/*err := r.Connections.Consume.Channel.Close()
 	if err != nil {
-		r.Logger.Error(constants.Error(baseInternalError,
+		r.logger.Error(constants.Error(baseInternalError,
 			"Error when closing consumer channel",
 			err.Error()))
 		err = nil
 	}
 	err = r.Connections.Publish.Channel.Close()
 	if err != nil {
-		r.Logger.Error(constants.Error(baseInternalError,
+		r.logger.Error(constants.Error(baseInternalError,
 			"Error when closing publisher channel",
 			err.Error()))
-	}
+	}*/
 }
 
 /*

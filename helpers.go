@@ -25,3 +25,17 @@ func encodeMessage(message interface{}) ([]byte, APIError) {
 func convertRMQError(err APIError) *constants.APIError {
 	return (*constants.APIError)(err)
 }
+
+func getRMQConnectionURL(connData RMQConnectionData) string {
+	var useTLS bool = false
+	if connData.UseTLS == "1" {
+		useTLS = true
+	}
+
+	protocol := "amqp"
+	if useTLS {
+		protocol += "s"
+	}
+	return protocol + "://" + connData.User + ":" + connData.Password +
+		"@" + connData.Host + ":" + connData.Port + "/"
+}

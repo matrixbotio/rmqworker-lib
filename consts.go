@@ -1,8 +1,10 @@
 package rmqworker
 
+import "time"
+
 const (
-	waitingBetweenMsgSubscription = 5  // seconds
-	deliveryCallbackTimeout       = 90 // seconds
+	waitBetweenReconnect    = 5 * time.Second
+	deliveryCallbackTimeout = 90 // seconds
 
 	baseInternalError = "BASE_INTERNAL_ERROR"
 )

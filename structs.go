@@ -5,6 +5,7 @@ import (
 
 	"github.com/beefsack/go-rate"
 	"github.com/matrixbotio/constants-lib"
+	darkmq "github.com/sagleft/darkrmq"
 	simplecron "github.com/sagleft/simple-cron"
 	"github.com/streadway/amqp"
 )
@@ -12,7 +13,7 @@ import (
 // APIError - error data container
 type APIError *constants.APIError
 
-type openConnectionNChannelTask struct {
+/*type openConnectionNChannelTask struct {
 	connectionPair     *connectionPair
 	connData           RMQConnectionData
 	logger             *constants.Logger
@@ -21,7 +22,7 @@ type openConnectionNChannelTask struct {
 	skipChannelOpening bool
 
 	errorData error
-}
+}*/
 
 // RMQConnectionData - rmq connection data container
 type RMQConnectionData struct {
@@ -34,12 +35,12 @@ type RMQConnectionData struct {
 
 // RMQWorker - just RMQ worker
 type RMQWorker struct {
-	data                  rmqWorkerData
-	connections           *handlerConnections
-	channels              rmqWorkerChannels
-	paused                bool
-	awaitMessages         bool
-	rejectDeliveryOnPause bool
+	data rmqWorkerData
+	//connections           *handlerConnections
+	channels rmqWorkerChannels
+	//paused                bool
+	//awaitMessages         bool
+	//rejectDeliveryOnPause bool
 
 	deliveryCallback RMQDeliveryCallback
 	errorCallback    RMQErrorCallback
@@ -175,9 +176,29 @@ type rmqWorkerChannels struct {
 	msgChanOpened bool
 }
 
-type consumeTask struct {
+/*type consumeTask struct {
 	consume        consumeFunc
 	connData       RMQConnectionData
 	connectionPair *connectionPair // to recreate connection
 	reconsumeAll   bool
+}*/
+
+// RMQHandler - RMQ connection handler
+type RMQHandler struct {
+	// public
+	UseErrorCallback        bool
+	ConnectionErrorCallback func(err APIError)
+
+	// protected
+	data   RMQConnectionData
+	conn   *darkmq.Connector
+	logger *constants.Logger
 }
+
+/*type connectionPair struct {
+	mutex    sync.Mutex
+	rwMutex  sync.RWMutex
+	Conn     *amqp.Connection
+	Channel  *amqp.Channel
+	consumes map[string]consumeFunc
+}*/

@@ -2,7 +2,6 @@ package rmqworker
 
 import (
 	"log"
-	"strings"
 	"time"
 
 	"github.com/beefsack/go-rate"
@@ -23,10 +22,10 @@ jgs /  \/  \/ |
 
 // NewRMQWorker - create new RMQ worker to receive messages
 func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
-	err := r.checkConnection()
+	/*err := r.checkConnection()
 	if err != nil {
 		return nil, err
-	}
+	}*/
 
 	// set worker name
 	if task.WorkerName == "" {
@@ -40,17 +39,17 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 			AutoAckByLib:        true,
 			CheckResponseErrors: true,
 		},
-		connections: &r.Connections,
+		//connections: &r.Connections,
 		channels: rmqWorkerChannels{
 			RMQMessages: make(<-chan amqp.Delivery),
 			OnFinished:  make(chan struct{}, 1),
 			StopCh:      make(chan struct{}, 1),
 		},
-		deliveryCallback:      task.Callback,
-		errorCallback:         task.ErrorCallback,
-		logger:                r.Logger,
-		awaitMessages:         true,
-		rejectDeliveryOnPause: task.RejectDeliveryOnPause,
+		deliveryCallback: task.Callback,
+		errorCallback:    task.ErrorCallback,
+		logger:           r.logger,
+		//awaitMessages:         true,
+		//rejectDeliveryOnPause: task.RejectDeliveryOnPause,
 	}
 	if task.EnableRateLimiter && task.MaxEventsPerSecond > 0 {
 		w.rateLimiter = rate.New(task.MaxEventsPerSecond, time.Second)
@@ -61,14 +60,14 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 
 // CloseChannels - force close worker's channels
 func (w *RMQWorker) CloseChannels() {
-	err := w.connections.Consume.Channel.Close()
+	/*err := w.connections.Consume.Channel.Close()
 	if err != nil {
 		w.logWarn(constants.Error(baseInternalError, "Exception closing consumer channel"+err.Error()))
 	}
 	err = w.connections.Publish.Channel.Close()
 	if err != nil {
 		w.logWarn(constants.Error(baseInternalError, "Exception closing publisher channel"+err.Error()))
-	}
+	}*/
 }
 
 func (w *RMQWorker) logWarn(err *constants.APIError) {
@@ -96,13 +95,13 @@ func (w *RMQWorker) logError(err *constants.APIError) {
 }
 
 // IsConnAlive - check that the connection is established
-func (w *RMQWorker) IsConnAlive() bool {
+/*func (w *RMQWorker) IsConnAlive() bool {
 	if w.connections == nil || w.connections.Consume.Conn == nil {
 		return false
 	}
 
 	return !w.connections.Consume.Conn.IsClosed()
-}
+}*/
 
 // SetName - set RMQ worker name for logs
 func (w *RMQWorker) SetName(name string) *RMQWorker {
@@ -127,14 +126,14 @@ func (w *RMQWorker) GetID() string {
 }
 
 // IsPaused - return worker paused state
-func (w *RMQWorker) IsPaused() bool {
+/*func (w *RMQWorker) IsPaused() bool {
 	return w.paused
-}
+}*/
 
 // IsActive - return worker paused state
-func (w *RMQWorker) IsActive() bool {
+/*func (w *RMQWorker) IsActive() bool {
 	return w.awaitMessages
-}
+}*/
 
 // SetAutoAck - auto accept messages.
 // This will also change the auto-acceptance of messages by the library (!autoAck)
@@ -163,70 +162,19 @@ func (w *RMQWorker) getLogWorkerName() string {
 
 // Serve - listen RMQ messages
 func (w *RMQWorker) Serve() {
-	w.logVerbose("subscribe..")
+	/*w.logVerbose("subscribe..")
 	err := w.Subscribe()
 	if err != nil {
 		w.logError(err)
 	}
 
 	w.logVerbose("listen..")
-	w.Listen()
-}
-
-func (w *RMQWorker) setupConsume(channel *amqp.Channel) {
-	var err error
-	if w.channels.RMQMessages == nil || !w.channels.msgChanOpened {
-		w.data.ConsumerId = getUUID()
-		w.channels.RMQMessages, err = channel.Consume(
-			w.data.QueueName,  // queue
-			w.data.ConsumerId, // consumer. "" > generate random ID
-			false,             // auto-ack by RMQ service
-			false,             // exclusive
-			false,             // no-local
-			false,             // no-wait
-			nil,               // args
-		)
-		if err != nil {
-			e := constants.Error(
-				"SERVICE_REQ_FAILED",
-				"failed to consume rmq worker messages: "+err.Error(),
-			)
-			w.handleError(e)
-		}
-		w.channels.msgChanOpened = true
-	}
-}
-
-// Subscribe to RMQ messages
-func (w *RMQWorker) Subscribe() APIError {
-	var aErr APIError
-	// channel not created but connection is active
-	// create new channel
-	consume := w.setupConsume
-	consumerConnectionPair := &w.connections.Consume
-	if consumerConnectionPair.consumes == nil {
-		consumerConnectionPair.consumes = make(map[string]consumeFunc)
-	}
-	if w.data.ConsumerTag == "" {
-		w.data.ConsumerTag = getUUID()
-	}
-	consumerConnectionPair.consumes[w.data.ConsumerTag] = consume
-	aErr = openConnectionNChannel(openConnectionNChannelTask{
-		connectionPair:     consumerConnectionPair,
-		connData:           w.connections.Data,
-		logger:             w.logger,
-		consume:            w.setupConsume,
-		skipChannelOpening: true, // channel already set in worker constructor
-	})
-	if aErr != nil {
-		return aErr
-	}
-	return nil
+	w.Listen()*/
 }
 
 // Stop RMQ messages listen
 func (w *RMQWorker) Stop() {
-	if w.cronHandler != nil {
+	/*if w.cronHandler != nil {
 		go w.cronHandler.Stop()
 	}
 	w.channels.StopCh <- struct{}{}
@@ -243,23 +191,7 @@ func (w *RMQWorker) Stop() {
 		delete(w.connections.Consume.consumes, w.data.ConsumerTag)
 	}
 
-	w.logVerbose("worker stopped")
-}
-
-// Pause RMQ Worker (ignore messages)
-func (w *RMQWorker) Pause() {
-	if w.cronHandler != nil {
-		w.cronHandler.Pause()
-	}
-	w.paused = true
-}
-
-// Resume RMQ Worker (continue listen messages)
-func (w *RMQWorker) Resume() {
-	if w.cronHandler != nil {
-		w.cronHandler.Resume()
-	}
-	w.paused = false
+	w.logVerbose("worker stopped")*/
 }
 
 // Reset worker channels
@@ -268,7 +200,7 @@ func (w *RMQWorker) Reset() {
 	w.channels.StopCh = make(chan struct{}, 1)
 
 	// re-consume
-	err := startConsumer(consumeTask{
+	/*err := startConsumer(consumeTask{
 		consume:        w.setupConsume,
 		connData:       w.connections.Data,
 		connectionPair: &w.connections.Consume,
@@ -278,7 +210,7 @@ func (w *RMQWorker) Reset() {
 		return
 	}
 
-	go w.Listen()
+	go w.Listen()*/
 }
 
 func (w *RMQWorker) runCron() {
@@ -310,47 +242,6 @@ func (w *RMQWorker) stopCron() {
 func (w *RMQWorker) limitHandleRate() {
 	if w.rateLimiter != nil {
 		w.rateLimiter.Wait()
-	}
-}
-
-// Listen RMQ messages
-func (w *RMQWorker) Listen() {
-	w.awaitMessages = true
-
-	if w.data.UseResponseTimeout {
-		w.runCron()
-	}
-
-	for rmqDelivery := range w.channels.RMQMessages {
-		// create delivery handler
-		delivery := NewRMQDeliveryHandler(rmqDelivery)
-
-		if !w.awaitMessages {
-			w.handleDeliveryOnPause(delivery)
-			return
-		}
-
-		if w.paused {
-			w.handleDeliveryOnPause(delivery)
-			continue // ignore message
-		}
-
-		w.limitHandleRate()
-		w.stopCron()
-		w.handleRMQMessage(delivery)
-	}
-	w.channels.msgChanOpened = false
-}
-
-func (w *RMQWorker) handleDeliveryOnPause(delivery RMQDeliveryHandler) {
-	var err APIError
-	if w.rejectDeliveryOnPause {
-		err = delivery.Reject(true)
-	} else {
-		err = delivery.Accept()
-	}
-	if err != nil {
-		w.logWarn(err)
 	}
 }
 
@@ -477,14 +368,14 @@ func (w *RMQMonitoringWorker) Stop() {
 }
 
 // Pause handle rmq messages
-func (w *RMQMonitoringWorker) Pause() {
+/*func (w *RMQMonitoringWorker) Pause() {
 	w.Worker.Pause()
-}
+}*/
 
 // Resume handle rmq messages
-func (w *RMQMonitoringWorker) Resume() {
+/*func (w *RMQMonitoringWorker) Resume() {
 	w.Worker.Resume()
-}
+}*/
 
 // AwaitFinish - await worker finished
 func (w *RMQMonitoringWorker) AwaitFinish() {
@@ -512,7 +403,7 @@ func (w *RMQMonitoringWorker) StopConnections() {
 }
 
 // IsPaused - return worker paused state
-func (w *RMQMonitoringWorker) IsPaused() bool {
+/*func (w *RMQMonitoringWorker) IsPaused() bool {
 	return w.Worker.IsPaused()
 }
 
@@ -524,4 +415,4 @@ func (w *RMQMonitoringWorker) IsActive() bool {
 // IsConnAlive - check that the connection is established
 func (w *RMQMonitoringWorker) IsConnAlive() bool {
 	return w.Worker.IsConnAlive()
-}
+}*/
