@@ -41,15 +41,14 @@ type consumer struct {
 
 // RMQWorker - just RMQ worker
 type RMQWorker struct {
-	data        rmqWorkerData
-	rmqConsumer consumer
-	//connections           *handlerConnections
-	channels rmqWorkerChannels
-	//paused                bool
-	//awaitMessages         bool
-	//rejectDeliveryOnPause bool
+	data           rmqWorkerData
+	conn           *darkmq.Connector
+	rmqConsumer    *consumer
+	channels       rmqWorkerChannels
+	consumersCount int
 
 	deliveryCallback RMQDeliveryCallback
+	useErrorCallback bool
 	errorCallback    RMQErrorCallback
 	timeoutCallback  RMQTimeoutCallback
 	cronHandler      *simplecron.CronObject
@@ -114,15 +113,17 @@ type RMQPublishResponseTask struct {
 // WorkerTask - new RMQ worker data
 type WorkerTask struct {
 	// required
-	QueueName     string
-	Callback      RMQDeliveryCallback
-	ErrorCallback RMQErrorCallback
+	QueueName string
+	Callback  RMQDeliveryCallback
 
 	// optional
+	ConsumersCount        int // default: 1
 	WorkerName            string
 	EnableRateLimiter     bool
 	MaxEventsPerSecond    int // for limiter
 	RejectDeliveryOnPause bool
+	UseErrorCallback      bool
+	ErrorCallback         RMQErrorCallback
 }
 
 // RMQMonitoringWorkerTask - new RMQ request->response monitoring worker data

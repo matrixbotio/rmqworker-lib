@@ -24,14 +24,12 @@ jgs /  \/  \/ |
 
 // NewRMQWorker - create new RMQ worker to receive messages
 func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
-	/*err := r.checkConnection()
-	if err != nil {
-		return nil, err
-	}*/
-
 	// set worker name
 	if task.WorkerName == "" {
 		task.WorkerName = "rmq worker"
+	}
+	if task.ConsumersCount == 0 {
+		task.ConsumersCount = 1
 	}
 
 	w := RMQWorker{
@@ -41,18 +39,18 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 			AutoAckByLib:        true,
 			CheckResponseErrors: true,
 		},
-		rmqConsumer: consumer{},
-		//connections: &r.Connections,
+		conn:        r.conn,
+		rmqConsumer: &consumer{},
 		channels: rmqWorkerChannels{
 			RMQMessages: make(<-chan amqp.Delivery),
 			OnFinished:  make(chan struct{}, 1),
 			StopCh:      make(chan struct{}, 1),
 		},
+		consumersCount:   task.ConsumersCount,
 		deliveryCallback: task.Callback,
+		useErrorCallback: task.UseErrorCallback,
 		errorCallback:    task.ErrorCallback,
 		logger:           r.logger,
-		//awaitMessages:         true,
-		//rejectDeliveryOnPause: task.RejectDeliveryOnPause,
 	}
 	if task.EnableRateLimiter && task.MaxEventsPerSecond > 0 {
 		w.rateLimiter = rate.New(task.MaxEventsPerSecond, time.Second)
@@ -256,7 +254,7 @@ func (c *consumer) Consume(ctx context.Context, ch *amqp.Channel) error {
 	}
 }
 
-// Serve - listen RMQ messages
+// Serve - start consumer(s)
 func (w *RMQWorker) Serve() {
 	/*w.logVerbose("subscribe..")
 	err := w.Subscribe()
@@ -266,6 +264,8 @@ func (w *RMQWorker) Serve() {
 
 	w.logVerbose("listen..")
 	w.Listen()*/
+
+	w.conn.StartMultipleConsumers(context.Background(), w.rmqConsumer, w.consumersCount) // TODO
 }
 
 // Stop RMQ messages listen
@@ -342,10 +342,11 @@ func (w *RMQWorker) limitHandleRate() {
 }
 
 func (w *RMQWorker) handleError(err *constants.APIError) {
-	if w.errorCallback == nil {
+	if !w.useErrorCallback {
 		w.logError(err)
 		return
 	}
+
 	w.errorCallback(w, err)
 }
 
