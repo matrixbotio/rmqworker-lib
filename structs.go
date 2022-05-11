@@ -163,7 +163,6 @@ type RMQTimeoutCallback func(w *RMQWorker)
 
 type rmqWorkerData struct {
 	Name                string // worker name
-	QueueName           string // the name of the queue from which to receive messages
 	AutoAckByLib        bool   // whether or not the worker will accept the message as soon as he receives it
 	CheckResponseErrors bool   // whether to check the error code in the messages
 

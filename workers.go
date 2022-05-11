@@ -35,12 +35,13 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 	w := RMQWorker{
 		data: rmqWorkerData{
 			Name:                task.WorkerName,
-			QueueName:           task.QueueName,
 			AutoAckByLib:        true,
 			CheckResponseErrors: true,
 		},
-		conn:        r.conn,
-		rmqConsumer: &consumer{},
+		conn: r.conn,
+		rmqConsumer: &consumer{
+			QueueName: task.QueueName,
+		},
 		channels: rmqWorkerChannels{
 			RMQMessages: make(<-chan amqp.Delivery),
 			OnFinished:  make(chan struct{}, 1),
@@ -60,18 +61,6 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 	}
 
 	return &w, nil
-}
-
-// CloseChannels - force close worker's channels
-func (w *RMQWorker) CloseChannels() {
-	/*err := w.connections.Consume.Channel.Close()
-	if err != nil {
-		w.logWarn(constants.Error(baseInternalError, "Exception closing consumer channel"+err.Error()))
-	}
-	err = w.connections.Publish.Channel.Close()
-	if err != nil {
-		w.logWarn(constants.Error(baseInternalError, "Exception closing publisher channel"+err.Error()))
-	}*/
 }
 
 func (w *RMQWorker) logWarn(err *constants.APIError) {
@@ -508,11 +497,6 @@ func (w *RMQMonitoringWorker) GetName() string {
 // GetID - get worker ID
 func (w *RMQMonitoringWorker) GetID() string {
 	return w.Worker.GetID()
-}
-
-// StopConnections - force stop worker connections
-func (w *RMQMonitoringWorker) StopConnections() {
-	w.Worker.CloseChannels()
 }
 
 // IsPaused - return worker paused state

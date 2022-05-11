@@ -1,18 +1,16 @@
 package rmqworker
 
 import (
-	"strings"
-
 	"github.com/matrixbotio/constants-lib"
 	"github.com/streadway/amqp"
 )
 
 // rmqQueueDeclare - declare RMQ queue
 func (r *RMQHandler) rmqQueueDeclare(connectionPair *connectionPair, task RMQQueueDeclareSimpleTask) APIError {
-	connectionPair.mutex.Lock()
+	/*connectionPair.mutex.Lock()
 	defer connectionPair.mutex.Unlock()
 	connectionPair.rwMutex.RLock()
-	defer connectionPair.rwMutex.RUnlock()
+	defer connectionPair.rwMutex.RUnlock()*/
 
 	args := amqp.Table{}
 	if task.MessagesLifetime > 0 {
@@ -23,11 +21,6 @@ func (r *RMQHandler) rmqQueueDeclare(connectionPair *connectionPair, task RMQQue
 	}
 	if task.DisableOverflow {
 		args["x-overflow"] = "reject-publish"
-	}
-
-	err := r.checkConnection()
-	if err != nil {
-		return err
 	}
 
 	_, rmqErr := connectionPair.Channel.QueueDeclare(
@@ -166,20 +159,4 @@ func (r *RMQHandler) DeleteQueues(queueNames map[string][]string) APIError {
 		}
 	}
 	return nil
-}
-
-// IsQueueExists - is queue exists? /ᐠ｡ꞈ｡ᐟ\
-func (r *RMQHandler) IsQueueExists(name string) (bool, APIError) {
-	_, err := r.Connections.Publish.Channel.QueueDeclarePassive(name, true, false, false, false, nil)
-	if err != nil {
-		if strings.Contains(err.Error(), "NOT_FOUND - no queue") {
-			return false, nil
-		}
-		return false, constants.Error(
-			"SERVICE_REQ_FAILED",
-			"failed to get queue `"+name+"` state: "+err.Error(),
-		)
-	}
-
-	return true, nil
 }
