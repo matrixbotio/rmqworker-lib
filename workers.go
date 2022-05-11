@@ -155,23 +155,7 @@ func (w *RMQWorker) getLogWorkerName() string {
 	return "RMQ Worker " + w.data.Name + ": "
 }
 
-// Declare implement darkmq.Consumer.(Declare) interface method
-func (c *consumer) Declare(ctx context.Context, ch *amqp.Channel) error {
-	if c.ExchangeName != "" {
-		err := ch.ExchangeDeclare(
-			c.ExchangeName, // name
-			"direct",       // type
-			true,           // durable
-			false,          // auto-deleted
-			false,          // internal
-			false,          // no-wait
-			nil,            // arguments
-		)
-		if err != nil {
-			return errors.New("failed to declare exchange: " + err.Error())
-		}
-	}
-
+func (c *consumer) declareQueue(ch *amqp.Channel) error {
 	_, err := ch.QueueDeclare(
 		c.QueueName, // name
 		true,        // durable
@@ -183,8 +167,27 @@ func (c *consumer) Declare(ctx context.Context, ch *amqp.Channel) error {
 	if err != nil {
 		return errors.New("failed to declare queue: " + err.Error())
 	}
+	return nil
+}
 
-	/*err = ch.QueueBind(
+func (c *consumer) declareExchange(ch *amqp.Channel) error {
+	err := ch.ExchangeDeclare(
+		c.ExchangeName, // name
+		"direct",       // type
+		true,           // durable
+		false,          // auto-deleted
+		false,          // internal
+		false,          // no-wait
+		nil,            // arguments
+	)
+	if err != nil {
+		return errors.New("failed to declare exchange: " + err.Error())
+	}
+	return nil
+}
+
+func (c *consumer) bindQueue(ch *amqp.Channel) error {
+	err := ch.QueueBind(
 		c.QueueName,    // queue name
 		c.QueueName,    // routing key
 		c.ExchangeName, // exchange
@@ -192,10 +195,29 @@ func (c *consumer) Declare(ctx context.Context, ch *amqp.Channel) error {
 		nil,            // arguments
 	)
 	if err != nil {
-		log.Printf("failed to bind queue %v: %v", c.QueueName, err)
+		return errors.New("failed to bind queue `" + c.QueueName + "` to `" + c.ExchangeName + "`: " + err.Error())
+	}
+	return nil
+}
 
+// Declare implement darkmq.Consumer.(Declare) interface method
+func (c *consumer) Declare(ctx context.Context, ch *amqp.Channel) error {
+	err := c.declareQueue(ch)
+	if err != nil {
 		return err
-	}*/
+	}
+
+	if c.ExchangeName != "" {
+		err = c.declareExchange(ch)
+		if err != nil {
+			return err
+		}
+
+		err = c.bindQueue(ch)
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
