@@ -37,6 +37,7 @@ type RMQConnectionData struct {
 type consumer struct {
 	ExchangeName string
 	QueueName    string
+	Tag          string
 }
 
 // RMQWorker - just RMQ worker
@@ -173,9 +174,8 @@ type rmqWorkerData struct {
 	WaitResponseTimeout time.Duration
 
 	// optional params
-	ID          string // worker ID for logs
-	ConsumerTag string // empty -> random ID
-	ConsumerId  string // empty -> random ID
+	ID         string // worker ID for logs
+	ConsumerId string // empty -> random ID
 }
 
 type rmqWorkerChannels struct {

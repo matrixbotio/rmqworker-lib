@@ -235,9 +235,14 @@ func (c *consumer) Consume(ctx context.Context, ch *amqp.Channel) error {
 		return err
 	}
 
+	// set consumer tag
+	if c.Tag == "" {
+		c.Tag = getUUID()
+	}
+
 	msgs, err := ch.Consume(
 		c.QueueName, // queue
-		getUUID(),   // consumer name
+		c.Tag,       // consumer name
 		false,       // auto-ack
 		false,       // exclusive
 		false,       // no-local
@@ -290,25 +295,6 @@ func (w *RMQWorker) Serve() {
 
 // Stop RMQ messages listen
 func (w *RMQWorker) Stop() {
-	/*if w.cronHandler != nil {
-		go w.cronHandler.Stop()
-	}
-	w.channels.StopCh <- struct{}{}
-	w.awaitMessages = false
-	w.channels.OnFinished <- struct{}{}
-
-	if w.connections.Consume.Channel != nil {
-		err := w.connections.Consume.Channel.Cancel(w.data.ConsumerId, false)
-		if err != nil {
-			if !strings.Contains(err.Error(), "channel/connection is not open") {
-				w.logError(constants.Error(baseInternalError, "Exception stopping consumer: "+err.Error()))
-			}
-		}
-		delete(w.connections.Consume.consumes, w.data.ConsumerTag)
-	}
-
-	w.logVerbose("worker stopped")*/
-
 	w.stopCh <- struct{}{}
 }
 
@@ -316,19 +302,6 @@ func (w *RMQWorker) Stop() {
 func (w *RMQWorker) Reset() {
 	w.channels.OnFinished = make(chan struct{}, 1)
 	w.channels.StopCh = make(chan struct{}, 1)
-
-	// re-consume
-	/*err := startConsumer(consumeTask{
-		consume:        w.setupConsume,
-		connData:       w.connections.Data,
-		connectionPair: &w.connections.Consume,
-	})
-	if err != nil {
-		w.handleError(err)
-		return
-	}
-
-	go w.Listen()*/
 
 	w.remakeStopChannel()
 }
@@ -343,19 +316,19 @@ func (w *RMQWorker) runCron() {
 }
 
 // SetConsumerTag - set worker unique consumer tag
-/*func (w *RMQWorker) SetConsumerTag(uniqueTag string) *RMQWorker {
-	w.data.ConsumerTag = uniqueTag
+func (w *RMQWorker) SetConsumerTag(uniqueTag string) *RMQWorker {
+	w.rmqConsumer.Tag = uniqueTag
 	return w
-}*/
+}
 
 // SetConsumerTagFromName - assign a consumer tag to the worker based on its name and random ID
-/*func (w *RMQWorker) SetConsumerTagFromName() *RMQWorker {
-	tag := w.data.Name + "-" + uuid.New().String()
+func (w *RMQWorker) SetConsumerTagFromName() *RMQWorker {
+	tag := w.data.Name + "-" + getUUID()
 	if w.data.Name == "" {
-		tag = "worker" + w.data.ConsumerTag
+		tag = "worker" + w.rmqConsumer.Tag
 	}
 	return w.SetConsumerTag(tag)
-}*/
+}
 
 func (w *RMQWorker) stopCron() {
 	if w.cronHandler != nil {
