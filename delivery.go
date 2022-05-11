@@ -73,6 +73,16 @@ func (d *RMQDeliveryHandler) Accept() APIError {
 		)
 	}
 
+	err := d.simpleAccept()
+	if err != nil {
+		return err
+	}
+
+	d.isAccepted = true
+	return nil
+}
+
+func (d *RMQDeliveryHandler) manualAccept() APIError {
 	err := d.rmqDelivery.Acknowledger.Ack(d.rmqDelivery.DeliveryTag, false)
 	if err != nil {
 		return constants.Error(
@@ -80,7 +90,17 @@ func (d *RMQDeliveryHandler) Accept() APIError {
 			"failed to ack task: "+err.Error(),
 		)
 	}
-	d.isAccepted = true
+	return nil
+}
+
+func (d *RMQDeliveryHandler) simpleAccept() APIError {
+	err := d.rmqDelivery.Ack(false)
+	if err != nil {
+		return constants.Error(
+			"SERVICE_REQ_FAILED",
+			"failed to accept msg: "+err.Error(),
+		)
+	}
 	return nil
 }
 
