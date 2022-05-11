@@ -250,9 +250,7 @@ func (c *consumer) Consume(ctx context.Context, ch *amqp.Channel) error {
 		false, // global
 	)
 	if err != nil {
-		log.Printf("failed to set qos: %v", err)
-
-		return err
+		return errors.New("failed to set QOS: " + err.Error())
 	}
 
 	// set consumer tag
