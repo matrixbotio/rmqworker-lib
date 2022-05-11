@@ -3,7 +3,6 @@ package rmqworker
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"time"
 
@@ -40,6 +39,7 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 		task.ConsumersCount = 1
 	}
 
+	// create worker
 	w := RMQWorker{
 		data: rmqWorkerData{
 			Name:                task.WorkerName,
@@ -80,6 +80,9 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 		w.useErrorCallback = true
 		w.errorCallback = task.ErrorCallback
 	}
+
+	// setup messages handler
+	w.rmqConsumer.msgHandler = w.handleRMQMessage
 
 	w.remakeStopChannel()
 
@@ -272,21 +275,24 @@ func (c *consumer) Consume(ctx context.Context, ch *amqp.Channel) error {
 
 	for {
 		select {
-		case msg, ok := <-msgs:
-			if !ok {
+		case msg, chClosed := <-msgs:
+			if !chClosed {
 				return amqp.ErrClosed
 			}
 
-			err := msg.Ack(false)
+			// get message
+			delivery := NewRMQDeliveryHandler(msg)
+
+			// accept message
+			err := delivery.Accept()
 			if err != nil {
-				c.errorCallback(constants.Error(
-					"SERVICE_REQ_FAILED",
-					"failed to accept msg: "+err.Error(),
-				))
+				c.errorCallback(err)
 				continue
 			}
 
-			fmt.Println("New message:", string(msg.Body))
+			// handle message
+			c.msgHandler(delivery)
+
 		case <-ctx.Done():
 			return ctx.Err()
 		}

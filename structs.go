@@ -40,6 +40,7 @@ type consumer struct {
 	QueueData DeclareQueueTask
 	Binding   exchandeBindData
 
+	msgHandler    func(delivery RMQDeliveryHandler)
 	errorCallback func(err *constants.APIError)
 }
 
