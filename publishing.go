@@ -90,7 +90,7 @@ func (r *RMQHandler) SendRMQResponse(
 
 // RMQPublishToExchange - publish message to exchangeю
 // responseRoutingKey is optional to send requests to exchange
-func (r *RMQHandler) RMQPublishToExchange(
+/*func (r *RMQHandler) RMQPublishToExchange(
 	message interface{},
 	exchangeName,
 	routingKey string,
@@ -120,9 +120,9 @@ func (r *RMQHandler) RMQPublishToExchange(
 		return err
 	}
 	return nil
-}
+}*/
 
-func (r *RMQHandler) publishMessage(exchangeName string, key string, mandatory bool, immediate bool,
+/*func (r *RMQHandler) publishMessage(exchangeName string, key string, mandatory bool, immediate bool,
 	publishing amqp.Publishing) APIError {
 	r.Connections.Publish.mutex.Lock()
 	defer r.Connections.Publish.mutex.Unlock()
@@ -142,4 +142,4 @@ func (r *RMQHandler) publishMessage(exchangeName string, key string, mandatory b
 		)
 	}
 	return nil
-}
+}*/

@@ -35,9 +35,15 @@ type RMQConnectionData struct {
 
 // consumer implement darkmq.Consumer interface
 type consumer struct {
+	Tag string
+
+	QueueData DeclareQueueTask
+	Binding   exchandeBindData
+}
+
+type exchandeBindData struct {
 	ExchangeName string
-	QueueName    string
-	Tag          string
+	RoutingKey   string
 }
 
 // RMQWorker - just RMQ worker
@@ -60,20 +66,15 @@ type RMQWorker struct {
 	stopCh chan struct{}
 }
 
-// RMQMonitoringWorker - rmq extended worker
-type RMQMonitoringWorker struct {
-	Worker *RMQWorker
-}
-
-// RMQQueueDeclareSimpleTask - queue declare task data container
-type RMQQueueDeclareSimpleTask struct {
-	QueueName  string
+// DeclareQueueTask - queue declare task data container
+type DeclareQueueTask struct {
+	Name       string
 	Durable    bool
 	AutoDelete bool
 
 	// optional
 	MessagesLifetime int64
-	QueueLength      int64
+	MaxLength        int64
 	DisableOverflow  bool
 }
 
@@ -116,42 +117,26 @@ type RMQPublishResponseTask struct {
 // WorkerTask - new RMQ worker data
 type WorkerTask struct {
 	// required
-	QueueName string
-	Callback  RMQDeliveryCallback
+	QueueName      string
+	RoutingKey     string
+	ISQueueDurable bool
+	ISAutoDelete   bool
+	Callback       RMQDeliveryCallback // callback to handle RMQ delivery
 
 	// optional
-	FromExchange          string // exchange name to bind queue
-	ConsumersCount        int    // default: 1
-	WorkerName            string
-	EnableRateLimiter     bool
-	MaxEventsPerSecond    int // for limiter
-	RejectDeliveryOnPause bool
-	UseErrorCallback      bool
-	ErrorCallback         RMQErrorCallback
-}
-
-// RMQMonitoringWorkerTask - new RMQ request->response monitoring worker data
-type RMQMonitoringWorkerTask struct {
-	// required
-	QueueName        string
-	ISQueueDurable   bool
-	ISAutoDelete     bool
-	FromExchangeName string
-	RoutingKey       string // to bind queue to response exchange
-	Callback         RMQDeliveryCallback
-	ErrorCallback    RMQErrorCallback // error handler func for RMQ-Worker errors
-
-	// optional
-	ID                    string
-	Timeout               time.Duration
-	TimeoutCallback       RMQTimeoutCallback
-	WorkerName            string
-	MessagesLifetime      int64 // milliseconds. 0 to disable limit
-	QueueLength           int64 // how many maximum messages to keep in the queue
-	EnableRateLimiter     bool
-	MaxEventsPerSecond    int // for limiter
-	DisableOverflow       bool
-	RejectDeliveryOnPause bool
+	ID                 string             // worker ID
+	FromExchange       string             // exchange name to bind queue
+	ConsumersCount     int                // default: 1
+	WorkerName         string             // worker name. default name when empty
+	EnableRateLimiter  bool               // limit handle rmq messages rate
+	MaxEventsPerSecond int                // for limiter
+	QueueLength        int64              // how many maximum messages to keep in the queue
+	MessagesLifetime   int64              // milliseconds. 0 to disable limit
+	DisableOverflow    bool               // disable queue overflow
+	UseErrorCallback   bool               // handle worker errors with error handler
+	ErrorCallback      RMQErrorCallback   // error handler callback
+	Timeout            time.Duration      // timeout to limit worker time
+	TimeoutCallback    RMQTimeoutCallback // timeout callback
 }
 
 // RMQDeliveryCallback - RMQ delivery callback function
@@ -165,7 +150,6 @@ type RMQTimeoutCallback func(w *RMQWorker)
 
 type rmqWorkerData struct {
 	Name                string // worker name
-	AutoAckByLib        bool   // whether or not the worker will accept the message as soon as he receives it
 	CheckResponseErrors bool   // whether to check the error code in the messages
 
 	// if only one response is expected,

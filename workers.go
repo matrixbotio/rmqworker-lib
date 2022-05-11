@@ -14,19 +14,27 @@ import (
 )
 
 /*
-      ,  ,  , , ,
-     <(__)> | | |
-     | \/ | \_|_/  I AM RMQ Worker.
-     \^  ^/   |    I hurt in a hundred ways
-     /\--/\  /|
-jgs /  \/  \/ |
+             __.-/|
+             \`o_O'  +---------------------------+
+              =( )=  |        RMQ Worker         |
+                U|   | I accept msgs from queues |
+      /\  /\   / |   +---------------------------+
+     ) /^\) ^\/ _)\     |
+     )   /^\/   _) \    |
+     )   _ /  / _)  \___|_
+ /\  )/\/ ||  | )_)\___,|))
+<  >      |(,,) )__)    |
+ ||      /    \)___)\
+ | \____(      )___) )____
+  \______(_______;;;)__;;;)
+
 */
 
 // NewRMQWorker - create new RMQ worker to receive messages
 func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 	// set worker name
 	if task.WorkerName == "" {
-		task.WorkerName = "rmq worker"
+		task.WorkerName = "RMQ-W"
 	}
 	if task.ConsumersCount == 0 {
 		task.ConsumersCount = 1
@@ -35,13 +43,25 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 	w := RMQWorker{
 		data: rmqWorkerData{
 			Name:                task.WorkerName,
-			AutoAckByLib:        true,
 			CheckResponseErrors: true,
+			UseResponseTimeout:  task.Timeout > 0,
+			WaitResponseTimeout: task.Timeout,
+			ID:                  task.ID,
 		},
 		conn: r.conn,
 		rmqConsumer: &consumer{
-			ExchangeName: task.FromExchange,
-			QueueName:    task.QueueName,
+			QueueData: DeclareQueueTask{
+				Name:             task.QueueName,
+				Durable:          task.ISQueueDurable,
+				AutoDelete:       task.ISAutoDelete,
+				MessagesLifetime: task.MessagesLifetime,
+				MaxLength:        task.QueueLength,
+				DisableOverflow:  task.DisableOverflow,
+			},
+			Binding: exchandeBindData{
+				ExchangeName: task.FromExchange,
+				RoutingKey:   task.RoutingKey,
+			},
 		},
 		channels: rmqWorkerChannels{
 			RMQMessages: make(<-chan amqp.Delivery),
@@ -52,6 +72,7 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 		deliveryCallback: task.Callback,
 		useErrorCallback: task.UseErrorCallback,
 		errorCallback:    task.ErrorCallback,
+		timeoutCallback:  task.TimeoutCallback,
 		logger:           r.logger,
 	}
 
@@ -120,22 +141,10 @@ func (w *RMQWorker) GetID() string {
 	return w.data.ID
 }
 
-// IsPaused - return worker paused state
-/*func (w *RMQWorker) IsPaused() bool {
-	return w.paused
-}*/
-
 // IsActive - return worker paused state
 /*func (w *RMQWorker) IsActive() bool {
 	return w.awaitMessages
 }*/
-
-// SetAutoAck - auto accept messages.
-// This will also change the auto-acceptance of messages by the library (!autoAck)
-func (w *RMQWorker) SetAutoAck(autoAck bool) *RMQWorker {
-	w.data.AutoAckByLib = autoAck
-	return w
-}
 
 // SetCheckResponseErrors - determines whether the errors in the answers passed to headers will be checked
 func (w *RMQWorker) SetCheckResponseErrors(check bool) *RMQWorker {
@@ -143,26 +152,29 @@ func (w *RMQWorker) SetCheckResponseErrors(check bool) *RMQWorker {
 	return w
 }
 
-// SetTimeout - set RMQ response timeout. When the timer goes out, the callback will be called
-func (w *RMQWorker) SetTimeout(timeout time.Duration, callback RMQTimeoutCallback) *RMQWorker {
-	w.data.UseResponseTimeout = true
-	w.data.WaitResponseTimeout = timeout
-	w.timeoutCallback = callback
-	return w
-}
-
 func (w *RMQWorker) getLogWorkerName() string {
 	return "RMQ Worker " + w.data.Name + ": "
 }
 
-func (c *consumer) declareQueue(ch *amqp.Channel) error {
+func (c *consumer) declareQueue(ch *amqp.Channel, task DeclareQueueTask) error {
+	args := amqp.Table{}
+	if task.MessagesLifetime > 0 {
+		args["x-message-ttl"] = task.MessagesLifetime
+	}
+	if task.MaxLength > 0 {
+		args["x-max-length"] = task.MaxLength
+	}
+	if task.DisableOverflow {
+		args["x-overflow"] = "reject-publish"
+	}
+
 	_, err := ch.QueueDeclare(
-		c.QueueName, // name
-		true,        // durable
-		false,       // delete when unused
-		false,       // exclusive
-		false,       // no-wait
-		nil,         // arguments
+		task.Name,       // name
+		task.Durable,    // durable
+		task.AutoDelete, // delete when unused
+		false,           // exclusive
+		false,           // no-wait
+		args,            // arguments
 	)
 	if err != nil {
 		return errors.New("failed to declare queue: " + err.Error())
@@ -172,13 +184,13 @@ func (c *consumer) declareQueue(ch *amqp.Channel) error {
 
 func (c *consumer) declareExchange(ch *amqp.Channel) error {
 	err := ch.ExchangeDeclare(
-		c.ExchangeName, // name
-		"direct",       // type
-		true,           // durable
-		false,          // auto-deleted
-		false,          // internal
-		false,          // no-wait
-		nil,            // arguments
+		c.Binding.ExchangeName, // name
+		"direct",               // type
+		true,                   // durable
+		false,                  // auto-deleted
+		false,                  // internal
+		false,                  // no-wait
+		nil,                    // arguments
 	)
 	if err != nil {
 		return errors.New("failed to declare exchange: " + err.Error())
@@ -188,26 +200,26 @@ func (c *consumer) declareExchange(ch *amqp.Channel) error {
 
 func (c *consumer) bindQueue(ch *amqp.Channel) error {
 	err := ch.QueueBind(
-		c.QueueName,    // queue name
-		c.QueueName,    // routing key
-		c.ExchangeName, // exchange
-		false,          // no-wait
-		nil,            // arguments
+		c.QueueData.Name,       // queue name
+		c.Binding.RoutingKey,   // routing key
+		c.Binding.ExchangeName, // exchange
+		false,                  // no-wait
+		nil,                    // arguments
 	)
 	if err != nil {
-		return errors.New("failed to bind queue `" + c.QueueName + "` to `" + c.ExchangeName + "`: " + err.Error())
+		return errors.New("failed to bind queue `" + c.QueueData.Name + "` to `" + c.Binding.ExchangeName + "`: " + err.Error())
 	}
 	return nil
 }
 
 // Declare implement darkmq.Consumer.(Declare) interface method
 func (c *consumer) Declare(ctx context.Context, ch *amqp.Channel) error {
-	err := c.declareQueue(ch)
+	err := c.declareQueue(ch, c.QueueData)
 	if err != nil {
 		return err
 	}
 
-	if c.ExchangeName != "" {
+	if c.Binding.ExchangeName != "" {
 		err = c.declareExchange(ch)
 		if err != nil {
 			return err
@@ -241,18 +253,16 @@ func (c *consumer) Consume(ctx context.Context, ch *amqp.Channel) error {
 	}
 
 	msgs, err := ch.Consume(
-		c.QueueName, // queue
-		c.Tag,       // consumer name
-		false,       // auto-ack
-		false,       // exclusive
-		false,       // no-local
-		false,       // no-wait
-		nil,         // args
+		c.QueueData.Name, // queue
+		c.Tag,            // consumer name
+		false,            // auto-ack
+		false,            // exclusive
+		false,            // no-local
+		false,            // no-wait
+		nil,              // args
 	)
 	if err != nil {
-		log.Printf("failed to consume %v: %v", c.QueueName, err)
-
-		return err
+		return errors.New("failed to consume from `" + c.QueueData.Name + "`: ")
 	}
 
 	for {
@@ -354,18 +364,9 @@ func (w *RMQWorker) handleError(err *constants.APIError) {
 func (w *RMQWorker) handleRMQMessage(delivery RMQDeliveryHandler) {
 	w.logVerbose("new rmq message found")
 
-	// auto accept message if needed
-	if w.data.AutoAckByLib {
-		err := delivery.Accept()
-		if err != nil {
-			w.handleError(err)
-			return
-		}
-	}
-
 	// check response error
-	w.logVerbose("check message errors")
 	if w.data.CheckResponseErrors {
+		w.logVerbose("check message errors")
 		aErr := delivery.CheckResponseError()
 		if aErr != nil {
 			w.handleError(aErr)
@@ -394,80 +395,4 @@ func (w *RMQWorker) timeIsUp() {
 // AwaitFinish - wait for worker finished
 func (w *RMQWorker) AwaitFinish() {
 	<-w.channels.OnFinished
-}
-
-/*
-
-             __.-/|
-             \`o_O'  +------------------------------------------------------+
-              =( )=  |        RMQ Monitoring Worker (RMQ-M Worker)          |
-                U|   | I accept responses from exchange to the binded queue |
-      /\  /\   / |   +------------------------------------------------------+
-     ) /^\) ^\/ _)\     |
-     )   /^\/   _) \    |
-     )   _ /  / _)  \___|_
- /\  )/\/ ||  | )_)\___,|))
-<  >      |(,,) )__)    |
- ||      /    \)___)\
- | \____(      )___) )____
-  \______(_______;;;)__;;;)
-
-*/
-
-// NewRMQMonitoringWorker - declare queue, bind to exchange, create worker & run.
-// monitoring worker used for create a queue and receive messages from exchange into it
-func (r *RMQHandler) NewRMQMonitoringWorker(task RMQMonitoringWorkerTask) (*RMQMonitoringWorker, APIError) {
-	// create worker
-	var err APIError
-	w := RMQMonitoringWorker{}
-	w.Worker, err = r.NewRMQWorker(WorkerTask{
-		QueueName:             task.QueueName,
-		Callback:              task.Callback,
-		FromExchange:          task.FromExchangeName,
-		WorkerName:            task.WorkerName,
-		ErrorCallback:         task.ErrorCallback,
-		EnableRateLimiter:     task.EnableRateLimiter,
-		MaxEventsPerSecond:    task.MaxEventsPerSecond,
-		RejectDeliveryOnPause: task.RejectDeliveryOnPause,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	// add optional params
-	if task.ID != "" {
-		w.Worker.SetID(task.ID)
-	}
-	if task.Timeout > 0 {
-		w.Worker.SetTimeout(task.Timeout, task.TimeoutCallback)
-	}
-
-	// run worker
-	go w.Worker.Serve()
-	return &w, nil
-}
-
-// Stop listen rmq messages
-func (w *RMQMonitoringWorker) Stop() {
-	w.Worker.Stop()
-}
-
-// AwaitFinish - await worker finished
-func (w *RMQMonitoringWorker) AwaitFinish() {
-	w.Worker.AwaitFinish()
-}
-
-// Reset worker channels
-func (w *RMQMonitoringWorker) Reset() {
-	w.Worker.Reset()
-}
-
-// GetName - get worker name
-func (w *RMQMonitoringWorker) GetName() string {
-	return w.Worker.GetName()
-}
-
-// GetID - get worker ID
-func (w *RMQMonitoringWorker) GetID() string {
-	return w.Worker.GetID()
 }
