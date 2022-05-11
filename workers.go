@@ -40,7 +40,8 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 		},
 		conn: r.conn,
 		rmqConsumer: &consumer{
-			QueueName: task.QueueName,
+			ExchangeName: task.FromExchange,
+			QueueName:    task.QueueName,
 		},
 		channels: rmqWorkerChannels{
 			RMQMessages: make(<-chan amqp.Delivery),
@@ -421,26 +422,13 @@ func (w *RMQWorker) AwaitFinish() {
 // NewRMQMonitoringWorker - declare queue, bind to exchange, create worker & run.
 // monitoring worker used for create a queue and receive messages from exchange into it
 func (r *RMQHandler) NewRMQMonitoringWorker(task RMQMonitoringWorkerTask) (*RMQMonitoringWorker, APIError) {
-	// declare queue & bind
-	err := r.RMQQueueDeclareAndBind(RMQQueueDeclareTask{
-		QueueName:        task.QueueName,
-		Durable:          task.ISQueueDurable,
-		AutoDelete:       task.ISAutoDelete,
-		FromExchangeName: task.FromExchangeName,
-		RoutingKey:       task.RoutingKey,
-		MessagesLifetime: task.MessagesLifetime,
-		QueueLength:      task.QueueLength,
-		DisableOverflow:  task.DisableOverflow,
-	})
-	if err != nil {
-		return nil, err
-	}
-
 	// create worker
+	var err APIError
 	w := RMQMonitoringWorker{}
 	w.Worker, err = r.NewRMQWorker(WorkerTask{
 		QueueName:             task.QueueName,
 		Callback:              task.Callback,
+		FromExchange:          task.FromExchangeName,
 		WorkerName:            task.WorkerName,
 		ErrorCallback:         task.ErrorCallback,
 		EnableRateLimiter:     task.EnableRateLimiter,
@@ -469,16 +457,6 @@ func (w *RMQMonitoringWorker) Stop() {
 	w.Worker.Stop()
 }
 
-// Pause handle rmq messages
-/*func (w *RMQMonitoringWorker) Pause() {
-	w.Worker.Pause()
-}*/
-
-// Resume handle rmq messages
-/*func (w *RMQMonitoringWorker) Resume() {
-	w.Worker.Resume()
-}*/
-
 // AwaitFinish - await worker finished
 func (w *RMQMonitoringWorker) AwaitFinish() {
 	w.Worker.AwaitFinish()
@@ -498,18 +476,3 @@ func (w *RMQMonitoringWorker) GetName() string {
 func (w *RMQMonitoringWorker) GetID() string {
 	return w.Worker.GetID()
 }
-
-// IsPaused - return worker paused state
-/*func (w *RMQMonitoringWorker) IsPaused() bool {
-	return w.Worker.IsPaused()
-}
-
-// IsActive - return worker paused state
-func (w *RMQMonitoringWorker) IsActive() bool {
-	return w.Worker.IsActive()
-}
-
-// IsConnAlive - check that the connection is established
-func (w *RMQMonitoringWorker) IsConnAlive() bool {
-	return w.Worker.IsConnAlive()
-}*/

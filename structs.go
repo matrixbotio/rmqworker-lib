@@ -119,7 +119,8 @@ type WorkerTask struct {
 	Callback  RMQDeliveryCallback
 
 	// optional
-	ConsumersCount        int // default: 1
+	FromExchange          string // exchange name to bind queue
+	ConsumersCount        int    // default: 1
 	WorkerName            string
 	EnableRateLimiter     bool
 	MaxEventsPerSecond    int // for limiter
