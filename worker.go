@@ -49,7 +49,7 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 			ID:                  task.ID,
 		},
 		conn: r.conn,
-		rmqConsumer: &consumer{
+		rmqConsumer: &consumer{ // consumer
 			QueueData: DeclareQueueTask{
 				Name:             task.QueueName,
 				Durable:          task.ISQueueDurable,
@@ -70,10 +70,15 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 		},
 		consumersCount:   task.ConsumersCount,
 		deliveryCallback: task.Callback,
-		useErrorCallback: task.UseErrorCallback,
-		errorCallback:    task.ErrorCallback,
 		timeoutCallback:  task.TimeoutCallback,
 		logger:           r.logger,
+	}
+
+	// setup error handler
+	w.rmqConsumer.errorCallback = w.handleError
+	if task.UseErrorCallback {
+		w.useErrorCallback = true
+		w.errorCallback = task.ErrorCallback
 	}
 
 	w.remakeStopChannel()
@@ -274,7 +279,11 @@ func (c *consumer) Consume(ctx context.Context, ch *amqp.Channel) error {
 
 			err := msg.Ack(false)
 			if err != nil {
-				log.Printf("failed to Ack message: %v", err)
+				c.errorCallback(constants.Error(
+					"SERVICE_REQ_FAILED",
+					"failed to accept msg: "+err.Error(),
+				))
+				continue
 			}
 
 			fmt.Println("New message:", string(msg.Body))
@@ -286,15 +295,6 @@ func (c *consumer) Consume(ctx context.Context, ch *amqp.Channel) error {
 
 // Serve - start consumer(s)
 func (w *RMQWorker) Serve() {
-	/*w.logVerbose("subscribe..")
-	err := w.Subscribe()
-	if err != nil {
-		w.logError(err)
-	}
-
-	w.logVerbose("listen..")
-	w.Listen()*/
-
 	err := w.conn.StartMultipleConsumers(context.Background(), w.rmqConsumer, w.consumersCount, w.stopCh)
 	if err != nil {
 		w.handleError(constants.Error(

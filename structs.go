@@ -39,6 +39,8 @@ type consumer struct {
 
 	QueueData DeclareQueueTask
 	Binding   exchandeBindData
+
+	errorCallback func(err *constants.APIError)
 }
 
 type exchandeBindData struct {
