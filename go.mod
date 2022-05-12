@@ -9,5 +9,4 @@ require (
 	github.com/sagleft/darkrmq v0.7.1
 	github.com/sagleft/simple-cron v1.3.0
 	github.com/streadway/amqp v1.0.0
-	golang.org/x/time v0.0.0-20220224211638-0e9765cccd65
 )
