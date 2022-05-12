@@ -1,6 +1,8 @@
 package rmqworker
 
 import (
+	"strings"
+
 	"github.com/matrixbotio/constants-lib"
 	"github.com/streadway/amqp"
 )
@@ -46,4 +48,20 @@ func (r *RMQHandler) DeclareExchanges(exchangeTypes map[string]string) APIError 
 		}
 	}
 	return nil
+}
+
+// IsQueueExists - is queue exists? /ᐠ｡ꞈ｡ᐟ\
+func (r *RMQHandler) IsQueueExists(name string) (bool, APIError) {
+	_, err := r.channelKeeper.Channel().QueueDeclarePassive(name, true, false, false, false, nil)
+	if err != nil {
+		if strings.Contains(err.Error(), "NOT_FOUND - no queue") {
+			return false, nil
+		}
+		return false, constants.Error(
+			"SERVICE_REQ_FAILED",
+			"failed to get queue `"+name+"` state: "+err.Error(),
+		)
+	}
+
+	return true, nil
 }
