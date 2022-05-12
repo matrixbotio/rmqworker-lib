@@ -27,7 +27,7 @@ func (r *RMQHandler) RMQPublishToQueue(task RMQPublishRequestTask) APIError {
 			CorrelationId: getUUID(),
 			Headers:       headers,
 			DeliveryMode:  amqp.Persistent,
-			ContentType:   "application/json",
+			ContentType:   defaultContentType,
 			Body:          body,
 		},
 		ensureDelivered: false,
@@ -41,7 +41,7 @@ func (r *RMQHandler) SendRMQResponse(
 ) APIError {
 	headers := amqp.Table{}
 	var responseBody []byte
-	contentType := "application/json"
+	contentType := defaultContentType
 
 	var isErrorFound bool
 	if len(errorMsg) == 0 {
@@ -104,7 +104,7 @@ func (r *RMQHandler) RMQPublishToExchange(
 		key:          routingKey,
 		publishing: amqp.Publishing{
 			Headers:     headers,
-			ContentType: "application/json",
+			ContentType: defaultContentType,
 			Body:        jsonBytes,
 		},
 		ensureDelivered: false,

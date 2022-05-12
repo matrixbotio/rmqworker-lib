@@ -12,6 +12,7 @@ const (
 	publishMaxAttempts  = 3
 	publishAttemptDelay = 50 * time.Millisecond
 	publishTimeout      = 2 * time.Second
+	defaultContentType  = "application/json"
 )
 
 var (

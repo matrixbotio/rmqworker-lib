@@ -33,7 +33,7 @@ func NewRMQHandler(task CreateRMQHandlerTask, logger ...*constants.Logger) (*RMQ
 	return &r, nil
 }
 
-func (r *RMQHandler) rmqInit() {
+func (r *RMQHandler) rmqInit() APIError {
 	// init rmq connector
 	r.conn = darkmq.NewConnector(darkmq.Config{
 		Wait: waitBetweenReconnect,
@@ -48,6 +48,13 @@ func (r *RMQHandler) rmqInit() {
 	r.firePublisher = darkmq.NewFireForgetPublisher(r.connPoolLightning)
 
 	go r.rmqConnect()
+
+	var err error
+	r.channelKeeper, err = r.connPool.ChannelWithConfirm(context.Background())
+	if err != nil {
+		return constants.Error("DATA_HANDLE_ERR", "failed to get channel from pool: "+err.Error())
+	}
+	return nil
 }
 
 func (r *RMQHandler) rmqConnect() {

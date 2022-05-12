@@ -190,4 +190,6 @@ type RMQHandler struct {
 
 	connPoolLightning *darkmq.LightningPool
 	firePublisher     *darkmq.FireForgetPublisher // the publisher of the messages, who does not care if the messages are received
+
+	channelKeeper darkmq.ChannelKeeper // rmq channel handler. for different requests
 }
