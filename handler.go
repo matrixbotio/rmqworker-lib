@@ -195,17 +195,21 @@ func (r *RequestHandler) sendRequest() APIError {
 func (r *RequestHandler) Send() (*RequestHandlerResponse, APIError) {
 	r.resetLastError()
 	// create RMQ-M worker
-	w, err := r.RMQH.NewRMQMonitoringWorker(RMQMonitoringWorkerTask{
-		QueueName:        r.Task.TempQueueName,
-		ISQueueDurable:   r.Task.ForceQueueToDurable,
-		ISAutoDelete:     false,
-		FromExchangeName: r.Task.ResponseFromExchangeName,
-		RoutingKey:       r.Task.TempQueueName,
-		Callback:         r.handleMessage,
+	w, err := r.RMQH.NewRMQWorker(WorkerTask{
+		QueueName:      r.Task.TempQueueName,
+		RoutingKey:     r.Task.TempQueueName,
+		ISQueueDurable: r.Task.ForceQueueToDurable,
+		ISAutoDelete:   false,
+		Callback:       r.handleMessage,
+
 		ID:               r.WorkerID,
+		FromExchange:     r.Task.ResponseFromExchangeName,
+		ConsumersCount:   1,
+		MessagesLifetime: requestHandlerDefaultMessageLifetime,
+		UseErrorCallback: true,
+		ErrorCallback:    r.onError,
 		Timeout:          r.Task.ResponseTimeout,
 		TimeoutCallback:  r.handleTimeout,
-		ErrorCallback:    r.onError,
 	})
 	if err != nil {
 		return nil, err
