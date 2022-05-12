@@ -3,6 +3,7 @@ package rmqworker
 import (
 	"time"
 
+	jsoniter "github.com/json-iterator/go"
 	"github.com/matrixbotio/constants-lib"
 )
 
@@ -20,4 +21,5 @@ var (
 	publishDeadlineError = constants.Error(
 		"SERVICE_REQ_TIMEOUT", "message publishing timeout",
 	)
+	json = jsoniter.ConfigCompatibleWithStandardLibrary
 )

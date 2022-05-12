@@ -1,8 +1,6 @@
 package rmqworker
 
 import (
-	"encoding/json"
-
 	"github.com/matrixbotio/constants-lib"
 	"github.com/streadway/amqp"
 )
