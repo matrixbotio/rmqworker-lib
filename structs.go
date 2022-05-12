@@ -1,6 +1,7 @@
 package rmqworker
 
 import (
+	"sync"
 	"time"
 
 	"github.com/beefsack/go-rate"
@@ -182,8 +183,9 @@ type CreateRMQHandlerTask struct {
 
 // RMQHandler - RMQ connection handler
 type RMQHandler struct {
-	task CreateRMQHandlerTask
-	conn *darkmq.Connector
+	task  CreateRMQHandlerTask
+	conn  *darkmq.Connector
+	locks rmqHandlerLocks
 
 	connPool        *darkmq.Pool
 	ensurePublisher *darkmq.EnsurePublisher // the publisher of the messages, who verifies that they were received
@@ -192,4 +194,8 @@ type RMQHandler struct {
 	firePublisher     *darkmq.FireForgetPublisher // the publisher of the messages, who does not care if the messages are received
 
 	channelKeeper darkmq.ChannelKeeper // rmq channel handler. for different requests
+}
+
+type rmqHandlerLocks struct {
+	rwLock sync.RWMutex
 }
