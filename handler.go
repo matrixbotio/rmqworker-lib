@@ -34,9 +34,18 @@ func NewRMQHandler(task CreateRMQHandlerTask, logger ...*constants.Logger) (*RMQ
 }
 
 func (r *RMQHandler) rmqInit() {
+	// init rmq connector
 	r.conn = darkmq.NewConnector(darkmq.Config{
 		Wait: waitBetweenReconnect,
 	})
+
+	// init channel pools
+	r.connPool = darkmq.NewPool(r.conn)
+	r.connPoolLightning = darkmq.NewLightningPool(r.conn)
+
+	// init publishers
+	r.ensurePublisher = darkmq.NewEnsurePublisher(r.connPool)
+	r.firePublisher = darkmq.NewFireForgetPublisher(r.connPoolLightning)
 
 	go r.rmqConnect()
 }

@@ -173,13 +173,6 @@ type rmqWorkerChannels struct {
 	msgChanOpened bool
 }
 
-/*type consumeTask struct {
-	consume        consumeFunc
-	connData       RMQConnectionData
-	connectionPair *connectionPair // to recreate connection
-	reconsumeAll   bool
-}*/
-
 type CreateRMQHandlerTask struct {
 	Data                    RMQConnectionData
 	UseErrorCallback        bool
@@ -191,4 +184,10 @@ type CreateRMQHandlerTask struct {
 type RMQHandler struct {
 	task CreateRMQHandlerTask
 	conn *darkmq.Connector
+
+	connPool        *darkmq.Pool
+	ensurePublisher *darkmq.EnsurePublisher // the publisher of the messages, who verifies that they were received
+
+	connPoolLightning *darkmq.LightningPool
+	firePublisher     *darkmq.FireForgetPublisher // the publisher of the messages, who does not care if the messages are received
 }

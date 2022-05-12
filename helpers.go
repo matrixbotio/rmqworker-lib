@@ -2,6 +2,7 @@ package rmqworker
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/matrixbotio/constants-lib"
@@ -38,4 +39,8 @@ func getRMQConnectionURL(connData RMQConnectionData) string {
 	}
 	return protocol + "://" + connData.User + ":" + connData.Password +
 		"@" + connData.Host + ":" + connData.Port + "/"
+}
+
+func checkContextDeadlineErr(err error) bool {
+	return strings.Contains(err.Error(), "context deadline")
 }
