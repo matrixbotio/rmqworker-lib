@@ -7,6 +7,9 @@ import (
 
 // rmqExchangeDeclare - declare RMQ exchange
 func (r *RMQHandler) rmqExchangeDeclare(RMQChannel *amqp.Channel, task RMQExchangeDeclareTask) APIError {
+	r.rlock()
+	defer r.runlock()
+
 	args := amqp.Table{}
 	if task.MessagesLifetime > 0 {
 		args["x-message-ttl"] = task.MessagesLifetime

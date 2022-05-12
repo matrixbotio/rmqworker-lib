@@ -84,6 +84,14 @@ func (r *RMQHandler) NewRMQHandler() *RMQHandler {
 	return &newHandler
 }
 
+func (r *RMQHandler) rlock() {
+	r.locks.rwLock.RLock()
+}
+
+func (r *RMQHandler) runlock() {
+	r.locks.rwLock.RUnlock()
+}
+
 // Close channels
 func (r *RMQHandler) Close() {
 	/*err := r.Connections.Consume.Channel.Close()
