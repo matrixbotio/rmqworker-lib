@@ -118,15 +118,6 @@ func (w *RMQWorker) logError(err *constants.APIError) {
 	}
 }
 
-// IsConnAlive - check that the connection is established
-/*func (w *RMQWorker) IsConnAlive() bool {
-	if w.connections == nil || w.connections.Consume.Conn == nil {
-		return false
-	}
-
-	return !w.connections.Consume.Conn.IsClosed()
-}*/
-
 // SetName - set RMQ worker name for logs
 func (w *RMQWorker) SetName(name string) *RMQWorker {
 	w.data.Name = name
@@ -149,11 +140,6 @@ func (w *RMQWorker) GetID() string {
 	return w.data.ID
 }
 
-// IsActive - return worker paused state
-/*func (w *RMQWorker) IsActive() bool {
-	return w.awaitMessages
-}*/
-
 // SetCheckResponseErrors - determines whether the errors in the answers passed to headers will be checked
 func (w *RMQWorker) SetCheckResponseErrors(check bool) *RMQWorker {
 	w.data.CheckResponseErrors = check
@@ -166,6 +152,10 @@ func (w *RMQWorker) getLogWorkerName() string {
 
 // Serve - start consumer(s)
 func (w *RMQWorker) Serve() {
+	if w.data.UseResponseTimeout {
+		w.runCron()
+	}
+
 	err := w.conn.StartMultipleConsumers(context.Background(), w.rmqConsumer, w.consumersCount, w.stopCh)
 	if err != nil {
 		w.handleError(constants.Error(
@@ -234,6 +224,8 @@ func (w *RMQWorker) handleError(err *constants.APIError) {
 
 func (w *RMQWorker) handleRMQMessage(delivery RMQDeliveryHandler) {
 	w.logVerbose("new rmq message found")
+
+	w.stopCron()
 
 	// check response error
 	if w.data.CheckResponseErrors {
