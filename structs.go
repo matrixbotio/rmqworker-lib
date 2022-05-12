@@ -180,22 +180,15 @@ type rmqWorkerChannels struct {
 	reconsumeAll   bool
 }*/
 
-// RMQHandler - RMQ connection handler
-type RMQHandler struct {
-	// public
+type CreateRMQHandlerTask struct {
+	Data                    RMQConnectionData
 	UseErrorCallback        bool
 	ConnectionErrorCallback func(err APIError)
-
-	// protected
-	data   RMQConnectionData
-	conn   *darkmq.Connector
-	logger *constants.Logger
+	Logger                  *constants.Logger
 }
 
-/*type connectionPair struct {
-	mutex    sync.Mutex
-	rwMutex  sync.RWMutex
-	Conn     *amqp.Connection
-	Channel  *amqp.Channel
-	consumes map[string]consumeFunc
-}*/
+// RMQHandler - RMQ connection handler
+type RMQHandler struct {
+	task CreateRMQHandlerTask
+	conn *darkmq.Connector
+}

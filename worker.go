@@ -71,7 +71,7 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 		consumersCount:   task.ConsumersCount,
 		deliveryCallback: task.Callback,
 		timeoutCallback:  task.TimeoutCallback,
-		logger:           r.logger,
+		logger:           r.task.Logger,
 	}
 
 	// setup error handler
@@ -94,9 +94,11 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 }
 
 func (w *RMQWorker) logWarn(err *constants.APIError) {
+	err.Message = w.getLogWorkerName() + err.Message
 	if w.logger != nil {
-		err.Message = w.getLogWorkerName() + err.Message
 		w.logger.Warn(err)
+	} else {
+		log.Println(err.Message)
 	}
 }
 
@@ -104,7 +106,7 @@ func (w *RMQWorker) logVerbose(message string) {
 	if w.logger != nil {
 		w.logger.Verbose(w.getLogWorkerName() + message)
 	} else {
-		log.Println()
+		log.Println(w.getLogWorkerName() + message)
 	}
 }
 
@@ -113,7 +115,7 @@ func (w *RMQWorker) logError(err *constants.APIError) {
 		err.Message = w.getLogWorkerName() + err.Message
 		w.logger.Error(err)
 	} else {
-		log.Println(err)
+		log.Println(err.Message)
 	}
 }
 

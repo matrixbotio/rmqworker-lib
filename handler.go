@@ -23,19 +23,12 @@ jgs  {}  /  \_/\=/\_/  \
 */
 
 // NewRMQHandler - create new RMQHandler
-func NewRMQHandler(connData RMQConnectionData, logger ...*constants.Logger) (*RMQHandler, APIError) {
+func NewRMQHandler(task CreateRMQHandlerTask, logger ...*constants.Logger) (*RMQHandler, APIError) {
 	// create handler
 	r := RMQHandler{
-		data: connData,
+		task: task,
 	}
 	r.rmqInit()
-
-	// assign logger
-	if len(logger) > 0 {
-		if logger[0] != nil {
-			r.logger = logger[0]
-		}
-	}
 
 	return &r, nil
 }
@@ -49,19 +42,19 @@ func (r *RMQHandler) rmqInit() {
 }
 
 func (r *RMQHandler) rmqConnect() {
-	dsn := getRMQConnectionURL(r.data)
+	dsn := getRMQConnectionURL(r.task.Data)
 
 	err := r.conn.Dial(context.Background(), dsn)
 	if err == nil {
 		return
 	}
 
-	if !r.UseErrorCallback {
+	if !r.task.UseErrorCallback {
 		log.Println("[rmq handler error callback is not set] error: " + err.Error())
 		return
 	}
 
-	r.ConnectionErrorCallback(constants.Error(
+	r.task.ConnectionErrorCallback(constants.Error(
 		"SERVICE_CONN_ERR", "failed to connect: "+err.Error(),
 	))
 }
