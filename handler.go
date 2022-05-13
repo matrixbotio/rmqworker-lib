@@ -91,23 +91,6 @@ func (r *RMQHandler) runlock() {
 	r.locks.rwLock.RUnlock()
 }
 
-// Close channels
-func (r *RMQHandler) Close() {
-	/*err := r.Connections.Consume.Channel.Close()
-	if err != nil {
-		r.logger.Error(constants.Error(baseInternalError,
-			"Error when closing consumer channel",
-			err.Error()))
-		err = nil
-	}
-	err = r.Connections.Publish.Channel.Close()
-	if err != nil {
-		r.logger.Error(constants.Error(baseInternalError,
-			"Error when closing publisher channel",
-			err.Error()))
-	}*/
-}
-
 /*
                 \||/
                 |  @___oo
@@ -156,11 +139,6 @@ func (r *RMQHandler) NewRequestHandler(task RequestHandlerTask) (*RequestHandler
 		RMQH: r,
 		Task: task,
 	}, nil
-}
-
-// Close channels
-func (r *RequestHandler) Close() {
-	r.RMQH.Close()
 }
 
 // SetID for worker
