@@ -38,8 +38,13 @@ func (r *RMQHandler) rmqExchangeDeclare(RMQChannel *amqp.Channel, task RMQExchan
 // DeclareExchanges - declare RMQ exchanges list.
 // exchange name -> exchange type
 func (r *RMQHandler) DeclareExchanges(exchangeTypes map[string]string) APIError {
+	ch, err := r.getChannel()
+	if err != nil {
+		return err
+	}
+
 	for exchangeName, exchangeType := range exchangeTypes {
-		err := r.rmqExchangeDeclare(r.connPoolLightning.Channel(), RMQExchangeDeclareTask{
+		err := r.rmqExchangeDeclare(ch, RMQExchangeDeclareTask{
 			ExchangeName: exchangeName,
 			ExchangeType: exchangeType,
 		})
@@ -52,14 +57,19 @@ func (r *RMQHandler) DeclareExchanges(exchangeTypes map[string]string) APIError 
 
 // IsQueueExists - is queue exists? /ᐠ｡ꞈ｡ᐟ\
 func (r *RMQHandler) IsQueueExists(name string) (bool, APIError) {
-	_, err := r.connPoolLightning.Channel().QueueDeclarePassive(name, true, false, false, false, nil)
+	ch, err := r.getChannel()
 	if err != nil {
-		if strings.Contains(err.Error(), "NOT_FOUND - no queue") {
+		return false, err
+	}
+
+	_, rmqErr := ch.QueueDeclarePassive(name, true, false, false, false, nil)
+	if rmqErr != nil {
+		if strings.Contains(rmqErr.Error(), "NOT_FOUND - no queue") {
 			return false, nil
 		}
 		return false, constants.Error(
 			"SERVICE_REQ_FAILED",
-			"failed to get queue `"+name+"` state: "+err.Error(),
+			"failed to get queue `"+name+"` state: "+rmqErr.Error(),
 		)
 	}
 
