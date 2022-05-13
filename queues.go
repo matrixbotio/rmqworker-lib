@@ -20,7 +20,7 @@ func (r *RMQHandler) queueDelete(managerName, queueName string) APIError {
 	r.rlock()
 	defer r.runlock()
 
-	_, err := r.channelKeeper.Channel().QueueDelete(
+	_, err := r.connPoolLightning.Channel().QueueDelete(
 		queueName, // queue name
 		false,     // if unused
 		false,     // if empty

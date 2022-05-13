@@ -39,7 +39,7 @@ func (r *RMQHandler) rmqExchangeDeclare(RMQChannel *amqp.Channel, task RMQExchan
 // exchange name -> exchange type
 func (r *RMQHandler) DeclareExchanges(exchangeTypes map[string]string) APIError {
 	for exchangeName, exchangeType := range exchangeTypes {
-		err := r.rmqExchangeDeclare(r.channelKeeper.Channel(), RMQExchangeDeclareTask{
+		err := r.rmqExchangeDeclare(r.connPoolLightning.Channel(), RMQExchangeDeclareTask{
 			ExchangeName: exchangeName,
 			ExchangeType: exchangeType,
 		})
@@ -52,7 +52,7 @@ func (r *RMQHandler) DeclareExchanges(exchangeTypes map[string]string) APIError 
 
 // IsQueueExists - is queue exists? /ᐠ｡ꞈ｡ᐟ\
 func (r *RMQHandler) IsQueueExists(name string) (bool, APIError) {
-	_, err := r.channelKeeper.Channel().QueueDeclarePassive(name, true, false, false, false, nil)
+	_, err := r.connPoolLightning.Channel().QueueDeclarePassive(name, true, false, false, false, nil)
 	if err != nil {
 		if strings.Contains(err.Error(), "NOT_FOUND - no queue") {
 			return false, nil
