@@ -167,6 +167,8 @@ func (w *RMQWorker) Serve() {
 // Stop RMQ messages listen
 func (w *RMQWorker) Stop() {
 	w.stopCh <- struct{}{}
+	w.channels.OnFinished <- struct{}{}
+	w.logVerbose("worker stopped")
 }
 
 // Reset worker channels
