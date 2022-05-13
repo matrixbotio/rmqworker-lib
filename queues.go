@@ -29,7 +29,7 @@ func (r *RMQHandler) queueDelete(managerName, queueName string) APIError {
 	if err != nil {
 		return constants.Error(
 			"SERVICE_REQ_FAILED",
-			"failed to delete "+managerName+" queue: "+err.Error(),
+			"failed to delete "+queueName+" queue: "+err.Error(),
 		)
 	}
 	return nil
