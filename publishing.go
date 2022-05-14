@@ -119,6 +119,9 @@ type publishTask struct {
 }
 
 func (r *RMQHandler) publishMessage(task publishTask) APIError {
+	r.rlock()
+	defer r.runlock()
+
 	ctx, ctxCancel := context.WithTimeout(context.Background(), publishTimeout)
 	defer ctxCancel()
 
