@@ -242,7 +242,7 @@ func (r *RequestHandler) onError(w *RMQWorker, err *constants.APIError) {
 	w.Stop()
 }
 
-func (r *RequestHandler) handleTimeout(_ *RMQWorker) {
+func (r *RequestHandler) handleTimeout(w *RMQWorker) {
 	message := "send RMQ request timeout"
 	if r.Task.WorkerName != "" {
 		message += " for " + r.Task.WorkerName + " worker"
