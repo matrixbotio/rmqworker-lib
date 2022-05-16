@@ -139,3 +139,8 @@ func (c *consumer) Consume(ctx context.Context, ch *amqp.Channel) error {
 		}
 	}
 }
+
+// GetTag - get consumer tag
+func (c *consumer) GetTag() string {
+	return c.Tag
+}
