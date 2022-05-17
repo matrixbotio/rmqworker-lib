@@ -92,15 +92,6 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 	return &w, nil
 }
 
-func (w *RMQWorker) logWarn(err *constants.APIError) {
-	err.Message = w.getLogWorkerName() + err.Message
-	if w.logger != nil {
-		w.logger.Warn(err)
-	} else {
-		log.Println(err.Message)
-	}
-}
-
 func (w *RMQWorker) logVerbose(message string) {
 	if w.logger != nil {
 		w.logger.Verbose(w.getLogWorkerName() + message)
@@ -206,12 +197,6 @@ func (w *RMQWorker) SetConsumerTagFromName() *RMQWorker {
 func (w *RMQWorker) stopCron() {
 	if w.cronHandler != nil {
 		w.cronHandler.Stop()
-	}
-}
-
-func (w *RMQWorker) limitHandleRate() {
-	if w.rateLimiter != nil {
-		w.rateLimiter.Wait()
 	}
 }
 

@@ -80,17 +80,6 @@ func (d *RMQDeliveryHandler) Accept() APIError {
 	return nil
 }
 
-func (d *RMQDeliveryHandler) manualAccept() APIError {
-	err := d.rmqDelivery.Acknowledger.Ack(d.rmqDelivery.DeliveryTag, false)
-	if err != nil {
-		return constants.Error(
-			"DATA_HANDLE_ERR",
-			"failed to ack task: "+err.Error(),
-		)
-	}
-	return nil
-}
-
 func (d *RMQDeliveryHandler) simpleAccept() APIError {
 	err := d.rmqDelivery.Ack(false)
 	if err != nil {

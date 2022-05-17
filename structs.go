@@ -14,17 +14,6 @@ import (
 // APIError - error data container
 type APIError *constants.APIError
 
-/*type openConnectionNChannelTask struct {
-	connectionPair     *connectionPair
-	connData           RMQConnectionData
-	logger             *constants.Logger
-	consume            consumeFunc
-	reconsumeAll       bool
-	skipChannelOpening bool
-
-	errorData error
-}*/
-
 // RMQConnectionData - rmq connection data container
 type RMQConnectionData struct {
 	User     string `json:"user"`
@@ -170,8 +159,6 @@ type rmqWorkerChannels struct {
 	RMQMessages <-chan amqp.Delivery
 	OnFinished  chan struct{}
 	StopCh      chan struct{}
-
-	msgChanOpened bool
 }
 
 type CreateRMQHandlerTask struct {

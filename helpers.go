@@ -22,10 +22,6 @@ func encodeMessage(message interface{}) ([]byte, APIError) {
 	return jsonBytes, nil
 }
 
-func convertRMQError(err APIError) *constants.APIError {
-	return (*constants.APIError)(err)
-}
-
 func getRMQConnectionURL(connData RMQConnectionData) string {
 	var useTLS bool = false
 	if connData.UseTLS == "1" {
