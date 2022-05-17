@@ -193,7 +193,10 @@ func (r *RequestHandler) Send() (*RequestHandlerResponse, APIError) {
 	}
 
 	// run worker
-	go w.Serve()
+	err = w.Serve()
+	if err != nil {
+		return nil, err
+	}
 
 	if r.Task.AttemptsNumber == 0 {
 		// value is not set
