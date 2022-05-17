@@ -7,6 +7,7 @@ import (
 
 	"github.com/beefsack/go-rate"
 	"github.com/matrixbotio/constants-lib"
+	darkmq "github.com/sagleft/darkrmq"
 	simplecron "github.com/sagleft/simple-cron"
 	"github.com/streadway/amqp"
 )
@@ -147,7 +148,12 @@ func (w *RMQWorker) Serve() {
 		w.runCron()
 	}
 
-	err := w.conn.StartMultipleConsumers(context.Background(), w.rmqConsumer, w.consumersCount, w.stopCh)
+	err := w.conn.StartMultipleConsumers(darkmq.StartConsumersTask{
+		Ctx:      context.Background(),
+		Consumer: w.rmqConsumer,
+		Count:    w.consumersCount,
+		Stop:     w.stopCh,
+	})
 	if err != nil {
 		w.handleError(constants.Error(
 			"SERVICE_REQ_FAILED", "failed to start consumer(s): "+err.Error(),
