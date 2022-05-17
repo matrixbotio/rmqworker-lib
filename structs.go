@@ -1,27 +1,18 @@
 package rmqworker
 
 import (
+	"sync"
 	"time"
 
 	"github.com/beefsack/go-rate"
 	"github.com/matrixbotio/constants-lib"
+	darkmq "github.com/sagleft/darkrmq"
 	simplecron "github.com/sagleft/simple-cron"
 	"github.com/streadway/amqp"
 )
 
 // APIError - error data container
 type APIError *constants.APIError
-
-type openConnectionNChannelTask struct {
-	connectionPair     *connectionPair
-	connData           RMQConnectionData
-	logger             *constants.Logger
-	consume            consumeFunc
-	reconsumeAll       bool
-	skipChannelOpening bool
-
-	errorData error
-}
 
 // RMQConnectionData - rmq connection data container
 type RMQConnectionData struct {
@@ -32,38 +23,51 @@ type RMQConnectionData struct {
 	UseTLS   string `json:"tls"`
 }
 
+// consumer implement darkmq.Consumer interface
+type consumer struct {
+	Tag string
+
+	QueueData DeclareQueueTask
+	Binding   exchandeBindData
+
+	msgHandler    func(delivery RMQDeliveryHandler)
+	errorCallback func(err *constants.APIError)
+}
+
+type exchandeBindData struct {
+	ExchangeName string
+	RoutingKey   string
+}
+
 // RMQWorker - just RMQ worker
 type RMQWorker struct {
-	data                  rmqWorkerData
-	connections           *handlerConnections
-	channels              rmqWorkerChannels
-	paused                bool
-	awaitMessages         bool
-	rejectDeliveryOnPause bool
+	data           rmqWorkerData
+	conn           *darkmq.Connector
+	rmqConsumer    *consumer
+	channels       rmqWorkerChannels
+	consumersCount int
 
 	deliveryCallback RMQDeliveryCallback
+	useErrorCallback bool
 	errorCallback    RMQErrorCallback
 	timeoutCallback  RMQTimeoutCallback
 	cronHandler      *simplecron.CronObject
 
 	logger      *constants.Logger
 	rateLimiter *rate.RateLimiter
+
+	stopCh chan struct{}
 }
 
-// RMQMonitoringWorker - rmq extended worker
-type RMQMonitoringWorker struct {
-	Worker *RMQWorker
-}
-
-// RMQQueueDeclareSimpleTask - queue declare task data container
-type RMQQueueDeclareSimpleTask struct {
-	QueueName  string
+// DeclareQueueTask - queue declare task data container
+type DeclareQueueTask struct {
+	Name       string
 	Durable    bool
 	AutoDelete bool
 
 	// optional
 	MessagesLifetime int64
-	QueueLength      int64
+	MaxLength        int64
 	DisableOverflow  bool
 }
 
@@ -106,39 +110,26 @@ type RMQPublishResponseTask struct {
 // WorkerTask - new RMQ worker data
 type WorkerTask struct {
 	// required
-	QueueName     string
-	Callback      RMQDeliveryCallback
-	ErrorCallback RMQErrorCallback
+	QueueName      string
+	RoutingKey     string
+	ISQueueDurable bool
+	ISAutoDelete   bool
+	Callback       RMQDeliveryCallback // callback to handle RMQ delivery
 
 	// optional
-	WorkerName            string
-	EnableRateLimiter     bool
-	MaxEventsPerSecond    int // for limiter
-	RejectDeliveryOnPause bool
-}
-
-// RMQMonitoringWorkerTask - new RMQ request->response monitoring worker data
-type RMQMonitoringWorkerTask struct {
-	// required
-	QueueName        string
-	ISQueueDurable   bool
-	ISAutoDelete     bool
-	FromExchangeName string
-	RoutingKey       string // to bind queue to response exchange
-	Callback         RMQDeliveryCallback
-	ErrorCallback    RMQErrorCallback // error handler func for RMQ-Worker errors
-
-	// optional
-	ID                    string
-	Timeout               time.Duration
-	TimeoutCallback       RMQTimeoutCallback
-	WorkerName            string
-	MessagesLifetime      int64 // milliseconds. 0 to disable limit
-	QueueLength           int64 // how many maximum messages to keep in the queue
-	EnableRateLimiter     bool
-	MaxEventsPerSecond    int // for limiter
-	DisableOverflow       bool
-	RejectDeliveryOnPause bool
+	ID                 string             // worker ID
+	FromExchange       string             // exchange name to bind queue
+	ConsumersCount     int                // default: 1
+	WorkerName         string             // worker name. default name when empty
+	EnableRateLimiter  bool               // limit handle rmq messages rate
+	MaxEventsPerSecond int                // for limiter
+	QueueLength        int64              // how many maximum messages to keep in the queue
+	MessagesLifetime   int64              // milliseconds. 0 to disable limit
+	DisableOverflow    bool               // disable queue overflow
+	UseErrorCallback   bool               // handle worker errors with error handler
+	ErrorCallback      RMQErrorCallback   // error handler callback
+	Timeout            time.Duration      // timeout to limit worker time
+	TimeoutCallback    RMQTimeoutCallback // timeout callback
 }
 
 // RMQDeliveryCallback - RMQ delivery callback function
@@ -152,8 +143,6 @@ type RMQTimeoutCallback func(w *RMQWorker)
 
 type rmqWorkerData struct {
 	Name                string // worker name
-	QueueName           string // the name of the queue from which to receive messages
-	AutoAckByLib        bool   // whether or not the worker will accept the message as soon as he receives it
 	CheckResponseErrors bool   // whether to check the error code in the messages
 
 	// if only one response is expected,
@@ -162,22 +151,38 @@ type rmqWorkerData struct {
 	WaitResponseTimeout time.Duration
 
 	// optional params
-	ID          string // worker ID for logs
-	ConsumerTag string // empty -> random ID
-	ConsumerId  string // empty -> random ID
+	ID         string // worker ID for logs
+	ConsumerId string // empty -> random ID
 }
 
 type rmqWorkerChannels struct {
 	RMQMessages <-chan amqp.Delivery
 	OnFinished  chan struct{}
 	StopCh      chan struct{}
-
-	msgChanOpened bool
 }
 
-type consumeTask struct {
-	consume        consumeFunc
-	connData       RMQConnectionData
-	connectionPair *connectionPair // to recreate connection
-	reconsumeAll   bool
+type CreateRMQHandlerTask struct {
+	Data                    RMQConnectionData
+	UseErrorCallback        bool
+	ConnectionErrorCallback func(err APIError)
+	Logger                  *constants.Logger
+}
+
+// RMQHandler - RMQ connection handler
+type RMQHandler struct {
+	task  CreateRMQHandlerTask
+	conn  *darkmq.Connector
+	locks rmqHandlerLocks
+
+	connPool        *darkmq.Pool
+	ensurePublisher *darkmq.EnsurePublisher // the publisher of the messages, who verifies that they were received
+
+	connPoolLightning *darkmq.LightningPool
+	firePublisher     *darkmq.FireForgetPublisher // the publisher of the messages, who does not care if the messages are received
+
+	channelKeeper darkmq.ChannelKeeper // rmq channel handler. for different requests
+}
+
+type rmqHandlerLocks struct {
+	rwLock sync.RWMutex
 }

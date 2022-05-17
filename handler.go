@@ -1,13 +1,12 @@
 package rmqworker
 
 import (
-	"encoding/json"
-	"sync"
+	"context"
+	"log"
 	"time"
 
 	"github.com/matrixbotio/constants-lib"
-	simplecron "github.com/sagleft/simple-cron"
-	"github.com/streadway/amqp"
+	darkmq "github.com/sagleft/darkrmq"
 )
 
 /*
@@ -22,105 +21,74 @@ import (
 jgs  {}  /  \_/\=/\_/  \
 */
 
-// RMQHandler - RMQ connection handler
-type RMQHandler struct {
-	Connections handlerConnections
-	Logger      *constants.Logger
-	Cron        *simplecron.CronObject
-}
-
-type handlerConnections struct {
-	Data RMQConnectionData
-
-	Publish connectionPair // connection & channel for publish messages
-	Consume connectionPair // connection & channel for consume messages
-}
-
-type connectionPair struct {
-	mutex    sync.Mutex
-	rwMutex  sync.RWMutex
-	Conn     *amqp.Connection
-	Channel  *amqp.Channel
-	consumes map[string]consumeFunc
-}
-
 // NewRMQHandler - create new RMQHandler
-func NewRMQHandler(connData RMQConnectionData, logger ...*constants.Logger) (*RMQHandler, APIError) {
+func NewRMQHandler(task CreateRMQHandlerTask, logger ...*constants.Logger) (*RMQHandler, APIError) {
 	// create handler
 	r := RMQHandler{
-		Connections: handlerConnections{
-			Data: connData,
-		},
+		task: task,
 	}
-
-	// assign logger
-	if len(logger) > 0 {
-		if logger[0] != nil {
-			r.Logger = logger[0]
-		}
-	}
-
-	err := r.openConnectionsAndChannels()
-	if err != nil {
-		return nil, err
-	}
+	r.rmqInit()
 
 	return &r, nil
 }
 
-func (r *RMQHandler) checkConnection() APIError {
-	if r.Connections.Publish.Conn == nil || r.Connections.Publish.Conn.IsClosed() {
-		// open new connection
-		err := r.openConnectionsAndChannels()
-		if err != nil {
-			return err
-		}
+func (r *RMQHandler) rmqInit() APIError {
+	// init rmq connector
+	r.conn = darkmq.NewConnector(darkmq.Config{
+		Wait: waitBetweenReconnect,
+	})
+
+	// init channel pools
+	r.connPool = darkmq.NewPool(r.conn)
+	r.connPoolLightning = darkmq.NewLightningPool(r.conn)
+
+	// init publishers
+	r.ensurePublisher = darkmq.NewEnsurePublisher(r.connPool)
+	r.firePublisher = darkmq.NewFireForgetPublisher(r.connPoolLightning)
+
+	go r.rmqConnect()
+
+	var err error
+	r.channelKeeper, err = r.connPool.ChannelWithConfirm(context.Background())
+	if err != nil {
+		return constants.Error("DATA_HANDLE_ERR", "failed to get channel from pool: "+err.Error())
 	}
 	return nil
 }
 
-func (r *RMQHandler) openConnectionsAndChannels() APIError {
-	var err APIError
-	err = openConnectionNChannel(openConnectionNChannelTask{
-		connectionPair: &r.Connections.Publish,
-		connData:       r.Connections.Data,
-		logger:         r.Logger,
-		consume:        nil,
-	})
-	if err != nil {
-		return err
+func (r *RMQHandler) rmqConnect() {
+	dsn := getRMQConnectionURL(r.task.Data)
+
+	err := r.conn.Dial(context.Background(), dsn)
+	if err == nil {
+		return
 	}
 
-	return openConnectionNChannel(openConnectionNChannelTask{
-		connectionPair: &r.Connections.Consume,
-		connData:       r.Connections.Data,
-		logger:         r.Logger,
-		consume:        nil,
-	})
+	if !r.task.UseErrorCallback {
+		log.Println("[rmq handler error callback is not set] error: " + err.Error())
+		return
+	}
+
+	r.task.ConnectionErrorCallback(constants.Error(
+		"SERVICE_CONN_ERR", "failed to connect: "+err.Error(),
+	))
 }
 
 // NewRMQHandler - clone handler & open new RMQ channel
-func (r *RMQHandler) NewRMQHandler() (*RMQHandler, APIError) {
+func (r *RMQHandler) NewRMQHandler() *RMQHandler {
 	handlerRoot := *r
 	newHandler := handlerRoot
-	return &newHandler, r.openConnectionsAndChannels()
+	newHandler.locks = rmqHandlerLocks{}
+	newHandler.rmqInit()
+	return &newHandler
 }
 
-// Close channels
-func (r *RMQHandler) Close() {
-	err := r.Connections.Consume.Channel.Close()
-	if err != nil {
-		r.Logger.Error(constants.Error(baseInternalError,
-			"Error when closing consumer channel",
-			err.Error()))
-		err = nil
-	}
-	err = r.Connections.Publish.Channel.Close()
-	if err != nil {
-		r.Logger.Error(constants.Error(baseInternalError,
-			"Error when closing publisher channel",
-			err.Error()))
-	}
+func (r *RMQHandler) rlock() {
+	r.locks.rwLock.RLock()
+}
+
+func (r *RMQHandler) runlock() {
+	r.locks.rwLock.RUnlock()
 }
 
 /*
@@ -173,11 +141,6 @@ func (r *RMQHandler) NewRequestHandler(task RequestHandlerTask) (*RequestHandler
 	}, nil
 }
 
-// Close channels
-func (r *RequestHandler) Close() {
-	r.RMQH.Close()
-}
-
 // SetID for worker
 func (r *RequestHandler) SetID(id string) *RequestHandler {
 	r.WorkerID = id
@@ -209,21 +172,28 @@ func (r *RequestHandler) sendRequest() APIError {
 func (r *RequestHandler) Send() (*RequestHandlerResponse, APIError) {
 	r.resetLastError()
 	// create RMQ-M worker
-	w, err := r.RMQH.NewRMQMonitoringWorker(RMQMonitoringWorkerTask{
-		QueueName:        r.Task.TempQueueName,
-		ISQueueDurable:   r.Task.ForceQueueToDurable,
-		ISAutoDelete:     false,
-		FromExchangeName: r.Task.ResponseFromExchangeName,
-		RoutingKey:       r.Task.TempQueueName,
-		Callback:         r.handleMessage,
+	w, err := r.RMQH.NewRMQWorker(WorkerTask{
+		QueueName:      r.Task.TempQueueName,
+		RoutingKey:     r.Task.TempQueueName,
+		ISQueueDurable: r.Task.ForceQueueToDurable,
+		ISAutoDelete:   false,
+		Callback:       r.handleMessage,
+
 		ID:               r.WorkerID,
+		FromExchange:     r.Task.ResponseFromExchangeName,
+		ConsumersCount:   1,
+		MessagesLifetime: requestHandlerDefaultMessageLifetime,
+		UseErrorCallback: true,
+		ErrorCallback:    r.onError,
 		Timeout:          r.Task.ResponseTimeout,
 		TimeoutCallback:  r.handleTimeout,
-		ErrorCallback:    r.onError,
 	})
 	if err != nil {
 		return nil, err
 	}
+
+	// run worker
+	go w.Serve()
 
 	if r.Task.AttemptsNumber == 0 {
 		// value is not set
@@ -272,7 +242,7 @@ func (r *RequestHandler) onError(w *RMQWorker, err *constants.APIError) {
 	w.Stop()
 }
 
-func (r *RequestHandler) handleTimeout(_ *RMQWorker) {
+func (r *RequestHandler) handleTimeout(w *RMQWorker) {
 	message := "send RMQ request timeout"
 	if r.Task.WorkerName != "" {
 		message += " for " + r.Task.WorkerName + " worker"
@@ -282,6 +252,7 @@ func (r *RequestHandler) handleTimeout(_ *RMQWorker) {
 		"SERVICE_REQ_TIMEOUT",
 		message,
 	)
+	w.Stop()
 }
 
 // RequestHandlerResponse - raw RMQ response data

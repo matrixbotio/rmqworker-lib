@@ -1,8 +1,6 @@
 package rmqworker
 
 import (
-	"encoding/json"
-
 	"github.com/matrixbotio/constants-lib"
 	"github.com/streadway/amqp"
 )
@@ -73,14 +71,23 @@ func (d *RMQDeliveryHandler) Accept() APIError {
 		)
 	}
 
-	err := d.rmqDelivery.Acknowledger.Ack(d.rmqDelivery.DeliveryTag, false)
+	err := d.simpleAccept()
+	if err != nil {
+		return err
+	}
+
+	d.isAccepted = true
+	return nil
+}
+
+func (d *RMQDeliveryHandler) simpleAccept() APIError {
+	err := d.rmqDelivery.Ack(false)
 	if err != nil {
 		return constants.Error(
-			"DATA_HANDLE_ERR",
-			"failed to ack task: "+err.Error(),
+			"SERVICE_REQ_FAILED",
+			"failed to accept msg: "+err.Error(),
 		)
 	}
-	d.isAccepted = true
 	return nil
 }
 

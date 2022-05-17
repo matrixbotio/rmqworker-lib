@@ -1,6 +1,8 @@
 package rmqworker
 
 import (
+	"context"
+
 	"github.com/matrixbotio/constants-lib"
 	"github.com/streadway/amqp"
 )
@@ -18,23 +20,18 @@ func (r *RMQHandler) RMQPublishToQueue(task RMQPublishRequestTask) APIError {
 		return err
 	}
 
-	err = r.publishMessage(
-		"",
-		task.QueueName,
-		false,
-		false,
-		amqp.Publishing{
+	return r.publishMessage(publishTask{
+		exchangeName: "",
+		key:          task.QueueName,
+		publishing: amqp.Publishing{
 			CorrelationId: getUUID(),
 			Headers:       headers,
 			DeliveryMode:  amqp.Persistent,
-			ContentType:   "application/json",
+			ContentType:   defaultContentType,
 			Body:          body,
-		})
-	if err != nil {
-		return err
-	}
-
-	return nil
+		},
+		ensureDelivered: false,
+	})
 }
 
 // SendRMQResponse - publish message to RMQ exchange
@@ -44,7 +41,7 @@ func (r *RMQHandler) SendRMQResponse(
 ) APIError {
 	headers := amqp.Table{}
 	var responseBody []byte
-	contentType := "application/json"
+	contentType := defaultContentType
 
 	var isErrorFound bool
 	if len(errorMsg) == 0 {
@@ -71,21 +68,17 @@ func (r *RMQHandler) SendRMQResponse(
 	}
 
 	// push result to rmq
-	err := r.publishMessage(
-		task.ExchangeName,
-		task.ResponseRoutingKey,
-		false,
-		false,
-		amqp.Publishing{
+	return r.publishMessage(publishTask{
+		exchangeName: task.ExchangeName,
+		key:          task.ResponseRoutingKey,
+		publishing: amqp.Publishing{
 			Headers:       headers,
 			ContentType:   contentType,
 			Body:          responseBody,
 			CorrelationId: task.CorrelationID,
-		})
-	if err != nil {
-		return err
-	}
-	return nil
+		},
+		ensureDelivered: true,
+	})
 }
 
 // RMQPublishToExchange - publish message to exchangeю
@@ -106,39 +99,46 @@ func (r *RMQHandler) RMQPublishToExchange(
 		return err
 	}
 
-	err = r.publishMessage(
-		exchangeName,
-		routingKey,
-		false,
-		false,
-		amqp.Publishing{
+	return r.publishMessage(publishTask{
+		exchangeName: exchangeName,
+		key:          routingKey,
+		publishing: amqp.Publishing{
 			Headers:     headers,
-			ContentType: "application/json",
+			ContentType: defaultContentType,
 			Body:        jsonBytes,
-		})
-	if err != nil {
-		return err
-	}
-	return nil
+		},
+		ensureDelivered: false,
+	})
 }
 
-func (r *RMQHandler) publishMessage(exchangeName string, key string, mandatory bool, immediate bool,
-	publishing amqp.Publishing) APIError {
-	r.Connections.Publish.mutex.Lock()
-	defer r.Connections.Publish.mutex.Unlock()
-	r.Connections.Publish.rwMutex.RLock()
-	defer r.Connections.Publish.rwMutex.RUnlock()
+type publishTask struct {
+	exchangeName    string
+	key             string
+	publishing      amqp.Publishing
+	ensureDelivered bool
+}
 
-	err := r.checkConnection()
-	if err != nil {
-		return err
+func (r *RMQHandler) publishMessage(task publishTask) APIError {
+	r.rlock()
+	defer r.runlock()
+
+	ctx, ctxCancel := context.WithTimeout(context.Background(), publishTimeout)
+	defer ctxCancel()
+
+	var err error
+	if task.ensureDelivered {
+		err = r.ensurePublisher.Publish(ctx, task.exchangeName, task.key, task.publishing)
+	} else {
+		err = r.firePublisher.Publish(ctx, task.exchangeName, task.key, task.publishing)
 	}
 
-	rmqErr := r.Connections.Publish.Channel.Publish(exchangeName, key, mandatory, immediate, publishing)
-	if rmqErr != nil {
+	if err != nil {
+		if checkContextDeadlineErr(err) {
+			return publishDeadlineError
+		}
 		return constants.Error(
 			"SERVICE_REQ_FAILED",
-			"failed to push message to exchange: "+rmqErr.Error(),
+			"failed to push message to exchange: "+err.Error(),
 		)
 	}
 	return nil

@@ -1,7 +1,7 @@
 package rmqworker
 
 import (
-	"encoding/json"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/matrixbotio/constants-lib"
@@ -22,6 +22,20 @@ func encodeMessage(message interface{}) ([]byte, APIError) {
 	return jsonBytes, nil
 }
 
-func convertRMQError(err APIError) *constants.APIError {
-	return (*constants.APIError)(err)
+func getRMQConnectionURL(connData RMQConnectionData) string {
+	var useTLS bool = false
+	if connData.UseTLS == "1" {
+		useTLS = true
+	}
+
+	protocol := "amqp"
+	if useTLS {
+		protocol += "s"
+	}
+	return protocol + "://" + connData.User + ":" + connData.Password +
+		"@" + connData.Host + ":" + connData.Port + "/"
+}
+
+func checkContextDeadlineErr(err error) bool {
+	return strings.Contains(err.Error(), "context deadline")
 }
