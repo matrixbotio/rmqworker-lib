@@ -2,6 +2,7 @@ package rmqworker
 
 import (
 	"context"
+	"errors"
 	"log"
 	"time"
 
@@ -143,7 +144,7 @@ func (w *RMQWorker) getLogWorkerName() string {
 }
 
 // Serve - start consumer(s)
-func (w *RMQWorker) Serve() {
+func (w *RMQWorker) Serve() error {
 	if w.data.UseResponseTimeout {
 		w.runCron()
 	}
@@ -155,10 +156,9 @@ func (w *RMQWorker) Serve() {
 		Stop:     w.stopCh,
 	})
 	if err != nil {
-		w.handleError(constants.Error(
-			"SERVICE_REQ_FAILED", "failed to start consumer(s): "+err.Error(),
-		))
+		return errors.New("failed to start consumer(s): " + err.Error())
 	}
+	return nil
 }
 
 // Stop RMQ messages listen

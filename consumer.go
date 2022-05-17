@@ -86,7 +86,8 @@ func (c *consumer) Declare(ctx context.Context, ch *amqp.Channel) error {
 }
 
 // Consume implement darkmq.Consumer.(Consume) interface method
-func (c *consumer) Consume(ctx context.Context, ch *amqp.Channel) error {
+// NOTE: it's blocking method
+func (c *consumer) Consume(ctx context.Context, ch *amqp.Channel, readyCh chan struct{}) error {
 	err := ch.Qos(
 		1,     // prefetch count
 		0,     // prefetch size
@@ -113,6 +114,9 @@ func (c *consumer) Consume(ctx context.Context, ch *amqp.Channel) error {
 	if err != nil {
 		return errors.New("failed to consume from `" + c.QueueData.Name + "`: ")
 	}
+
+	// notify consumer ready
+	readyCh <- struct{}{}
 
 	for {
 		select {
