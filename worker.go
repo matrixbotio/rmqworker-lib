@@ -170,7 +170,10 @@ func (w *RMQWorker) Stop() {
 		w.stopCh <- struct{}{}
 	}
 
-	w.channels.OnFinished <- struct{}{}
+	if len(w.channels.OnFinished) == 0 {
+		w.channels.OnFinished <- struct{}{}
+	}
+
 	w.logVerbose("worker stopped")
 }
 
