@@ -60,6 +60,7 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 			},
 			Binding: exchandeBindData{
 				ExchangeName: task.FromExchange,
+				ExchangeType: task.ExchangeType,
 				RoutingKey:   task.RoutingKey,
 			},
 		},

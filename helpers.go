@@ -39,3 +39,10 @@ func getRMQConnectionURL(connData RMQConnectionData) string {
 func checkContextDeadlineErr(err error) bool {
 	return strings.Contains(err.Error(), "context deadline")
 }
+
+func ternary(statement bool, a, b string) string {
+	if statement {
+		return a
+	}
+	return b
+}
