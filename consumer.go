@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/matrixbotio/constants-lib"
 	"github.com/streadway/amqp"
 )
 
@@ -28,7 +29,12 @@ func (c *consumer) declareQueue(ch *amqp.Channel, task DeclareQueueTask) error {
 		args,            // arguments
 	)
 	if err != nil {
-		return errors.New("failed to declare queue: " + err.Error())
+		errInfo := "failed to declare queue: " + err.Error()
+		c.errorCallback(constants.Error(
+			"SERVICE_REQ_FAILED",
+			errInfo,
+		))
+		return errors.New(errInfo)
 	}
 	return nil
 }
@@ -44,7 +50,12 @@ func (c *consumer) declareExchange(ch *amqp.Channel) error {
 		nil,   // arguments
 	)
 	if err != nil {
-		return errors.New("failed to declare exchange: " + err.Error())
+		errInfo := "failed to declare exchange: " + err.Error()
+		c.errorCallback(constants.Error(
+			"SERVICE_REQ_FAILED",
+			errInfo,
+		))
+		return errors.New(errInfo)
 	}
 	return nil
 }
@@ -58,7 +69,12 @@ func (c *consumer) bindQueue(ch *amqp.Channel) error {
 		nil,                    // arguments
 	)
 	if err != nil {
-		return errors.New("failed to bind queue `" + c.QueueData.Name + "` to `" + c.Binding.ExchangeName + "`: " + err.Error())
+		errInfo := "failed to bind queue `" + c.QueueData.Name + "` to `" + c.Binding.ExchangeName + "`: " + err.Error()
+		c.errorCallback(constants.Error(
+			"SERVICE_REQ_FAILED",
+			errInfo,
+		))
+		return errors.New(errInfo)
 	}
 	return nil
 }
@@ -94,7 +110,12 @@ func (c *consumer) Consume(ctx context.Context, ch *amqp.Channel, readyCh chan s
 		false, // global
 	)
 	if err != nil {
-		return errors.New("failed to set QOS: " + err.Error())
+		errInfo := "failed to set QOS: " + err.Error()
+		c.errorCallback(constants.Error(
+			"SERVICE_REQ_FAILED",
+			errInfo,
+		))
+		return errors.New(errInfo)
 	}
 
 	// set consumer tag
@@ -112,7 +133,12 @@ func (c *consumer) Consume(ctx context.Context, ch *amqp.Channel, readyCh chan s
 		nil,              // args
 	)
 	if err != nil {
-		return errors.New("failed to consume from `" + c.QueueData.Name + "`: ")
+		errInfo := "failed to consume from `" + c.QueueData.Name + "`: "
+		c.errorCallback(constants.Error(
+			"SERVICE_REQ_FAILED",
+			errInfo,
+		))
+		return errors.New(errInfo)
 	}
 
 	// notify consumer ready
