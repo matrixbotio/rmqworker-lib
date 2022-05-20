@@ -123,6 +123,7 @@ type WorkerTask struct {
 	// optional
 	ID                 string             // worker ID
 	FromExchange       string             // exchange name to bind queue
+	ExchangeType       string             // direct, topic, etc
 	ConsumersCount     int                // default: 1
 	WorkerName         string             // worker name. default name when empty
 	EnableRateLimiter  bool               // limit handle rmq messages rate
