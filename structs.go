@@ -35,8 +35,12 @@ type consumer struct {
 }
 
 type exchandeBindData struct {
+	// required
 	ExchangeName string
 	RoutingKey   string
+
+	// optional
+	ExchangeType string // direct (by default), topic, etc
 }
 
 // RMQWorker - just RMQ worker

@@ -36,12 +36,12 @@ func (c *consumer) declareQueue(ch *amqp.Channel, task DeclareQueueTask) error {
 func (c *consumer) declareExchange(ch *amqp.Channel) error {
 	err := ch.ExchangeDeclare(
 		c.Binding.ExchangeName, // name
-		"direct",               // type
-		true,                   // durable
-		false,                  // auto-deleted
-		false,                  // internal
-		false,                  // no-wait
-		nil,                    // arguments
+		ternary(c.Binding.ExchangeType == "", "direct", c.Binding.ExchangeType), // type
+		true,  // durable
+		false, // auto-deleted
+		false, // internal
+		false, // no-wait
+		nil,   // arguments
 	)
 	if err != nil {
 		return errors.New("failed to declare exchange: " + err.Error())
