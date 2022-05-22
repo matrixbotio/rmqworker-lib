@@ -79,7 +79,6 @@ func (r *RMQHandler) NewRMQHandler() *RMQHandler {
 	handlerRoot := *r
 	newHandler := handlerRoot
 	newHandler.locks = rmqHandlerLocks{}
-	newHandler.rmqInit()
 	return &newHandler
 }
 
