@@ -214,6 +214,5 @@ type RequestHandlerTask struct {
 	// optional
 	ExchangeInsteadOfQueue bool
 	WorkerName             string
-	ResponseTimeout        time.Duration
 	ForceQueueToDurable    bool
 }
