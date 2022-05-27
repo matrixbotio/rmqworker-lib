@@ -125,8 +125,6 @@ func (h *RMQHandler) NewRequestHandler(task RequestHandlerTask) (*RequestHandler
 		MessagesLifetime: requestHandlerDefaultMessageLifetime,
 		UseErrorCallback: true,
 		ErrorCallback:    r.onError,
-		Timeout:          r.Task.ResponseTimeout,
-		TimeoutCallback:  r.handleTimeout,
 	})
 	if err != nil {
 		return nil, err
@@ -215,18 +213,6 @@ func (r *RequestHandler) handleMessage(w *RMQWorker, deliveryHandler RMQDelivery
 func (r *RequestHandler) onError(w *RMQWorker, err *constants.APIError) {
 	r.LastError = err
 	w.Stop()
-}
-
-func (r *RequestHandler) handleTimeout(w *RMQWorker) {
-	message := "send RMQ request timeout"
-	if r.Task.WorkerName != "" {
-		message += " for " + r.Task.WorkerName + " worker"
-	}
-
-	r.LastError = constants.Error(
-		"SERVICE_REQ_TIMEOUT",
-		message,
-	)
 }
 
 // RequestHandlerResponse - raw RMQ response data
