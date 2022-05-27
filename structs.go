@@ -191,3 +191,29 @@ type RMQHandler struct {
 type rmqHandlerLocks struct {
 	rwLock sync.RWMutex
 }
+
+// RequestHandler - periodic request handler
+type RequestHandler struct {
+	RMQH   *RMQHandler
+	Task   RequestHandlerTask
+	Worker *RMQWorker
+
+	WorkerID  string
+	Response  *RequestHandlerResponse
+	LastError *constants.APIError
+}
+
+// RequestHandlerTask data
+type RequestHandlerTask struct {
+	// required
+	ResponseFromExchangeName string
+	RequestToQueueName       string
+	TempQueueName            string
+	AttemptsNumber           int
+
+	// optional
+	ExchangeInsteadOfQueue bool
+	WorkerName             string
+	ResponseTimeout        time.Duration
+	ForceQueueToDurable    bool
+}

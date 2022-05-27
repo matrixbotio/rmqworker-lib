@@ -3,7 +3,6 @@ package rmqworker
 import (
 	"context"
 	"log"
-	"time"
 
 	"github.com/matrixbotio/constants-lib"
 	darkmq "github.com/sagleft/darkrmq"
@@ -105,33 +104,6 @@ func (r *RMQHandler) runlock() {
 
 */
 
-// RequestHandler - periodic request handler
-type RequestHandler struct {
-	RMQH   *RMQHandler
-	Task   RequestHandlerTask
-	Worker *RMQWorker
-
-	WorkerID  string
-	Response  *RequestHandlerResponse
-	LastError *constants.APIError
-}
-
-// RequestHandlerTask data
-type RequestHandlerTask struct {
-	// required
-	ResponseFromExchangeName string
-	RequestToQueueName       string
-	TempQueueName            string
-	AttemptsNumber           int
-	MessageBody              interface{}
-
-	// optional
-	ExchangeInsteadOfQueue bool
-	WorkerName             string
-	ResponseTimeout        time.Duration
-	ForceQueueToDurable    bool
-}
-
 // NewRequestHandler - create new handler for one-time request
 func (h *RMQHandler) NewRequestHandler(task RequestHandlerTask) (*RequestHandler, APIError) {
 	r := &RequestHandler{
@@ -175,19 +147,20 @@ func (r *RequestHandler) SetID(id string) *RequestHandler {
 	return r
 }
 
-func (r *RequestHandler) sendRequest() APIError {
+func (r *RequestHandler) sendRequest(messageBody interface{}) APIError {
 	if r.Task.ExchangeInsteadOfQueue {
 		return r.RMQH.RMQPublishToExchange(
-			r.Task.MessageBody,        // request message
+			messageBody,               // request message
 			r.Task.RequestToQueueName, // exchange name
 			"",                        // routing key
 			r.Task.TempQueueName,      // response routing key
 		)
 	}
+
 	return r.RMQH.RMQPublishToQueue(RMQPublishRequestTask{
 		QueueName:          r.Task.RequestToQueueName,
 		ResponseRoutingKey: r.Task.TempQueueName,
-		MessageBody:        r.Task.MessageBody,
+		MessageBody:        messageBody,
 	})
 }
 
@@ -197,17 +170,18 @@ func (r *RequestHandler) reset() {
 }
 
 // Send request (sync)
-func (r *RequestHandler) Send() (*RequestHandlerResponse, APIError) {
+func (r *RequestHandler) Send(messageBody interface{}) (*RequestHandlerResponse, APIError) {
 	if r.Task.AttemptsNumber == 0 {
 		// value is not set
 		r.Task.AttemptsNumber = 1
 	}
+
 	for i := 1; i <= r.Task.AttemptsNumber; i++ {
 		// reset worker
 		r.reset()
 
 		// send request
-		err := r.sendRequest()
+		err := r.sendRequest(messageBody)
 		if err != nil {
 			return nil, err
 		}
