@@ -107,18 +107,19 @@ func (r *RMQHandler) runlock() {
 // NewRequestHandler - create new handler for one-time request
 func (h *RMQHandler) NewRequestHandler(task RequestHandlerTask) (*RequestHandler, APIError) {
 	r := &RequestHandler{
-		RMQH: h,
-		Task: task,
+		RMQH:     h,
+		Task:     task,
+		IsPaused: true,
 	}
+	r.remakeFinishedChannel()
 
 	// create RMQ-M worker
 	w, err := r.RMQH.NewRMQWorker(WorkerTask{
-		QueueName:      r.Task.TempQueueName,
-		RoutingKey:     r.Task.TempQueueName,
-		ISQueueDurable: r.Task.ForceQueueToDurable,
-		ISAutoDelete:   false,
-		Callback:       r.handleMessage,
-
+		QueueName:        r.Task.TempQueueName,
+		RoutingKey:       r.Task.TempQueueName,
+		ISQueueDurable:   r.Task.ForceQueueToDurable,
+		ISAutoDelete:     false,
+		Callback:         r.handleMessage,
 		ID:               r.WorkerID,
 		FromExchange:     r.Task.ResponseFromExchangeName,
 		ConsumersCount:   1,
@@ -137,6 +138,10 @@ func (h *RMQHandler) NewRequestHandler(task RequestHandlerTask) (*RequestHandler
 	}
 
 	return r, nil
+}
+
+func (r *RequestHandler) remakeFinishedChannel() {
+	r.Finished = make(chan struct{}, 1)
 }
 
 // SetID for worker
@@ -167,8 +172,23 @@ func (r *RequestHandler) reset() {
 	r.Worker.Reset()
 }
 
+func (r *RequestHandler) waitResponse() {
+	<-r.Finished
+}
+
+func (r *RequestHandler) pause() {
+	r.IsPaused = true
+}
+
+func (r *RequestHandler) resume() {
+	r.IsPaused = false
+}
+
 // Send request (sync)
 func (r *RequestHandler) Send(messageBody interface{}) (*RequestHandlerResponse, APIError) {
+	// init
+	r.remakeFinishedChannel()
+	r.resume()
 	if r.Task.AttemptsNumber == 0 {
 		// value is not set
 		r.Task.AttemptsNumber = 1
@@ -185,15 +205,22 @@ func (r *RequestHandler) Send(messageBody interface{}) (*RequestHandlerResponse,
 		}
 
 		// await response
-		r.Worker.AwaitFinish()
+		r.waitResponse()
 
 		if r.LastError == nil {
 			break
 		}
 	}
+	r.pause()
 
 	// return result
 	return r.Response, r.LastError
+}
+
+func (r *RequestHandler) markFinished() {
+	if len(r.Finished) == 0 {
+		r.Finished <- struct{}{}
+	}
 }
 
 func (r *RequestHandler) DeleteQueues() APIError {
@@ -204,15 +231,19 @@ func (r *RequestHandler) DeleteQueues() APIError {
 
 // request callback
 func (r *RequestHandler) handleMessage(w *RMQWorker, deliveryHandler RMQDeliveryHandler) {
+	if r.IsPaused {
+		return
+	}
+
 	r.Response = &RequestHandlerResponse{
 		ResponseBody: deliveryHandler.GetMessageBody(),
 	}
-	w.Stop()
+	r.markFinished()
 }
 
 func (r *RequestHandler) onError(w *RMQWorker, err *constants.APIError) {
 	r.LastError = err
-	w.Stop()
+	r.markFinished()
 }
 
 // RequestHandlerResponse - raw RMQ response data
@@ -230,4 +261,9 @@ func (s *RequestHandlerResponse) Decode(destination interface{}) APIError {
 		)
 	}
 	return nil
+}
+
+// Stop handler, cancel consumer
+func (r *RequestHandler) Stop() {
+	r.Worker.Stop()
 }

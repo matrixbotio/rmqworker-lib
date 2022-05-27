@@ -201,6 +201,9 @@ type RequestHandler struct {
 	WorkerID  string
 	Response  *RequestHandlerResponse
 	LastError *constants.APIError
+
+	Finished chan struct{}
+	IsPaused bool
 }
 
 // RequestHandlerTask data
