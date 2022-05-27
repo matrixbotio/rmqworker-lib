@@ -105,11 +105,11 @@ func (r *RMQHandler) runlock() {
 
 */
 
-// RequestHandler used for one-time requests.
-// using RMQ-M worker
+// RequestHandler - periodic request handler
 type RequestHandler struct {
-	RMQH *RMQHandler
-	Task RequestHandlerTask
+	RMQH   *RMQHandler
+	Task   RequestHandlerTask
+	Worker *RMQWorker
 
 	WorkerID  string
 	Response  *RequestHandlerResponse
@@ -133,11 +133,40 @@ type RequestHandlerTask struct {
 }
 
 // NewRequestHandler - create new handler for one-time request
-func (r *RMQHandler) NewRequestHandler(task RequestHandlerTask) (*RequestHandler, APIError) {
-	return &RequestHandler{
-		RMQH: r,
+func (h *RMQHandler) NewRequestHandler(task RequestHandlerTask) (*RequestHandler, APIError) {
+	r := &RequestHandler{
+		RMQH: h,
 		Task: task,
-	}, nil
+	}
+
+	// create RMQ-M worker
+	w, err := r.RMQH.NewRMQWorker(WorkerTask{
+		QueueName:      r.Task.TempQueueName,
+		RoutingKey:     r.Task.TempQueueName,
+		ISQueueDurable: r.Task.ForceQueueToDurable,
+		ISAutoDelete:   false,
+		Callback:       r.handleMessage,
+
+		ID:               r.WorkerID,
+		FromExchange:     r.Task.ResponseFromExchangeName,
+		ConsumersCount:   1,
+		MessagesLifetime: requestHandlerDefaultMessageLifetime,
+		UseErrorCallback: true,
+		ErrorCallback:    r.onError,
+		Timeout:          r.Task.ResponseTimeout,
+		TimeoutCallback:  r.handleTimeout,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// run worker
+	err = w.Serve()
+	if err != nil {
+		return nil, err
+	}
+
+	return r, nil
 }
 
 // SetID for worker
@@ -167,44 +196,22 @@ func (r *RequestHandler) sendRequest() APIError {
 	})
 }
 
+func (r *RequestHandler) reset() {
+	r.Worker.Reset()
+}
+
 // Send request (sync)
 func (r *RequestHandler) Send() (*RequestHandlerResponse, APIError) {
 	r.resetLastError()
-	// create RMQ-M worker
-	w, err := r.RMQH.NewRMQWorker(WorkerTask{
-		QueueName:      r.Task.TempQueueName,
-		RoutingKey:     r.Task.TempQueueName,
-		ISQueueDurable: r.Task.ForceQueueToDurable,
-		ISAutoDelete:   false,
-		Callback:       r.handleMessage,
-
-		ID:               r.WorkerID,
-		FromExchange:     r.Task.ResponseFromExchangeName,
-		ConsumersCount:   1,
-		MessagesLifetime: requestHandlerDefaultMessageLifetime,
-		UseErrorCallback: true,
-		ErrorCallback:    r.onError,
-		Timeout:          r.Task.ResponseTimeout,
-		TimeoutCallback:  r.handleTimeout,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	// run worker
-	err = w.Serve()
-	if err != nil {
-		return nil, err
-	}
 
 	if r.Task.AttemptsNumber == 0 {
 		// value is not set
 		r.Task.AttemptsNumber = 1
 	}
 	for i := 1; i <= r.Task.AttemptsNumber; i++ {
-		if i > 1 {
-			w.Reset()
-		}
+		// reset worker
+		r.reset()
+
 		// send request
 		err := r.sendRequest()
 		if err != nil {
@@ -212,23 +219,21 @@ func (r *RequestHandler) Send() (*RequestHandlerResponse, APIError) {
 		}
 
 		// await response
-		w.AwaitFinish()
+		r.Worker.AwaitFinish()
 
 		if r.LastError == nil {
 			break
 		}
 	}
 
-	// delete temp queue
-	err = r.RMQH.DeleteQueues(map[string][]string{
-		"reqHandler": {r.Task.TempQueueName},
-	})
-	if err != nil {
-		return nil, err
-	}
-
 	// return result
 	return r.Response, r.LastError
+}
+
+func (r *RequestHandler) DeleteQueues() APIError {
+	return r.RMQH.DeleteQueues(map[string][]string{
+		"reqHandler": {r.Task.TempQueueName},
+	})
 }
 
 // request callback
