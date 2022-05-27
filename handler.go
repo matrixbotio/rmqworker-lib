@@ -175,11 +175,6 @@ func (r *RequestHandler) SetID(id string) *RequestHandler {
 	return r
 }
 
-func (r *RequestHandler) resetLastError() *RequestHandler {
-	r.LastError = nil
-	return r
-}
-
 func (r *RequestHandler) sendRequest() APIError {
 	if r.Task.ExchangeInsteadOfQueue {
 		return r.RMQH.RMQPublishToExchange(
@@ -197,13 +192,12 @@ func (r *RequestHandler) sendRequest() APIError {
 }
 
 func (r *RequestHandler) reset() {
+	r.LastError = nil
 	r.Worker.Reset()
 }
 
 // Send request (sync)
 func (r *RequestHandler) Send() (*RequestHandlerResponse, APIError) {
-	r.resetLastError()
-
 	if r.Task.AttemptsNumber == 0 {
 		// value is not set
 		r.Task.AttemptsNumber = 1
