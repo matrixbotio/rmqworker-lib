@@ -148,6 +148,7 @@ func (h *RMQHandler) NewRequestHandler(task RequestHandlerTask) (*RequestHandler
 		ID:                 r.WorkerID,
 		FromExchange:       r.Task.ResponseFromExchangeName,
 		ConsumersCount:     1,
+		WorkerName:         r.Task.WorkerName,
 		MessagesLifetime:   requestHandlerDefaultMessageLifetime,
 		UseErrorCallback:   true,
 		ErrorCallback:      r.onError,
