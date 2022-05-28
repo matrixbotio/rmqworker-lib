@@ -138,7 +138,8 @@ func (h *RMQHandler) NewRequestHandler(task RequestHandlerTask) (*RequestHandler
 	r.remakeFinishedChannel()
 
 	// create RMQ-M worker
-	w, err := r.RMQH.NewRMQWorker(WorkerTask{
+	var err APIError
+	r.Worker, err = r.RMQH.NewRMQWorker(WorkerTask{
 		QueueName:        r.Task.TempQueueName,
 		RoutingKey:       r.Task.TempQueueName,
 		ISQueueDurable:   r.Task.ForceQueueToDurable,
@@ -156,7 +157,7 @@ func (h *RMQHandler) NewRequestHandler(task RequestHandlerTask) (*RequestHandler
 	}
 
 	// run worker
-	err = w.Serve()
+	err = r.Worker.Serve()
 	if err != nil {
 		return nil, err
 	}
