@@ -135,6 +135,7 @@ type WorkerTask struct {
 	ErrorCallback      RMQErrorCallback   // error handler callback
 	Timeout            time.Duration      // timeout to limit worker time
 	TimeoutCallback    RMQTimeoutCallback // timeout callback
+	DoNotStopOnTimeout bool
 }
 
 // RMQDeliveryCallback - RMQ delivery callback function
@@ -154,6 +155,7 @@ type rmqWorkerData struct {
 	// then a timeout can be applied
 	UseResponseTimeout  bool
 	WaitResponseTimeout time.Duration
+	DoNotStopOnTimeout  bool
 
 	// optional params
 	ID         string // worker ID for logs
@@ -179,15 +181,41 @@ type RMQHandler struct {
 	conn  *darkmq.Connector
 	locks rmqHandlerLocks
 
-	connPool        *darkmq.Pool
-	ensurePublisher *darkmq.EnsurePublisher // the publisher of the messages, who verifies that they were received
-
+	connPool          *darkmq.Pool
+	publisher         *darkmq.ConstantPublisher
 	connPoolLightning *darkmq.LightningPool
-	firePublisher     *darkmq.FireForgetPublisher // the publisher of the messages, who does not care if the messages are received
-
-	channelKeeper darkmq.ChannelKeeper // rmq channel handler. for different requests
 }
 
 type rmqHandlerLocks struct {
 	rwLock sync.RWMutex
+}
+
+// RequestHandler - periodic request handler
+type RequestHandler struct {
+	RMQH   *RMQHandler
+	Task   RequestHandlerTask
+	Worker *RMQWorker
+
+	WorkerID  string
+	Response  *RequestHandlerResponse
+	LastError *constants.APIError
+
+	Finished chan struct{}
+	IsPaused bool
+}
+
+// RequestHandlerTask data
+type RequestHandlerTask struct {
+	// required
+	ResponseFromExchangeName string
+	RequestToQueueName       string
+	TempQueueName            string
+	AttemptsNumber           int
+	Timeout                  time.Duration
+
+	// optional
+	ExchangeInsteadOfQueue bool
+	WorkerName             string
+	ForceQueueToDurable    bool
+	MethodFriendlyName     string // the name of the operation performed by the vorker for the logs and errors
 }

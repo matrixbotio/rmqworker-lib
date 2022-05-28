@@ -8,7 +8,8 @@ import (
 )
 
 const (
-	waitBetweenReconnect = 5 * time.Second
+	handlerFirstConnTimeout              = 10 * time.Second
+	waitBetweenReconnect                 = 5 * time.Second
 	publishMaxAttempts                   = 3
 	publishAttemptDelay                  = 50 * time.Millisecond
 	publishTimeout                       = 2 * time.Second

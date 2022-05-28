@@ -46,6 +46,7 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 			CheckResponseErrors: true,
 			UseResponseTimeout:  task.Timeout > 0,
 			WaitResponseTimeout: task.Timeout,
+			DoNotStopOnTimeout:  task.DoNotStopOnTimeout,
 			ID:                  task.ID,
 		},
 		conn: r.conn,
@@ -170,11 +171,15 @@ func (w *RMQWorker) Stop() {
 		w.stopCh <- struct{}{}
 	}
 
+	w.Finish()
+	w.logVerbose("worker stopped")
+}
+
+// Finish worker but continue listen messages
+func (w *RMQWorker) Finish() {
 	if len(w.channels.OnFinished) == 0 {
 		w.channels.OnFinished <- struct{}{}
 	}
-
-	w.logVerbose("worker stopped")
 }
 
 // Reset worker channels
@@ -254,7 +259,10 @@ func (w *RMQWorker) timeIsUp() {
 	w.logVerbose("worker cron: response time is up")
 	w.cronHandler.Stop()
 	w.timeoutCallback(w)
-	w.Stop()
+
+	if !w.data.DoNotStopOnTimeout {
+		w.Stop()
+	}
 }
 
 // AwaitFinish - wait for worker finished

@@ -3,10 +3,10 @@ package rmqworker
 import (
 	"context"
 	"log"
-	"time"
 
 	"github.com/matrixbotio/constants-lib"
 	darkmq "github.com/sagleft/darkrmq"
+	simplecron "github.com/sagleft/simple-cron"
 )
 
 /*
@@ -42,16 +42,38 @@ func (r *RMQHandler) rmqInit() APIError {
 	r.connPool = darkmq.NewPool(r.conn)
 	r.connPoolLightning = darkmq.NewLightningPool(r.conn)
 
+	// setup conn listener
+	connEstablished := make(chan struct{})
+	markConnected := func() {
+		if len(connEstablished) == 0 {
+			connEstablished <- struct{}{}
+		}
+	}
+	r.conn.AddDialedListener(func(d darkmq.Dialed) {
+		markConnected()
+	})
+
+	// limit conn timeout
+	h := simplecron.NewRuntimeLimitHandler(handlerFirstConnTimeout, func() {
+		go r.rmqConnect()
+		<-connEstablished
+	})
+	if h.Run() {
+		markConnected() // to close goroutine
+		return constants.Error(
+			"SERVICE_REQ_TIMEOUT",
+			"RMQ conn timeout",
+		)
+	}
+
 	// init publishers
-	r.ensurePublisher = darkmq.NewEnsurePublisher(r.connPool)
-	r.firePublisher = darkmq.NewFireForgetPublisher(r.connPoolLightning)
-
-	go r.rmqConnect()
-
 	var err error
-	r.channelKeeper, err = r.connPool.ChannelWithConfirm(context.Background())
+	r.publisher, err = darkmq.NewConstantPublisher(r.connPoolLightning)
 	if err != nil {
-		return constants.Error("DATA_HANDLE_ERR", "failed to get channel from pool: "+err.Error())
+		return constants.Error(
+			"SERVICE_REQ_FAILED",
+			err.Error(),
+		)
 	}
 	return nil
 }
@@ -59,6 +81,7 @@ func (r *RMQHandler) rmqInit() APIError {
 func (r *RMQHandler) rmqConnect() {
 	dsn := getRMQConnectionURL(r.task.Data)
 
+	// ctx background -- opening a connection without a time limit
 	err := r.conn.Dial(context.Background(), dsn)
 	if err == nil {
 		return
@@ -79,7 +102,6 @@ func (r *RMQHandler) NewRMQHandler() *RMQHandler {
 	handlerRoot := *r
 	newHandler := handlerRoot
 	newHandler.locks = rmqHandlerLocks{}
-	newHandler.rmqInit()
 	return &newHandler
 }
 
@@ -106,39 +128,49 @@ func (r *RMQHandler) runlock() {
 
 */
 
-// RequestHandler used for one-time requests.
-// using RMQ-M worker
-type RequestHandler struct {
-	RMQH *RMQHandler
-	Task RequestHandlerTask
-
-	WorkerID  string
-	Response  *RequestHandlerResponse
-	LastError *constants.APIError
-}
-
-// RequestHandlerTask data
-type RequestHandlerTask struct {
-	// required
-	ResponseFromExchangeName string
-	RequestToQueueName       string
-	TempQueueName            string
-	AttemptsNumber           int
-	MessageBody              interface{}
-
-	// optional
-	ExchangeInsteadOfQueue bool
-	WorkerName             string
-	ResponseTimeout        time.Duration
-	ForceQueueToDurable    bool
-}
-
 // NewRequestHandler - create new handler for one-time request
-func (r *RMQHandler) NewRequestHandler(task RequestHandlerTask) (*RequestHandler, APIError) {
-	return &RequestHandler{
-		RMQH: r,
-		Task: task,
-	}, nil
+func (h *RMQHandler) NewRequestHandler(task RequestHandlerTask) (*RequestHandler, APIError) {
+	r := &RequestHandler{
+		RMQH:     h,
+		Task:     task,
+		IsPaused: true,
+	}
+	r.remakeFinishedChannel()
+
+	// create RMQ-M worker
+	var err APIError
+	r.Worker, err = r.RMQH.NewRMQWorker(WorkerTask{
+		QueueName:          r.Task.TempQueueName,
+		RoutingKey:         r.Task.TempQueueName,
+		ISQueueDurable:     r.Task.ForceQueueToDurable,
+		ISAutoDelete:       false,
+		Callback:           r.handleMessage,
+		ID:                 r.WorkerID,
+		FromExchange:       r.Task.ResponseFromExchangeName,
+		ConsumersCount:     1,
+		WorkerName:         r.Task.WorkerName,
+		MessagesLifetime:   requestHandlerDefaultMessageLifetime,
+		UseErrorCallback:   true,
+		ErrorCallback:      r.onError,
+		Timeout:            task.Timeout,
+		TimeoutCallback:    r.handleTimeout,
+		DoNotStopOnTimeout: true,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// run worker
+	err = r.Worker.Serve()
+	if err != nil {
+		return nil, err
+	}
+
+	return r, nil
+}
+
+func (r *RequestHandler) remakeFinishedChannel() {
+	r.Finished = make(chan struct{}, 1)
 }
 
 // SetID for worker
@@ -147,114 +179,121 @@ func (r *RequestHandler) SetID(id string) *RequestHandler {
 	return r
 }
 
-func (r *RequestHandler) resetLastError() *RequestHandler {
-	r.LastError = nil
-	return r
-}
-
-func (r *RequestHandler) sendRequest() APIError {
+func (r *RequestHandler) sendRequest(messageBody interface{}) APIError {
 	if r.Task.ExchangeInsteadOfQueue {
 		return r.RMQH.RMQPublishToExchange(
-			r.Task.MessageBody,        // request message
+			messageBody,               // request message
 			r.Task.RequestToQueueName, // exchange name
 			"",                        // routing key
 			r.Task.TempQueueName,      // response routing key
 		)
 	}
+
 	return r.RMQH.RMQPublishToQueue(RMQPublishRequestTask{
 		QueueName:          r.Task.RequestToQueueName,
 		ResponseRoutingKey: r.Task.TempQueueName,
-		MessageBody:        r.Task.MessageBody,
+		MessageBody:        messageBody,
 	})
 }
 
+func (r *RequestHandler) reset() {
+	r.LastError = nil
+	r.Worker.Reset()
+}
+
+func (r *RequestHandler) waitResponse() {
+	<-r.Finished
+}
+
+func (r *RequestHandler) pause() {
+	r.IsPaused = true
+}
+
+func (r *RequestHandler) resume() {
+	r.IsPaused = false
+}
+
 // Send request (sync)
-func (r *RequestHandler) Send() (*RequestHandlerResponse, APIError) {
-	r.resetLastError()
-	// create RMQ-M worker
-	w, err := r.RMQH.NewRMQWorker(WorkerTask{
-		QueueName:      r.Task.TempQueueName,
-		RoutingKey:     r.Task.TempQueueName,
-		ISQueueDurable: r.Task.ForceQueueToDurable,
-		ISAutoDelete:   false,
-		Callback:       r.handleMessage,
-
-		ID:               r.WorkerID,
-		FromExchange:     r.Task.ResponseFromExchangeName,
-		ConsumersCount:   1,
-		MessagesLifetime: requestHandlerDefaultMessageLifetime,
-		UseErrorCallback: true,
-		ErrorCallback:    r.onError,
-		Timeout:          r.Task.ResponseTimeout,
-		TimeoutCallback:  r.handleTimeout,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	// run worker
-	err = w.Serve()
-	if err != nil {
-		return nil, err
-	}
-
+func (r *RequestHandler) Send(messageBody interface{}) (*RequestHandlerResponse, APIError) {
+	// init
+	r.remakeFinishedChannel()
+	r.resume()
 	if r.Task.AttemptsNumber == 0 {
 		// value is not set
 		r.Task.AttemptsNumber = 1
 	}
+
 	for i := 1; i <= r.Task.AttemptsNumber; i++ {
-		if i > 1 {
-			w.Reset()
-		}
+		// reset worker
+		r.reset()
+		r.Worker.runCron()
+
 		// send request
-		err := r.sendRequest()
+		err := r.sendRequest(messageBody)
 		if err != nil {
 			return nil, err
 		}
 
 		// await response
-		w.AwaitFinish()
+		r.waitResponse()
 
 		if r.LastError == nil {
 			break
 		}
 	}
-
-	// delete temp queue
-	err = r.RMQH.DeleteQueues(map[string][]string{
-		"reqHandler": {r.Task.TempQueueName},
-	})
-	if err != nil {
-		return nil, err
-	}
+	r.Worker.stopCron()
+	r.pause()
 
 	// return result
 	return r.Response, r.LastError
 }
 
-// request callback
-func (r *RequestHandler) handleMessage(w *RMQWorker, deliveryHandler RMQDeliveryHandler) {
-	r.Response = &RequestHandlerResponse{
-		ResponseBody: deliveryHandler.GetMessageBody(),
-	}
-	w.Stop()
-}
-
-func (r *RequestHandler) onError(w *RMQWorker, err *constants.APIError) {
-	r.LastError = err
-	w.Stop()
-}
-
 func (r *RequestHandler) handleTimeout(w *RMQWorker) {
-	message := "send RMQ request timeout"
-	if r.Task.WorkerName != "" {
-		message += " for " + r.Task.WorkerName + " worker"
+	var message string
+	if r.Task.MethodFriendlyName == "" {
+		message = "send RMQ request timeout"
+		if r.Task.WorkerName != "" {
+			message += " for " + r.Task.WorkerName + " worker"
+		}
+	} else {
+		message = r.Task.MethodFriendlyName + " timeout"
 	}
 
 	r.LastError = constants.Error(
 		"SERVICE_REQ_TIMEOUT",
 		message,
 	)
+	//w.Finish()
+	r.markFinished()
+}
+
+func (r *RequestHandler) markFinished() {
+	if len(r.Finished) == 0 {
+		r.Finished <- struct{}{}
+	}
+}
+
+func (r *RequestHandler) DeleteQueues() APIError {
+	return r.RMQH.DeleteQueues(map[string][]string{
+		"reqHandler": {r.Task.TempQueueName},
+	})
+}
+
+// request callback
+func (r *RequestHandler) handleMessage(w *RMQWorker, deliveryHandler RMQDeliveryHandler) {
+	if r.IsPaused {
+		return
+	}
+
+	r.Response = &RequestHandlerResponse{
+		ResponseBody: deliveryHandler.GetMessageBody(),
+	}
+	r.markFinished()
+}
+
+func (r *RequestHandler) onError(w *RMQWorker, err *constants.APIError) {
+	r.LastError = err
+	r.markFinished()
 }
 
 // RequestHandlerResponse - raw RMQ response data
@@ -272,4 +311,9 @@ func (s *RequestHandlerResponse) Decode(destination interface{}) APIError {
 		)
 	}
 	return nil
+}
+
+// Stop handler, cancel consumer
+func (r *RequestHandler) Stop() {
+	r.Worker.Stop()
 }
