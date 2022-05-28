@@ -135,6 +135,7 @@ type WorkerTask struct {
 	ErrorCallback      RMQErrorCallback   // error handler callback
 	Timeout            time.Duration      // timeout to limit worker time
 	TimeoutCallback    RMQTimeoutCallback // timeout callback
+	DoNotStopOnTimeout bool
 }
 
 // RMQDeliveryCallback - RMQ delivery callback function
@@ -154,6 +155,7 @@ type rmqWorkerData struct {
 	// then a timeout can be applied
 	UseResponseTimeout  bool
 	WaitResponseTimeout time.Duration
+	DoNotStopOnTimeout  bool
 
 	// optional params
 	ID         string // worker ID for logs
@@ -209,6 +211,7 @@ type RequestHandlerTask struct {
 	RequestToQueueName       string
 	TempQueueName            string
 	AttemptsNumber           int
+	Timeout                  time.Duration
 
 	// optional
 	ExchangeInsteadOfQueue bool

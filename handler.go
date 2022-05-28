@@ -140,17 +140,20 @@ func (h *RMQHandler) NewRequestHandler(task RequestHandlerTask) (*RequestHandler
 	// create RMQ-M worker
 	var err APIError
 	r.Worker, err = r.RMQH.NewRMQWorker(WorkerTask{
-		QueueName:        r.Task.TempQueueName,
-		RoutingKey:       r.Task.TempQueueName,
-		ISQueueDurable:   r.Task.ForceQueueToDurable,
-		ISAutoDelete:     false,
-		Callback:         r.handleMessage,
-		ID:               r.WorkerID,
-		FromExchange:     r.Task.ResponseFromExchangeName,
-		ConsumersCount:   1,
-		MessagesLifetime: requestHandlerDefaultMessageLifetime,
-		UseErrorCallback: true,
-		ErrorCallback:    r.onError,
+		QueueName:          r.Task.TempQueueName,
+		RoutingKey:         r.Task.TempQueueName,
+		ISQueueDurable:     r.Task.ForceQueueToDurable,
+		ISAutoDelete:       false,
+		Callback:           r.handleMessage,
+		ID:                 r.WorkerID,
+		FromExchange:       r.Task.ResponseFromExchangeName,
+		ConsumersCount:     1,
+		MessagesLifetime:   requestHandlerDefaultMessageLifetime,
+		UseErrorCallback:   true,
+		ErrorCallback:      r.onError,
+		Timeout:            task.Timeout,
+		TimeoutCallback:    r.handleTimeout,
+		DoNotStopOnTimeout: true,
 	})
 	if err != nil {
 		return nil, err
@@ -222,6 +225,7 @@ func (r *RequestHandler) Send(messageBody interface{}) (*RequestHandlerResponse,
 	for i := 1; i <= r.Task.AttemptsNumber; i++ {
 		// reset worker
 		r.reset()
+		r.Worker.runCron()
 
 		// send request
 		err := r.sendRequest(messageBody)
@@ -236,10 +240,25 @@ func (r *RequestHandler) Send(messageBody interface{}) (*RequestHandlerResponse,
 			break
 		}
 	}
+	r.Worker.stopCron()
 	r.pause()
 
 	// return result
 	return r.Response, r.LastError
+}
+
+func (r *RequestHandler) handleTimeout(w *RMQWorker) {
+	message := "send RMQ request timeout"
+	if r.Task.WorkerName != "" {
+		message += " for " + r.Task.WorkerName + " worker"
+	}
+
+	r.LastError = constants.Error(
+		"SERVICE_REQ_TIMEOUT",
+		message,
+	)
+	//w.Finish()
+	r.markFinished()
 }
 
 func (r *RequestHandler) markFinished() {
