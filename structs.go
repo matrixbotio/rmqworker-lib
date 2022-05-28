@@ -217,4 +217,5 @@ type RequestHandlerTask struct {
 	ExchangeInsteadOfQueue bool
 	WorkerName             string
 	ForceQueueToDurable    bool
+	MethodFriendlyName     string // the name of the operation performed by the vorker for the logs and errors
 }

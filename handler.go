@@ -248,9 +248,14 @@ func (r *RequestHandler) Send(messageBody interface{}) (*RequestHandlerResponse,
 }
 
 func (r *RequestHandler) handleTimeout(w *RMQWorker) {
-	message := "send RMQ request timeout"
-	if r.Task.WorkerName != "" {
-		message += " for " + r.Task.WorkerName + " worker"
+	var message string
+	if r.Task.MethodFriendlyName == "" {
+		message = "send RMQ request timeout"
+		if r.Task.WorkerName != "" {
+			message += " for " + r.Task.WorkerName + " worker"
+		}
+	} else {
+		message = r.Task.MethodFriendlyName + " timeout"
 	}
 
 	r.LastError = constants.Error(
