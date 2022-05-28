@@ -6,6 +6,7 @@ import (
 
 	"github.com/matrixbotio/constants-lib"
 	darkmq "github.com/sagleft/darkrmq"
+	simplecron "github.com/sagleft/simple-cron"
 )
 
 /*
@@ -41,6 +42,30 @@ func (r *RMQHandler) rmqInit() APIError {
 	r.connPool = darkmq.NewPool(r.conn)
 	r.connPoolLightning = darkmq.NewLightningPool(r.conn)
 
+	// setup conn listener
+	connEstablished := make(chan struct{})
+	markConnected := func() {
+		if len(connEstablished) == 0 {
+			connEstablished <- struct{}{}
+		}
+	}
+	r.conn.AddDialedListener(func(d darkmq.Dialed) {
+		markConnected()
+	})
+
+	// limit conn timeout
+	h := simplecron.NewRuntimeLimitHandler(handlerFirstConnTimeout, func() {
+		go r.rmqConnect()
+		<-connEstablished
+	})
+	if h.Run() {
+		markConnected() // to close goroutine
+		return constants.Error(
+			"SERVICE_REQ_TIMEOUT",
+			"RMQ conn timeout",
+		)
+	}
+
 	// init publishers
 	var err error
 	r.publisher, err = darkmq.NewConstantPublisher(r.connPoolLightning)
@@ -50,19 +75,13 @@ func (r *RMQHandler) rmqInit() APIError {
 			err.Error(),
 		)
 	}
-
-	go r.rmqConnect()
-
-	r.channelKeeper, err = r.connPool.ChannelWithConfirm(context.Background())
-	if err != nil {
-		return constants.Error("DATA_HANDLE_ERR", "failed to get channel from pool: "+err.Error())
-	}
 	return nil
 }
 
 func (r *RMQHandler) rmqConnect() {
 	dsn := getRMQConnectionURL(r.task.Data)
 
+	// ctx background -- opening a connection without a time limit
 	err := r.conn.Dial(context.Background(), dsn)
 	if err == nil {
 		return

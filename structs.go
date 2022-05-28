@@ -182,7 +182,6 @@ type RMQHandler struct {
 	connPool          *darkmq.Pool
 	publisher         *darkmq.ConstantPublisher
 	connPoolLightning *darkmq.LightningPool
-	channelKeeper     darkmq.ChannelKeeper // rmq channel handler. for different requests
 }
 
 type rmqHandlerLocks struct {
