@@ -42,12 +42,17 @@ func (r *RMQHandler) rmqInit() APIError {
 	r.connPoolLightning = darkmq.NewLightningPool(r.conn)
 
 	// init publishers
-	r.ensurePublisher = darkmq.NewEnsurePublisher(r.connPool)
-	r.firePublisher = darkmq.NewFireForgetPublisher(r.connPoolLightning)
+	var err error
+	r.publisher, err = darkmq.NewConstantPublisher(r.connPoolLightning)
+	if err != nil {
+		return constants.Error(
+			"SERVICE_REQ_FAILED",
+			err.Error(),
+		)
+	}
 
 	go r.rmqConnect()
 
-	var err error
 	r.channelKeeper, err = r.connPool.ChannelWithConfirm(context.Background())
 	if err != nil {
 		return constants.Error("DATA_HANDLE_ERR", "failed to get channel from pool: "+err.Error())

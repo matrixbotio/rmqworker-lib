@@ -179,13 +179,10 @@ type RMQHandler struct {
 	conn  *darkmq.Connector
 	locks rmqHandlerLocks
 
-	connPool        *darkmq.Pool
-	ensurePublisher *darkmq.EnsurePublisher // the publisher of the messages, who verifies that they were received
-
+	connPool          *darkmq.Pool
+	publisher         *darkmq.ConstantPublisher
 	connPoolLightning *darkmq.LightningPool
-	firePublisher     *darkmq.FireForgetPublisher // the publisher of the messages, who does not care if the messages are received
-
-	channelKeeper darkmq.ChannelKeeper // rmq channel handler. for different requests
+	channelKeeper     darkmq.ChannelKeeper // rmq channel handler. for different requests
 }
 
 type rmqHandlerLocks struct {

@@ -30,7 +30,6 @@ func (r *RMQHandler) RMQPublishToQueue(task RMQPublishRequestTask) APIError {
 			ContentType:   defaultContentType,
 			Body:          body,
 		},
-		ensureDelivered: false,
 	})
 }
 
@@ -77,7 +76,6 @@ func (r *RMQHandler) SendRMQResponse(
 			Body:          responseBody,
 			CorrelationId: task.CorrelationID,
 		},
-		ensureDelivered: true,
 	})
 }
 
@@ -107,15 +105,13 @@ func (r *RMQHandler) RMQPublishToExchange(
 			ContentType: defaultContentType,
 			Body:        jsonBytes,
 		},
-		ensureDelivered: false,
 	})
 }
 
 type publishTask struct {
-	exchangeName    string
-	key             string
-	publishing      amqp.Publishing
-	ensureDelivered bool
+	exchangeName string
+	key          string
+	publishing   amqp.Publishing
 }
 
 func (r *RMQHandler) publishMessage(task publishTask) APIError {
@@ -125,13 +121,7 @@ func (r *RMQHandler) publishMessage(task publishTask) APIError {
 	ctx, ctxCancel := context.WithTimeout(context.Background(), publishTimeout)
 	defer ctxCancel()
 
-	var err error
-	if task.ensureDelivered {
-		err = r.ensurePublisher.Publish(ctx, task.exchangeName, task.key, task.publishing)
-	} else {
-		err = r.firePublisher.Publish(ctx, task.exchangeName, task.key, task.publishing)
-	}
-
+	err := r.publisher.Publish(ctx, task.exchangeName, task.key, task.publishing)
 	if err != nil {
 		if checkContextDeadlineErr(err) {
 			return publishDeadlineError
