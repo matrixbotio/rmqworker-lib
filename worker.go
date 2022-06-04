@@ -51,6 +51,7 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 		},
 		conn: r.conn,
 		rmqConsumer: &consumer{ // consumer
+			Tag: getUUID(),
 			QueueData: DeclareQueueTask{
 				Name:             task.QueueName,
 				Durable:          task.ISQueueDurable,
