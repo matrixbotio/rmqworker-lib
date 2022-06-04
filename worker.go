@@ -187,8 +187,6 @@ func (w *RMQWorker) Finish() {
 func (w *RMQWorker) Reset() {
 	w.channels.OnFinished = make(chan struct{}, 1)
 	w.channels.StopCh = make(chan struct{}, 1)
-
-	w.remakeStopChannel()
 }
 
 func (w *RMQWorker) remakeStopChannel() {
