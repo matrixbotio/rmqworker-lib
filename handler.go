@@ -216,7 +216,6 @@ func (r *RequestHandler) resume() {
 // Send request (sync)
 func (r *RequestHandler) Send(messageBody interface{}) (*RequestHandlerResponse, APIError) {
 	// init
-	r.remakeFinishedChannel()
 	r.resume()
 	if r.Task.AttemptsNumber == 0 {
 		// value is not set
@@ -315,5 +314,7 @@ func (s *RequestHandlerResponse) Decode(destination interface{}) APIError {
 
 // Stop handler, cancel consumer
 func (r *RequestHandler) Stop() {
+	r.markFinished()
+	r.Worker.stopCron()
 	r.Worker.Stop()
 }
