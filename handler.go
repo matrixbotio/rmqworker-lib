@@ -216,7 +216,6 @@ func (r *RequestHandler) resume() {
 // Send request (sync)
 func (r *RequestHandler) Send(messageBody interface{}) (*RequestHandlerResponse, APIError) {
 	// init
-	r.remakeFinishedChannel()
 	r.resume()
 	if r.Task.AttemptsNumber == 0 {
 		// value is not set
@@ -225,6 +224,7 @@ func (r *RequestHandler) Send(messageBody interface{}) (*RequestHandlerResponse,
 
 	for i := 1; i <= r.Task.AttemptsNumber; i++ {
 		// reset worker
+		r.remakeFinishedChannel()
 		r.reset()
 		r.Worker.runCron()
 
@@ -263,7 +263,6 @@ func (r *RequestHandler) handleTimeout(w *RMQWorker) {
 		"SERVICE_REQ_TIMEOUT",
 		message,
 	)
-	//w.Finish()
 	r.markFinished()
 }
 
@@ -281,6 +280,8 @@ func (r *RequestHandler) DeleteQueues() APIError {
 
 // request callback
 func (r *RequestHandler) handleMessage(w *RMQWorker, deliveryHandler RMQDeliveryHandler) {
+	defer r.markFinished()
+
 	if r.IsPaused {
 		return
 	}
@@ -288,7 +289,6 @@ func (r *RequestHandler) handleMessage(w *RMQWorker, deliveryHandler RMQDelivery
 	r.Response = &RequestHandlerResponse{
 		ResponseBody: deliveryHandler.GetMessageBody(),
 	}
-	r.markFinished()
 }
 
 func (r *RequestHandler) onError(w *RMQWorker, err *constants.APIError) {
@@ -315,5 +315,7 @@ func (s *RequestHandlerResponse) Decode(destination interface{}) APIError {
 
 // Stop handler, cancel consumer
 func (r *RequestHandler) Stop() {
+	r.markFinished()
+	r.Worker.stopCron()
 	r.Worker.Stop()
 }

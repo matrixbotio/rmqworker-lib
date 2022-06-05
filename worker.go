@@ -44,13 +44,14 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 		data: rmqWorkerData{
 			Name:                task.WorkerName,
 			CheckResponseErrors: true,
-			UseResponseTimeout:  task.Timeout > 0,
+			UseResponseTimeout:  task.Timeout > 0 && !task.DoNotStopOnTimeout,
 			WaitResponseTimeout: task.Timeout,
 			DoNotStopOnTimeout:  task.DoNotStopOnTimeout,
 			ID:                  task.ID,
 		},
 		conn: r.conn,
 		rmqConsumer: &consumer{ // consumer
+			Tag: task.WorkerName + "-" + getUUID(),
 			QueueData: DeclareQueueTask{
 				Name:             task.QueueName,
 				Durable:          task.ISQueueDurable,
@@ -186,8 +187,6 @@ func (w *RMQWorker) Finish() {
 func (w *RMQWorker) Reset() {
 	w.channels.OnFinished = make(chan struct{}, 1)
 	w.channels.StopCh = make(chan struct{}, 1)
-
-	w.remakeStopChannel()
 }
 
 func (w *RMQWorker) remakeStopChannel() {
