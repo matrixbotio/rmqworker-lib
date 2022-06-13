@@ -22,7 +22,7 @@ jgs  {}  /  \_/\=/\_/  \
 */
 
 // NewRMQHandler - create new RMQHandler
-func NewRMQHandler(task CreateRMQHandlerTask, logger ...*constants.Logger) (*RMQHandler, APIError) {
+func NewRMQHandler(task CreateRMQHandlerTask) (*RMQHandler, APIError) {
 	// create handler
 	r := RMQHandler{
 		task: task,
