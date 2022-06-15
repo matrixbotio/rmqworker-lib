@@ -27,9 +27,8 @@ func NewRMQHandler(task CreateRMQHandlerTask) (*RMQHandler, APIError) {
 	r := RMQHandler{
 		task: task,
 	}
-	r.rmqInit()
 
-	return &r, nil
+	return &r, r.rmqInit()
 }
 
 func (r *RMQHandler) rmqInit() APIError {
