@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/matrixbotio/constants-lib"
+	darkmq "github.com/sagleft/darkrmq"
 	"github.com/streadway/amqp"
 )
 
@@ -103,8 +104,8 @@ func (c *consumer) Declare(ctx context.Context, ch *amqp.Channel) error {
 
 // Consume implement darkmq.Consumer.(Consume) interface method
 // NOTE: it's blocking method
-func (c *consumer) Consume(ctx context.Context, ch *amqp.Channel, readyCh chan struct{}) error {
-	err := ch.Qos(
+func (c *consumer) Consume(task darkmq.ConsumeTask) error {
+	err := task.Ch.Qos(
 		1,     // prefetch count
 		0,     // prefetch size
 		false, // global
@@ -123,7 +124,7 @@ func (c *consumer) Consume(ctx context.Context, ch *amqp.Channel, readyCh chan s
 		c.Tag = getUUID()
 	}
 
-	msgs, err := ch.Consume(
+	msgs, err := task.Ch.Consume(
 		c.QueueData.Name, // queue
 		c.Tag,            // consumer name
 		false,            // auto-ack
@@ -142,7 +143,7 @@ func (c *consumer) Consume(ctx context.Context, ch *amqp.Channel, readyCh chan s
 	}
 
 	// notify consumer ready
-	readyCh <- struct{}{}
+	task.ReadyCh <- struct{}{}
 
 	for {
 		select {
@@ -164,8 +165,8 @@ func (c *consumer) Consume(ctx context.Context, ch *amqp.Channel, readyCh chan s
 			// handle message
 			c.msgHandler(delivery)
 
-		case <-ctx.Done():
-			return ctx.Err()
+		case <-task.Ctx.Done():
+			return task.Ctx.Err()
 		}
 	}
 }
