@@ -7,7 +7,8 @@ import (
 	"github.com/streadway/amqp"
 )
 
-// RMQPublishToQueue - send request to rmq queue
+// RMQPublishToQueue - send request to rmq queue.
+// NOTE: should be replaced by PublishToExchange in later lib versions
 func (r *RMQHandler) RMQPublishToQueue(task RMQPublishRequestTask) APIError {
 	headers := amqp.Table{}
 	if task.ResponseRoutingKey != "" {
@@ -26,6 +27,37 @@ func (r *RMQHandler) RMQPublishToQueue(task RMQPublishRequestTask) APIError {
 		publishing: amqp.Publishing{
 			CorrelationId: getUUID(),
 			Headers:       headers,
+			DeliveryMode:  amqp.Persistent,
+			ContentType:   defaultContentType,
+			Body:          body,
+		},
+	})
+}
+
+// PublishToQueue - send request to rmq queue
+func (r *RMQHandler) PublishToQueue(task RMQPublishRequestTask) APIError {
+	headers := amqp.Table{}
+	if task.ResponseRoutingKey != "" {
+		headers["responseRoutingKey"] = task.ResponseRoutingKey
+	}
+
+	// encode message
+	body, err := encodeMessage(task.MessageBody)
+	if err != nil {
+		return err
+	}
+
+	correlationID := task.CorrelationID
+	if correlationID == "" {
+		correlationID = getUUID()
+	}
+
+	return r.publishMessage(publishTask{
+		exchangeName: "",
+		key:          task.QueueName,
+		publishing: amqp.Publishing{
+			Headers:       headers,
+			CorrelationId: correlationID,
 			DeliveryMode:  amqp.Persistent,
 			ContentType:   defaultContentType,
 			Body:          body,
@@ -109,17 +141,6 @@ func (r *RMQHandler) RMQPublishToExchange(
 	})
 }
 
-type PublishToExchangeTask struct {
-	// required
-	Message      interface{}
-	ExchangeName string
-
-	// optional
-	RoutingKey         string
-	ResponseRoutingKey string
-	CorrelationID      string
-}
-
 // PublishToExchange - publish message to exchangeю
 // responseRoutingKey is optional to send requests to exchange
 func (r *RMQHandler) PublishToExchange(task PublishToExchangeTask) APIError {
@@ -133,13 +154,18 @@ func (r *RMQHandler) PublishToExchange(task PublishToExchangeTask) APIError {
 		return err
 	}
 
+	correlationID := task.CorrelationID
+	if correlationID == "" {
+		correlationID = getUUID()
+	}
+
 	return r.publishMessage(publishTask{
 		exchangeName: task.ExchangeName,
 		key:          task.RoutingKey,
 		publishing: amqp.Publishing{
 			Headers:       headers,
 			ContentType:   defaultContentType,
-			CorrelationId: task.CorrelationID,
+			CorrelationId: correlationID,
 			Body:          jsonBytes,
 		},
 	})

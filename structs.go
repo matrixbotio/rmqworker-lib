@@ -98,9 +98,13 @@ type RMQExchangeDeclareTask struct {
 
 // RMQPublishRequestTask - publish message to RMQ task data container
 type RMQPublishRequestTask struct {
-	QueueName          string
+	// required
+	QueueName   string
+	MessageBody interface{}
+
+	// optional
 	ResponseRoutingKey string
-	MessageBody        interface{}
+	CorrelationID      string
 }
 
 // RMQPublishResponseTask - response for publish message to RMQ request
@@ -219,4 +223,15 @@ type RequestHandlerTask struct {
 	WorkerName             string
 	ForceQueueToDurable    bool
 	MethodFriendlyName     string // the name of the operation performed by the vorker for the logs and errors
+}
+
+type PublishToExchangeTask struct {
+	// required
+	Message      interface{}
+	ExchangeName string
+
+	// optional
+	RoutingKey         string
+	ResponseRoutingKey string
+	CorrelationID      string
 }
