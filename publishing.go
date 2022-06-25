@@ -79,8 +79,9 @@ func (r *RMQHandler) SendRMQResponse(
 	})
 }
 
-// RMQPublishToExchange - publish message to exchangeю
-// responseRoutingKey is optional to send requests to exchange
+// RMQPublishToExchange - publish message to exchange.
+// responseRoutingKey is optional to send requests to exchange.
+// NOTE: should be replaced by PublishToExchange in later lib versions
 func (r *RMQHandler) RMQPublishToExchange(
 	message interface{},
 	exchangeName,
@@ -104,6 +105,42 @@ func (r *RMQHandler) RMQPublishToExchange(
 			Headers:     headers,
 			ContentType: defaultContentType,
 			Body:        jsonBytes,
+		},
+	})
+}
+
+type PublishToExchangeTask struct {
+	// required
+	Message      interface{}
+	ExchangeName string
+
+	// optional
+	RoutingKey         string
+	ResponseRoutingKey string
+	CorrelationID      string
+}
+
+// PublishToExchange - publish message to exchangeю
+// responseRoutingKey is optional to send requests to exchange
+func (r *RMQHandler) PublishToExchange(task PublishToExchangeTask) APIError {
+	headers := amqp.Table{}
+	if task.ResponseRoutingKey != "" {
+		headers["responseRoutingKey"] = task.ResponseRoutingKey
+	}
+
+	jsonBytes, err := encodeMessage(task.Message)
+	if err != nil {
+		return err
+	}
+
+	return r.publishMessage(publishTask{
+		exchangeName: task.ExchangeName,
+		key:          task.RoutingKey,
+		publishing: amqp.Publishing{
+			Headers:       headers,
+			ContentType:   defaultContentType,
+			CorrelationId: task.CorrelationID,
+			Body:          jsonBytes,
 		},
 	})
 }
