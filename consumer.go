@@ -120,13 +120,13 @@ func (c *consumer) Consume(task darkmq.ConsumeTask) error {
 	}
 
 	// set consumer tag
-	if c.Tag == "" {
-		c.Tag = getUUID()
+	if task.UniqueTag == "" {
+		task.UniqueTag = getUUID()
 	}
 
 	msgs, err := task.Ch.Consume(
 		c.QueueData.Name, // queue
-		c.Tag,            // consumer name
+		task.UniqueTag,   // consumer name
 		false,            // auto-ack
 		false,            // exclusive
 		false,            // no-local
