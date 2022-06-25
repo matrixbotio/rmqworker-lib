@@ -43,7 +43,7 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 	w := RMQWorker{
 		data: rmqWorkerData{
 			Name:                task.WorkerName,
-			CheckResponseErrors: true,
+			CheckResponseErrors: !task.DisableCheckResponseErrors,
 			UseResponseTimeout:  task.Timeout > 0 && !task.DoNotStopOnTimeout,
 			WaitResponseTimeout: task.Timeout,
 			DoNotStopOnTimeout:  task.DoNotStopOnTimeout,
