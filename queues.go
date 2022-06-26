@@ -1,8 +1,6 @@
 package rmqworker
 
 import (
-	"context"
-
 	"github.com/matrixbotio/constants-lib"
 	"github.com/streadway/amqp"
 )
@@ -22,7 +20,7 @@ func (r *RMQHandler) DeleteQueues(queueNames map[string][]string) APIError {
 }
 
 func (r *RMQHandler) getChannel() (*amqp.Channel, APIError) {
-	ch, rmqErr := r.connPoolLightning.Channel(context.Background())
+	ch, rmqErr := r.publisher.Channel()
 	if rmqErr != nil {
 		return nil, constants.Error(
 			"SERVICE_REQ_FAILED",
