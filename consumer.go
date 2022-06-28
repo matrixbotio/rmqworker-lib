@@ -134,7 +134,7 @@ func (c *consumer) Consume(task darkmq.ConsumeTask) error {
 		nil,              // args
 	)
 	if err != nil {
-		errInfo := "failed to consume from `" + c.QueueData.Name + "`: "
+		errInfo := "failed to consume from `" + c.QueueData.Name + "`: " + err.Error()
 		c.errorCallback(constants.Error(
 			"SERVICE_REQ_FAILED",
 			errInfo,
