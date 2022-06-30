@@ -178,19 +178,19 @@ func (r *RequestHandler) SetID(id string) *RequestHandler {
 	return r
 }
 
-func (r *RequestHandler) sendRequest(messageBody interface{}) APIError {
+func (r *RequestHandler) sendRequest(messageBody interface{}, responseRoutingKey string) APIError {
 	if r.Task.ExchangeInsteadOfQueue {
 		return r.RMQH.RMQPublishToExchange(
 			messageBody,               // request message
 			r.Task.RequestToQueueName, // exchange name
 			"",                        // routing key
-			r.Task.TempQueueName,      // response routing key
+			responseRoutingKey,        // response routing key
 		)
 	}
 
 	return r.RMQH.RMQPublishToQueue(RMQPublishRequestTask{
 		QueueName:          r.Task.RequestToQueueName,
-		ResponseRoutingKey: r.Task.TempQueueName,
+		ResponseRoutingKey: responseRoutingKey,
 		MessageBody:        messageBody,
 	})
 }
@@ -213,7 +213,7 @@ func (r *RequestHandler) resume() {
 }
 
 // Send request (sync)
-func (r *RequestHandler) Send(messageBody interface{}) (*RequestHandlerResponse, APIError) {
+func (r *RequestHandler) Send(messageBody interface{}, responseRoutingKey string) (*RequestHandlerResponse, APIError) {
 	// init
 	r.resume()
 	if r.Task.AttemptsNumber == 0 {
@@ -228,7 +228,7 @@ func (r *RequestHandler) Send(messageBody interface{}) (*RequestHandlerResponse,
 		r.Worker.runCron()
 
 		// send request
-		err := r.sendRequest(messageBody)
+		err := r.sendRequest(messageBody, responseRoutingKey)
 		if err != nil {
 			return nil, err
 		}
