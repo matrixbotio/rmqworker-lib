@@ -43,7 +43,7 @@ func (c *consumer) declareQueue(ch *amqp.Channel, task DeclareQueueTask) error {
 func (c *consumer) declareExchange(ch *amqp.Channel) error {
 	err := ch.ExchangeDeclare(
 		c.Binding.ExchangeName, // name
-		ternary(c.Binding.ExchangeType == "", "direct", c.Binding.ExchangeType), // type
+		ternary(c.Binding.ExchangeType == "", ExchangeTypeDirect, c.Binding.ExchangeType), // type
 		true,  // durable
 		false, // auto-deleted
 		false, // internal

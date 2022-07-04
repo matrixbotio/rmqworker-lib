@@ -52,6 +52,8 @@ func (r *RMQHandler) PublishToQueue(task RMQPublishRequestTask) APIError {
 		correlationID = getUUID()
 	}
 
+	headers = setCSTXHeaders(headers, task.CSTX)
+
 	return r.publishMessage(publishTask{
 		exchangeName: "",
 		key:          task.QueueName,
@@ -158,6 +160,8 @@ func (r *RMQHandler) PublishToExchange(task PublishToExchangeTask) APIError {
 	if correlationID == "" {
 		correlationID = getUUID()
 	}
+
+	headers = setCSTXHeaders(headers, task.cstx)
 
 	return r.publishMessage(publishTask{
 		exchangeName: task.ExchangeName,
