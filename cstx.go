@@ -16,8 +16,9 @@ var cstxAcksConsumer *RMQWorker
 var cstxAcksMap map[string][]CSTXAck
 var cstxAcksMapLock = sync.RWMutex{}
 
-func (handler *RMQHandler) BeginCSTX(ackNum int, timeout int) (*CSTX, APIError) {
-	CSTX := CSTX{
+// BeginCSTX starts a new cross-service transaction
+func (handler *RMQHandler) BeginCSTX(ackNum int, timeout int) (*CrossServiceTransaction, APIError) {
+	CSTX := CrossServiceTransaction{
 		handler:   handler,
 		ID:        getUUID(),
 		AckNum:    ackNum,
@@ -27,18 +28,18 @@ func (handler *RMQHandler) BeginCSTX(ackNum int, timeout int) (*CSTX, APIError) 
 	return &CSTX, nil
 }
 
-func (CSTX CSTX) PublishToQueue(task RMQPublishRequestTask) APIError {
+func (CSTX CrossServiceTransaction) PublishToQueue(task RMQPublishRequestTask) APIError {
 	task.CSTX = CSTX
 	return CSTX.handler.PublishToQueue(task)
 }
 
-func (CSTX CSTX) PublishToExchange(task PublishToExchangeTask) APIError {
+func (CSTX CrossServiceTransaction) PublishToExchange(task PublishToExchangeTask) APIError {
 	task.cstx = CSTX
 	return CSTX.handler.PublishToExchange(task)
 }
 
-// Commit the CSTX and await the required number of acks from other participants
-func (CSTX CSTX) Commit() (bool, APIError) {
+// Commit the CrossServiceTransaction and await the required number of acks from other participants
+func (CSTX CrossServiceTransaction) Commit() (bool, APIError) {
 	if cstxAcksConsumer == nil {
 		err := CSTX.startAcksConsumer()
 		if err != nil {
@@ -53,11 +54,11 @@ func (CSTX CSTX) Commit() (bool, APIError) {
 	return CSTX.awaitRequiredAcks()
 }
 
-func (CSTX CSTX) Rollback() APIError {
+func (CSTX CrossServiceTransaction) Rollback() APIError {
 	return CSTX.sendCSTXAck(cstxNack)
 }
 
-func (CSTX CSTX) startAcksConsumer() APIError {
+func (CSTX CrossServiceTransaction) startAcksConsumer() APIError {
 	if !cstxExchangeDeclared {
 		err := CSTX.handler.DeclareExchanges(map[string]string{cstxExchangeName: ExchangeTypeTopic})
 		if err != nil {
@@ -93,7 +94,7 @@ func (CSTX CSTX) startAcksConsumer() APIError {
 	return nil
 }
 
-func (CSTX CSTX) sendCSTXAck(ackType string) APIError {
+func (CSTX CrossServiceTransaction) sendCSTXAck(ackType string) APIError {
 	return CSTX.handler.PublishToExchange(PublishToExchangeTask{
 		Message: CSTXAck{
 			TxId:    CSTX.ID,
@@ -105,7 +106,7 @@ func (CSTX CSTX) sendCSTXAck(ackType string) APIError {
 	})
 }
 
-func (CSTX CSTX) awaitRequiredAcks() (bool, APIError) {
+func (CSTX CrossServiceTransaction) awaitRequiredAcks() (bool, APIError) {
 	for {
 		cstxAcksMapLock.RLock()
 		if len(cstxAcksMap[CSTX.ID]) >= CSTX.AckNum {
@@ -114,14 +115,14 @@ func (CSTX CSTX) awaitRequiredAcks() (bool, APIError) {
 		}
 		cstxAcksMapLock.RUnlock()
 		if time.Now().UnixMilli()-CSTX.StartedAt > int64(CSTX.Timeout) {
-			return false, constants.Error("CSTX_TIMEOUT", "CSTX timeout: "+CSTX.ID)
+			return false, constants.Error("CSTX_TIMEOUT", "CrossServiceTransaction timeout: "+CSTX.ID)
 		}
 		time.Sleep(time.Second * 1)
 	}
 }
 
-func (deliveryHandler RMQDeliveryHandler) GetCSTX(handler *RMQHandler) CSTX {
-	var CSTX CSTX
+func (deliveryHandler RMQDeliveryHandler) GetCSTX(handler *RMQHandler) CrossServiceTransaction {
+	var CSTX CrossServiceTransaction
 	ID, exists := deliveryHandler.GetHeader("cstxId")
 	if exists {
 		CSTX.ID = ID.(string)
@@ -142,7 +143,7 @@ func (deliveryHandler RMQDeliveryHandler) GetCSTX(handler *RMQHandler) CSTX {
 	return CSTX
 }
 
-func setCSTXHeaders(headers amqp.Table, CSTX CSTX) amqp.Table {
+func setCSTXHeaders(headers amqp.Table, CSTX CrossServiceTransaction) amqp.Table {
 	if CSTX.ID != "" {
 		headers["cstxId"] = CSTX.ID
 		headers["cstxAckNum"] = CSTX.AckNum
@@ -159,7 +160,7 @@ func acksConsumerCallback() RMQDeliveryCallback {
 		if len(body) > 0 {
 			err := json.Unmarshal(body, &ack)
 			if err != nil {
-				worker.logger.Error("Failed to unmarshal CSTX Ack message body: " + err.Error())
+				worker.logger.Error("Failed to unmarshal CrossServiceTransaction Ack message body: " + err.Error())
 				return
 			}
 		}

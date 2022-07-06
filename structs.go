@@ -105,7 +105,7 @@ type RMQPublishRequestTask struct {
 	// optional
 	ResponseRoutingKey string
 	CorrelationID      string
-	CSTX               CSTX
+	CSTX               CrossServiceTransaction
 }
 
 // RMQPublishResponseTask - response for publish message to RMQ request
@@ -236,11 +236,10 @@ type PublishToExchangeTask struct {
 	ResponseRoutingKey string
 	CorrelationID      string
 
-	cstx CSTX
+	cstx CrossServiceTransaction
 }
 
-// CSTX Cross-Service Transactions
-type CSTX struct {
+type CrossServiceTransaction struct {
 	ID        string
 	AckNum    int
 	StartedAt int64
