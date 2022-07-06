@@ -11,6 +11,11 @@ const cstxExchangeName = "cstx"
 const cstxAck = "ack"
 const cstxNack = "nack"
 
+const headerCSTXID = "CSTXID"
+const headerCSTXAckNum = "CSTXAckNum"
+const headerCSTXTimeout = "CSTXTimeout"
+const headerCSTXStartedAt = "CSTXStartedAt"
+
 var cstxExchangeDeclared = false
 var cstxAcksConsumer *RMQWorker
 var cstxAcksMap map[string][]CSTXAck
@@ -123,19 +128,19 @@ func (CSTX CrossServiceTransaction) awaitRequiredAcks() (bool, APIError) {
 
 func (deliveryHandler RMQDeliveryHandler) GetCSTX(handler *RMQHandler) CrossServiceTransaction {
 	var CSTX CrossServiceTransaction
-	ID, exists := deliveryHandler.GetHeader("cstxId")
+	ID, exists := deliveryHandler.GetHeader(headerCSTXID)
 	if exists {
 		CSTX.ID = ID.(string)
 	}
-	ackNum, exists := deliveryHandler.GetHeader("cstxAckNum")
+	ackNum, exists := deliveryHandler.GetHeader(headerCSTXAckNum)
 	if exists {
 		CSTX.AckNum = ackNum.(int)
 	}
-	timeout, exists := deliveryHandler.GetHeader("cstxTimeout")
+	timeout, exists := deliveryHandler.GetHeader(headerCSTXTimeout)
 	if exists {
 		CSTX.Timeout = timeout.(int)
 	}
-	startedAt, exists := deliveryHandler.GetHeader("cstxStartedAt")
+	startedAt, exists := deliveryHandler.GetHeader(headerCSTXStartedAt)
 	if exists {
 		CSTX.StartedAt = startedAt.(int64)
 	}
@@ -145,10 +150,10 @@ func (deliveryHandler RMQDeliveryHandler) GetCSTX(handler *RMQHandler) CrossServ
 
 func setCSTXHeaders(headers amqp.Table, CSTX CrossServiceTransaction) amqp.Table {
 	if CSTX.ID != "" {
-		headers["cstxId"] = CSTX.ID
-		headers["cstxAckNum"] = CSTX.AckNum
-		headers["cstxTimeout"] = CSTX.Timeout
-		headers["cstxStartedAt"] = CSTX.StartedAt
+		headers[headerCSTXID] = CSTX.ID
+		headers[headerCSTXAckNum] = CSTX.AckNum
+		headers[headerCSTXTimeout] = CSTX.Timeout
+		headers[headerCSTXStartedAt] = CSTX.StartedAt
 	}
 	return headers
 }
