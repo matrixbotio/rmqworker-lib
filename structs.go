@@ -249,7 +249,7 @@ type CrossServiceTransaction struct {
 }
 
 type CSTXAck struct {
-	TxId    string
+	TXID    string
 	Type    string // ack or nack
 	Time    int64
 	Timeout int

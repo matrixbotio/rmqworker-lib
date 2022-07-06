@@ -102,7 +102,7 @@ func (CSTX CrossServiceTransaction) startAcksConsumer() APIError {
 func (CSTX CrossServiceTransaction) sendCSTXAck(ackType string) APIError {
 	return CSTX.handler.PublishToExchange(PublishToExchangeTask{
 		Message: CSTXAck{
-			TxId:    CSTX.ID,
+			TXID:    CSTX.ID,
 			Type:    ackType,
 			Time:    time.Now().UnixMilli(),
 			Timeout: CSTX.Timeout,
@@ -170,7 +170,7 @@ func acksConsumerCallback() RMQDeliveryCallback {
 			}
 		}
 		cstxAcksMapLock.Lock()
-		cstxAcksMap[ack.TxId] = append(cstxAcksMap[ack.TxId], ack)
+		cstxAcksMap[ack.TXID] = append(cstxAcksMap[ack.TXID], ack)
 		cstxAcksMapLock.Unlock()
 	}
 }
