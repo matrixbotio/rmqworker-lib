@@ -10,8 +10,6 @@ import (
 const (
 	handlerFirstConnTimeout              = 10 * time.Second
 	waitBetweenReconnect                 = 5 * time.Second
-	publishMaxAttempts                   = 3
-	publishAttemptDelay                  = 50 * time.Millisecond
 	publishTimeout                       = 2 * time.Second
 	defaultContentType                   = "application/json"
 	requestHandlerDefaultMessageLifetime = 5 * 60 * 1000 // ms
@@ -22,4 +20,9 @@ var (
 		"SERVICE_REQ_TIMEOUT", "message publishing timeout",
 	)
 	json = jsoniter.ConfigCompatibleWithStandardLibrary
+)
+
+const (
+	ExchangeTypeDirect = "direct"
+	ExchangeTypeTopic  = "topic"
 )
