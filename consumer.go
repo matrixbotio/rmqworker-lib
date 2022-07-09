@@ -175,3 +175,11 @@ func (c *consumer) Consume(task darkmq.ConsumeTask) error {
 func (c *consumer) GetTag() string {
 	return c.Tag
 }
+
+// GetTag - get consumer tag
+func (c *consumer) ErrorCallback(err error) {
+	c.errorCallback(constants.Error(
+		"SERVICE_REQ_FAILED",
+		err.Error(),
+	))
+}
