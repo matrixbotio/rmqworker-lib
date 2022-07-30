@@ -1,10 +1,12 @@
 package rmqworker
 
 import (
-	"github.com/matrixbotio/constants-lib"
-	"github.com/streadway/amqp"
+	"errors"
 	"sync"
 	"time"
+
+	"github.com/matrixbotio/constants-lib"
+	"github.com/streadway/amqp"
 )
 
 const cstxExchangeName = "cstx"
@@ -165,7 +167,7 @@ func acksConsumerCallback() RMQDeliveryCallback {
 		if len(body) > 0 {
 			err := json.Unmarshal(body, &ack)
 			if err != nil {
-				worker.logger.Error("Failed to unmarshal CrossServiceTransaction Ack message body: " + err.Error())
+				worker.logs.LogError(errors.New("Failed to unmarshal CrossServiceTransaction Ack message body: " + err.Error()))
 				return
 			}
 		}

@@ -2,7 +2,7 @@ package rmqworker
 
 import (
 	"context"
-	"log"
+	"errors"
 	"time"
 
 	"github.com/beefsack/go-rate"
@@ -74,7 +74,7 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 		consumersCount:   task.ConsumersCount,
 		deliveryCallback: task.Callback,
 		timeoutCallback:  task.TimeoutCallback,
-		logger:           r.task.Logger,
+		logs:             task.Logs,
 	}
 
 	// setup error handler
@@ -96,21 +96,20 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 	return &w, nil
 }
 
-func (w *RMQWorker) logVerbose(message string) {
-	if w.logger != nil {
-		w.logger.Verbose(w.getLogWorkerName() + message)
-	} else {
-		log.Println(w.getLogWorkerName() + message)
+func (w *RMQWorker) logVerboseMessage(message string) {
+	if !w.logs.UseLogs {
+		return
 	}
+
+	w.logs.LogVerbose(w.getLogWorkerName() + message)
 }
 
-func (w *RMQWorker) logError(err *constants.APIError) {
-	if w.logger != nil {
-		err.Message = w.getLogWorkerName() + err.Message
-		w.logger.Error(err)
-	} else {
-		log.Println(err.Message)
+func (w *RMQWorker) logErrorMessage(err *constants.APIError) {
+	if !w.logs.UseLogs {
+		return
 	}
+
+	w.logs.LogError(errors.New(w.getLogWorkerName() + err.Message))
 }
 
 // SetName - set RMQ worker name for logs
@@ -173,7 +172,7 @@ func (w *RMQWorker) Stop() {
 	}
 
 	w.Finish()
-	w.logVerbose("worker stopped")
+	w.logVerboseMessage("worker stopped")
 }
 
 // Finish worker but continue listen messages
@@ -221,7 +220,7 @@ func (w *RMQWorker) stopCron() {
 
 func (w *RMQWorker) handleError(err *constants.APIError) {
 	if !w.useErrorCallback {
-		w.logError(err)
+		w.logErrorMessage(err)
 		return
 	}
 
@@ -229,13 +228,13 @@ func (w *RMQWorker) handleError(err *constants.APIError) {
 }
 
 func (w *RMQWorker) handleRMQMessage(delivery RMQDeliveryHandler) {
-	w.logVerbose("new rmq message found")
+	w.logVerboseMessage("new rmq message found")
 
 	w.stopCron()
 
 	// check response error
 	if w.data.CheckResponseErrors {
-		w.logVerbose("check message errors")
+		w.logVerboseMessage("check message errors")
 		aErr := delivery.CheckResponseError()
 		if aErr != nil {
 			w.handleError(aErr)
@@ -244,7 +243,7 @@ func (w *RMQWorker) handleRMQMessage(delivery RMQDeliveryHandler) {
 	}
 
 	// callback
-	w.logVerbose("run callback..")
+	w.logVerboseMessage("run callback..")
 	if w.deliveryCallback == nil {
 		w.handleError(constants.Error("DATA_HANDLE_ERR", "rmq worker message callback is nil"))
 		return
@@ -255,7 +254,7 @@ func (w *RMQWorker) handleRMQMessage(delivery RMQDeliveryHandler) {
 }
 
 func (w *RMQWorker) timeIsUp() {
-	w.logVerbose("worker cron: response time is up")
+	w.logVerboseMessage("worker cron: response time is up")
 	w.cronHandler.Stop()
 	w.timeoutCallback(w)
 
