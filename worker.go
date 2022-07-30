@@ -2,7 +2,6 @@ package rmqworker
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/beefsack/go-rate"
@@ -109,7 +108,7 @@ func (w *RMQWorker) logErrorMessage(err *constants.APIError) {
 		return
 	}
 
-	w.logs.LogError(errors.New(w.getLogWorkerName() + err.Message))
+	w.logs.LogError(w.getLogWorkerName() + err.Message)
 }
 
 // SetName - set RMQ worker name for logs
