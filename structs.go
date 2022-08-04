@@ -147,7 +147,7 @@ type WorkerTask struct {
 type LogCallbacks struct {
 	UseLogs    bool
 	LogVerbose func(info string)
-	LogError   func(errInfo string)
+	LogError   func(err error)
 }
 
 // RMQDeliveryCallback - RMQ delivery callback function

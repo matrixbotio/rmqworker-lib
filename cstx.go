@@ -1,6 +1,7 @@
 package rmqworker
 
 import (
+	"errors"
 	"sync"
 	"time"
 
@@ -166,7 +167,7 @@ func acksConsumerCallback() RMQDeliveryCallback {
 		if len(body) > 0 {
 			err := json.Unmarshal(body, &ack)
 			if err != nil {
-				worker.logs.LogError("Failed to unmarshal CrossServiceTransaction Ack message body: " + err.Error())
+				worker.logs.LogError(errors.New("Failed to unmarshal CrossServiceTransaction Ack message body: " + err.Error()))
 				return
 			}
 		}
