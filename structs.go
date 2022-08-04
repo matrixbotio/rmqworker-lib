@@ -56,8 +56,9 @@ type RMQWorker struct {
 	errorCallback    RMQErrorCallback
 	timeoutCallback  RMQTimeoutCallback
 	cronHandler      *simplecron.CronObject
-	rateLimiter      *rate.RateLimiter
-	logs             LogCallbacks
+
+	logger      *constants.Logger
+	rateLimiter *rate.RateLimiter
 
 	stopCh chan struct{}
 }
@@ -141,13 +142,6 @@ type WorkerTask struct {
 	Timeout                    time.Duration      // timeout to limit worker time
 	TimeoutCallback            RMQTimeoutCallback // timeout callback
 	DoNotStopOnTimeout         bool
-	Logs                       LogCallbacks
-}
-
-type LogCallbacks struct {
-	UseLogs    bool
-	LogVerbose func(info string)
-	LogError   func(err error)
 }
 
 // RMQDeliveryCallback - RMQ delivery callback function
@@ -181,13 +175,10 @@ type rmqWorkerChannels struct {
 }
 
 type CreateRMQHandlerTask struct {
-	// required
 	Data                    RMQConnectionData
 	UseErrorCallback        bool
 	ConnectionErrorCallback func(err APIError)
-
-	// optional
-	Logs LogCallbacks
+	Logger                  *constants.Logger
 }
 
 // RMQHandler - RMQ connection handler
@@ -233,7 +224,6 @@ type RequestHandlerTask struct {
 	WorkerName             string
 	ForceQueueToDurable    bool
 	MethodFriendlyName     string // the name of the operation performed by the vorker for the logs and errors
-	Logs                   LogCallbacks
 }
 
 type PublishToExchangeTask struct {

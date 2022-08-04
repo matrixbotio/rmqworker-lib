@@ -154,7 +154,6 @@ func (h *RMQHandler) NewRequestHandler(task RequestHandlerTask) (*RequestHandler
 		Timeout:            task.Timeout,
 		TimeoutCallback:    r.handleTimeout,
 		DoNotStopOnTimeout: true,
-		Logs:               task.Logs,
 	})
 	if err != nil {
 		return nil, err
