@@ -16,11 +16,11 @@ const headerCSTXAckNum = "CSTXAckNum"
 const headerCSTXTimeout = "CSTXTimeout"
 const headerCSTXStartedAt = "CSTXStartedAt"
 
-var acksConsumerStartedLock = sync.Mutex{}
+var acksConsumerStartedLock sync.Mutex
 var acksConsumerStarted = false
 var cstxAcksConsumer *RMQWorker
 var cstxAcksMap map[string][]CSTXAck
-var cstxAcksMapLock = sync.RWMutex{}
+var cstxAcksMapLock sync.RWMutex
 
 // BeginCSTX starts a new cross-service transaction
 func (handler *RMQHandler) BeginCSTX(ackNum int, timeout int) (*CrossServiceTransaction, APIError) {
