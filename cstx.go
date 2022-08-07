@@ -16,7 +16,8 @@ const headerCSTXAckNum = "CSTXAckNum"
 const headerCSTXTimeout = "CSTXTimeout"
 const headerCSTXStartedAt = "CSTXStartedAt"
 
-var cstxExchangeDeclared = false
+var acksConsumerStartedLock = sync.Mutex{}
+var acksConsumerStarted = false
 var cstxAcksConsumer *RMQWorker
 var cstxAcksMap map[string][]CSTXAck
 var cstxAcksMapLock = sync.RWMutex{}
@@ -64,13 +65,18 @@ func (CSTX CrossServiceTransaction) Rollback() APIError {
 }
 
 func (CSTX CrossServiceTransaction) startAcksConsumer() APIError {
-	if !cstxExchangeDeclared {
-		err := CSTX.handler.DeclareExchanges(map[string]string{cstxExchangeName: ExchangeTypeTopic})
-		if err != nil {
-			return err
-		}
-		cstxExchangeDeclared = true
+	acksConsumerStartedLock.Lock()
+	defer acksConsumerStartedLock.Unlock()
+
+	if acksConsumerStarted {
+		return nil
 	}
+
+	err := CSTX.handler.DeclareExchanges(map[string]string{cstxExchangeName: ExchangeTypeTopic})
+	if err != nil {
+		return err
+	}
+	acksConsumerStarted = true
 
 	queueName := cstxExchangeName + "-" + getUUID()
 	task := WorkerTask{
