@@ -1,10 +1,11 @@
 package rmqworker
 
 import (
-	"github.com/matrixbotio/constants-lib"
-	"github.com/streadway/amqp"
 	"sync"
 	"time"
+
+	"github.com/matrixbotio/constants-lib"
+	"github.com/streadway/amqp"
 )
 
 const cstxExchangeName = "cstx"
@@ -19,11 +20,11 @@ const headerCSTXStartedAt = "CSTXStartedAt"
 var acksConsumerStartedLock sync.Mutex
 var acksConsumerStarted = false
 var cstxAcksConsumer *RMQWorker
-var cstxAcksMap map[string][]CSTXAck
+var cstxAcksMap = make(map[string][]CSTXAck, 0)
 var cstxAcksMapLock sync.RWMutex
 
 // BeginCSTX starts a new cross-service transaction
-func (handler *RMQHandler) BeginCSTX(ackNum int, timeout int) (*CrossServiceTransaction, APIError) {
+func (handler *RMQHandler) BeginCSTX(ackNum, timeout int32) (*CrossServiceTransaction, APIError) {
 	CSTX := CrossServiceTransaction{
 		handler:   handler,
 		ID:        getUUID(),
@@ -120,7 +121,7 @@ func (CSTX CrossServiceTransaction) sendCSTXAck(ackType string) APIError {
 func (CSTX CrossServiceTransaction) awaitRequiredAcks() (bool, APIError) {
 	for {
 		cstxAcksMapLock.RLock()
-		if len(cstxAcksMap[CSTX.ID]) >= CSTX.AckNum {
+		if len(cstxAcksMap[CSTX.ID]) >= int(CSTX.AckNum) {
 			cstxAcksMapLock.RUnlock()
 			return true, nil
 		}
@@ -140,11 +141,11 @@ func (deliveryHandler RMQDeliveryHandler) GetCSTX(handler *RMQHandler) CrossServ
 	}
 	ackNum, exists := deliveryHandler.GetHeader(headerCSTXAckNum)
 	if exists {
-		CSTX.AckNum = ackNum.(int)
+		CSTX.AckNum = ackNum.(int32)
 	}
 	timeout, exists := deliveryHandler.GetHeader(headerCSTXTimeout)
 	if exists {
-		CSTX.Timeout = timeout.(int)
+		CSTX.Timeout = timeout.(int32)
 	}
 	startedAt, exists := deliveryHandler.GetHeader(headerCSTXStartedAt)
 	if exists {

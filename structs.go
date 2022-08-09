@@ -242,9 +242,9 @@ type PublishToExchangeTask struct {
 
 type CrossServiceTransaction struct {
 	ID        string
-	AckNum    int
+	AckNum    int32
 	StartedAt int64
-	Timeout   int
+	Timeout   int32
 
 	handler *RMQHandler
 }
@@ -253,5 +253,5 @@ type CSTXAck struct {
 	TXID    string
 	Type    string // ack or nack
 	Time    int64
-	Timeout int
+	Timeout int32
 }
