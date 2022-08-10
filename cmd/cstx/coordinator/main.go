@@ -1,7 +1,5 @@
 package main
 
-//  {"data": "alex"}
-
 import (
 	"log"
 
@@ -11,6 +9,7 @@ import (
 
 func main() {
 	h := cmd.GetHandler()
+	h.StartCSTXAcksConsumer()
 
 	transaction, err := h.BeginCSTX(2, 3000)
 	if err != nil {

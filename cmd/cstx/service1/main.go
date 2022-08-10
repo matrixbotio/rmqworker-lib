@@ -16,6 +16,7 @@ const queue = "service1"
 
 func main() {
 	h := cmd.GetHandler()
+	h.StartCSTXAcksConsumer()
 
 	workerTask := rmqworker.WorkerTask{
 		QueueName:      queue,
