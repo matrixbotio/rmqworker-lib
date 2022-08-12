@@ -8,7 +8,7 @@ require (
 	github.com/json-iterator/go v1.1.12
 	github.com/matrixbotio/constants-lib v1.0.87
 	github.com/matrixbotio/go-common-lib v1.1.0
-	github.com/sagleft/darkrmq v0.7.16
+	github.com/sagleft/darkrmq v0.7.17
 	github.com/sagleft/simple-cron v1.3.0
 	github.com/streadway/amqp v1.0.0
 )
