@@ -2,9 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"log"
-
-	"github.com/matrixbotio/go-common-lib/logger"
 
 	"github.com/matrixbotio/rmqworker-lib"
 )
@@ -20,7 +17,6 @@ func GetHandler() *rmqworker.RMQHandler {
 		},
 		UseErrorCallback:        false,
 		ConnectionErrorCallback: nil,
-		Logger:                  logger.NewLogger(myLogger{}, "host", "source", "0"),
 	}
 
 	h, err := rmqworker.NewRMQHandler(task)
@@ -29,11 +25,4 @@ func GetHandler() *rmqworker.RMQHandler {
 	}
 
 	return h
-}
-
-type myLogger struct {
-}
-
-func (l myLogger) Send(data string) {
-	log.Println(data)
 }
