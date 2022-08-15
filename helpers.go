@@ -24,7 +24,7 @@ func encodeMessage(message interface{}) ([]byte, APIError) {
 
 func getRMQConnectionURL(connData RMQConnectionData) string {
 	var useTLS bool = false
-	if connData.UseTLS == "1" {
+	if connData.UseTLS {
 		useTLS = true
 	}
 

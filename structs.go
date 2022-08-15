@@ -21,7 +21,7 @@ type RMQConnectionData struct {
 	Password string `json:"password"`
 	Host     string `json:"host"`
 	Port     string `json:"port"`
-	UseTLS   string `json:"tls"`
+	UseTLS   bool   `json:"tls"`
 }
 
 // consumer implement darkmq.Consumer interface

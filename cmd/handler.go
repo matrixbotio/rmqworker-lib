@@ -16,7 +16,7 @@ func GetHandler() *rmqworker.RMQHandler {
 			Password: "example",
 			Host:     "localhost",
 			Port:     "5672",
-			UseTLS:   "",
+			UseTLS:   false,
 		},
 		UseErrorCallback:        false,
 		ConnectionErrorCallback: nil,
