@@ -17,8 +17,9 @@ const headerCSTXAckNum = "CSTXAckNum"
 const headerCSTXTimeout = "CSTXTimeout"
 const headerCSTXStartedAt = "CSTXStartedAt"
 
+const standardAckMessageLifetime = int64(time.Minute * 1)
+
 var acksConsumerStartedLock sync.Mutex
-var acksConsumerStarted = false
 var cstxAcksConsumer *RMQWorker
 var cstxAcksMap = make(map[string][]CSTXAck, 0)
 var cstxAcksMapLock sync.RWMutex
@@ -47,13 +48,6 @@ func (CSTX CrossServiceTransaction) PublishToExchange(task PublishToExchangeTask
 
 // Commit the CrossServiceTransaction and await the required number of acks from other participants
 func (CSTX CrossServiceTransaction) Commit() (bool, APIError) {
-	if cstxAcksConsumer == nil {
-		err := CSTX.startAcksConsumer()
-		if err != nil {
-			return false, err
-		}
-		startAcksCleaner()
-	}
 	err := CSTX.sendCSTXAck(cstxAck)
 	if err != nil {
 		return false, err
@@ -65,19 +59,18 @@ func (CSTX CrossServiceTransaction) Rollback() APIError {
 	return CSTX.sendCSTXAck(cstxNack)
 }
 
-func (CSTX CrossServiceTransaction) startAcksConsumer() APIError {
+func (handler *RMQHandler) StartCSTXAcksConsumer() APIError {
 	acksConsumerStartedLock.Lock()
 	defer acksConsumerStartedLock.Unlock()
 
-	if acksConsumerStarted {
+	if cstxAcksConsumer != nil {
 		return nil
 	}
 
-	err := CSTX.handler.DeclareExchanges(map[string]string{cstxExchangeName: ExchangeTypeTopic})
+	err := handler.DeclareExchanges(map[string]string{cstxExchangeName: ExchangeTypeTopic})
 	if err != nil {
 		return err
 	}
-	acksConsumerStarted = true
 
 	queueName := cstxExchangeName + "-" + getUUID()
 	task := WorkerTask{
@@ -91,17 +84,19 @@ func (CSTX CrossServiceTransaction) startAcksConsumer() APIError {
 		ConsumersCount:   1,
 		WorkerName:       queueName,
 		QueueLength:      1000,
-		MessagesLifetime: int64(CSTX.Timeout),
+		MessagesLifetime: standardAckMessageLifetime,
 	}
-	worker, err := CSTX.handler.NewRMQWorker(task)
+	cstxAcksConsumer, err = handler.NewRMQWorker(task)
 	if err != nil {
 		return err
 	}
 
-	err = worker.Serve()
+	err = cstxAcksConsumer.Serve()
 	if err != nil {
 		return err
 	}
+
+	startAcksCleaner()
 
 	return nil
 }
@@ -119,6 +114,9 @@ func (CSTX CrossServiceTransaction) sendCSTXAck(ackType string) APIError {
 }
 
 func (CSTX CrossServiceTransaction) awaitRequiredAcks() (bool, APIError) {
+	if cstxAcksConsumer == nil {
+		return false, constants.Error("BASE_INTERNAL_ERROR", "CSTX acks consumer not started")
+	}
 	for {
 		cstxAcksMapLock.RLock()
 		if len(cstxAcksMap[CSTX.ID]) >= int(CSTX.AckNum) {
