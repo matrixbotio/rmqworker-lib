@@ -6,7 +6,6 @@ import (
 
 	"github.com/beefsack/go-rate"
 	"github.com/matrixbotio/constants-lib"
-	logger "github.com/matrixbotio/go-common-lib/logger"
 	darkmq "github.com/sagleft/darkrmq"
 	simplecron "github.com/sagleft/simple-cron"
 	"github.com/streadway/amqp"
@@ -58,7 +57,6 @@ type RMQWorker struct {
 	timeoutCallback  RMQTimeoutCallback
 	cronHandler      *simplecron.CronObject
 
-	logger      *logger.Logger
 	rateLimiter *rate.RateLimiter
 
 	stopCh chan struct{}
@@ -179,7 +177,6 @@ type CreateRMQHandlerTask struct {
 	Data                    RMQConnectionData
 	UseErrorCallback        bool
 	ConnectionErrorCallback func(err APIError)
-	Logger                  *logger.Logger
 }
 
 // RMQHandler - RMQ connection handler
