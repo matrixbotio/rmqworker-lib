@@ -2,7 +2,6 @@ package rmqworker
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"github.com/beefsack/go-rate"
@@ -10,6 +9,7 @@ import (
 	darkmq "github.com/sagleft/darkrmq"
 	simplecron "github.com/sagleft/simple-cron"
 	"github.com/streadway/amqp"
+	"go.uber.org/zap"
 )
 
 /*
@@ -97,20 +97,7 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 }
 
 func (w *RMQWorker) logVerbose(message string) {
-	if w.logger != nil {
-		w.logger.Verbose(w.getLogWorkerName() + message)
-	} else {
-		log.Println(w.getLogWorkerName() + message)
-	}
-}
-
-func (w *RMQWorker) logError(err *constants.APIError) {
-	if w.logger != nil {
-		err.Message = w.getLogWorkerName() + err.Message
-		w.logger.Error(err)
-	} else {
-		log.Println(err.Message)
-	}
+	w.logger.Debug(message, zap.String("worker_name", w.data.Name))
 }
 
 // SetName - set RMQ worker name for logs
@@ -139,10 +126,6 @@ func (w *RMQWorker) GetID() string {
 func (w *RMQWorker) SetCheckResponseErrors(check bool) *RMQWorker {
 	w.data.CheckResponseErrors = check
 	return w
-}
-
-func (w *RMQWorker) getLogWorkerName() string {
-	return "RMQ Worker " + w.data.Name + ": "
 }
 
 // Serve - start consumer(s)
@@ -221,7 +204,7 @@ func (w *RMQWorker) stopCron() {
 
 func (w *RMQWorker) handleError(err *constants.APIError) {
 	if !w.useErrorCallback {
-		w.logError(err)
+		w.logger.Error("handleError", zap.Error(err))
 		return
 	}
 

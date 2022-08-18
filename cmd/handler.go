@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/matrixbotio/go-common-lib/logger"
+	"go.uber.org/zap"
 
 	"github.com/matrixbotio/rmqworker-lib"
 )
 
-func GetHandler() *rmqworker.RMQHandler {
+func GetHandler(logger *zap.Logger) *rmqworker.RMQHandler {
 	task := rmqworker.CreateRMQHandlerTask{
 		Data: rmqworker.RMQConnectionData{
 			User:     "example",
@@ -20,7 +20,7 @@ func GetHandler() *rmqworker.RMQHandler {
 		},
 		UseErrorCallback:        false,
 		ConnectionErrorCallback: nil,
-		Logger:                  logger.NewLogger(myLogger{}, "host", "source", "0"),
+		Logger:                  logger,
 	}
 
 	h, err := rmqworker.NewRMQHandler(task)

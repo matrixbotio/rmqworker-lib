@@ -6,6 +6,7 @@ import (
 
 	"github.com/matrixbotio/constants-lib"
 	"github.com/streadway/amqp"
+	"go.uber.org/zap"
 )
 
 const cstxExchangeName = "cstx"
@@ -170,7 +171,7 @@ func acksConsumerCallback() RMQDeliveryCallback {
 		if len(body) > 0 {
 			err := json.Unmarshal(body, &ack)
 			if err != nil {
-				worker.logger.Error("Failed to unmarshal CrossServiceTransaction Ack message body: " + err.Error())
+				worker.logger.Error("unmarshal CrossServiceTransaction Ack message body", zap.Error(err))
 				return
 			}
 		}
