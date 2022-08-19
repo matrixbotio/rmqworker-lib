@@ -2,11 +2,14 @@ package cmd
 
 import (
 	"fmt"
+	"log"
+
+	"go.uber.org/zap"
 
 	"github.com/matrixbotio/rmqworker-lib"
 )
 
-func GetHandler() *rmqworker.RMQHandler {
+func GetHandler(logger *zap.Logger) *rmqworker.RMQHandler {
 	task := rmqworker.CreateRMQHandlerTask{
 		Data: rmqworker.RMQConnectionData{
 			User:     "example",
@@ -17,6 +20,7 @@ func GetHandler() *rmqworker.RMQHandler {
 		},
 		UseErrorCallback:        false,
 		ConnectionErrorCallback: nil,
+		Logger:                  logger,
 	}
 
 	h, err := rmqworker.NewRMQHandler(task)
@@ -25,4 +29,11 @@ func GetHandler() *rmqworker.RMQHandler {
 	}
 
 	return h
+}
+
+type myLogger struct {
+}
+
+func (l myLogger) Send(data string) {
+	log.Println(data)
 }

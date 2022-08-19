@@ -171,7 +171,7 @@ func acksConsumerCallback() RMQDeliveryCallback {
 		if len(body) > 0 {
 			err := json.Unmarshal(body, &ack)
 			if err != nil {
-				zap.L().Error("Failed to unmarshal CrossServiceTransaction Ack message body", zap.Error(err))
+				worker.logger.Error("unmarshal CrossServiceTransaction Ack message body", zap.Error(err))
 				return
 			}
 		}

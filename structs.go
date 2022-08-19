@@ -9,6 +9,7 @@ import (
 	darkmq "github.com/sagleft/darkrmq"
 	simplecron "github.com/sagleft/simple-cron"
 	"github.com/streadway/amqp"
+	"go.uber.org/zap"
 )
 
 // APIError - error data container
@@ -57,6 +58,7 @@ type RMQWorker struct {
 	timeoutCallback  RMQTimeoutCallback
 	cronHandler      *simplecron.CronObject
 
+	logger      *zap.Logger
 	rateLimiter *rate.RateLimiter
 
 	stopCh chan struct{}
@@ -177,6 +179,7 @@ type CreateRMQHandlerTask struct {
 	Data                    RMQConnectionData
 	UseErrorCallback        bool
 	ConnectionErrorCallback func(err APIError)
+	Logger                  *zap.Logger
 }
 
 // RMQHandler - RMQ connection handler
