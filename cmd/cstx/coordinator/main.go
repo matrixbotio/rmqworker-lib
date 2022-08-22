@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"fmt"
 
 	"github.com/matrixbotio/go-common-lib/zes"
 	"go.uber.org/zap"
@@ -16,8 +16,9 @@ func main() {
 		panic(loggerErr)
 	}
 	defer logger.Close()
+	zap.ReplaceGlobals(logger.New(zap.DebugLevel))
 
-	h := cmd.GetHandler(logger.New(zap.DebugLevel))
+	h := cmd.GetHandler()
 
 	h.StartCSTXAcksConsumer()
 
@@ -34,9 +35,18 @@ func main() {
 		CSTX:               *transaction,
 	})
 
+	transaction.PublishToQueue(rmqworker.RMQPublishRequestTask{
+		QueueName:          "service2",
+		MessageBody:        "body-body-body-service2",
+		ResponseRoutingKey: "",
+		CorrelationID:      "",
+		CSTX:               *transaction,
+	})
+
 	res, err := transaction.Commit()
 	if err != nil {
-		log.Printf("commit error: %#v", err)
+		zap.L().Debug(fmt.Sprintf("commit error: %#v", err))
+	} else {
+		zap.L().Debug(fmt.Sprintf("commit result: %v", res))
 	}
-	log.Printf("commit result: %v", res)
 }

@@ -9,7 +9,7 @@ import (
 	"github.com/matrixbotio/rmqworker-lib"
 )
 
-func GetHandler(logger *zap.Logger) *rmqworker.RMQHandler {
+func GetHandler() *rmqworker.RMQHandler {
 	task := rmqworker.CreateRMQHandlerTask{
 		Data: rmqworker.RMQConnectionData{
 			User:     "example",
@@ -20,7 +20,7 @@ func GetHandler(logger *zap.Logger) *rmqworker.RMQHandler {
 		},
 		UseErrorCallback:        false,
 		ConnectionErrorCallback: nil,
-		Logger:                  logger,
+		Logger:                  zap.L(),
 	}
 
 	h, err := rmqworker.NewRMQHandler(task)

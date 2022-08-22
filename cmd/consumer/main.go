@@ -19,8 +19,9 @@ func main() {
 		panic(loggerErr)
 	}
 	defer logger.Close()
+	zap.ReplaceGlobals(logger.New(zap.DebugLevel))
 
-	h := cmd.GetHandler(logger.New(zap.DebugLevel))
+	h := cmd.GetHandler()
 
 	workerTask := rmqworker.WorkerTask{
 		QueueName:      "alex",

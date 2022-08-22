@@ -13,7 +13,7 @@ import (
 	"github.com/matrixbotio/rmqworker-lib/cmd"
 )
 
-const queue = "service1"
+const queue = "service2"
 
 func main() {
 	logger, loggerErr := zes.Init(false)
