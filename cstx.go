@@ -132,12 +132,20 @@ func (CSTX CrossServiceTransaction) awaitRequiredAcks() (bool, APIError) {
 	}
 }
 
+// GetCSTXID - check CSTX available.
+// returns CSTX ID, available status
+func (deliveryHandler RMQDeliveryHandler) GetCSTXID() (string, bool) {
+	IDraw, isAvailable := deliveryHandler.GetHeader(headerCSTXID)
+	if isAvailable {
+		return IDraw.(string), isAvailable
+	}
+	return "", isAvailable
+}
+
 func (deliveryHandler RMQDeliveryHandler) GetCSTX(handler *RMQHandler) CrossServiceTransaction {
 	var CSTX CrossServiceTransaction
-	ID, exists := deliveryHandler.GetHeader(headerCSTXID)
-	if exists {
-		CSTX.ID = ID.(string)
-	}
+	CSTX.ID, _ = deliveryHandler.GetCSTXID()
+
 	ackNum, exists := deliveryHandler.GetHeader(headerCSTXAckNum)
 	if exists {
 		CSTX.AckNum = ackNum.(int32)
