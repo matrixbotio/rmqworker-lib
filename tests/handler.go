@@ -3,6 +3,7 @@ package tests
 import (
 	"testing"
 
+	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 
 	"github.com/matrixbotio/rmqworker-lib"
@@ -19,7 +20,7 @@ func getHandler(t *testing.T) *rmqworker.RMQHandler {
 		},
 		UseErrorCallback:        false,
 		ConnectionErrorCallback: nil,
-		Logger:                  zaptest.NewLogger(t),
+		Logger:                  zaptest.NewLogger(t, zaptest.Level(zap.InfoLevel)),
 	}
 
 	h, err := rmqworker.NewRMQHandler(task)

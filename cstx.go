@@ -128,7 +128,7 @@ func (CSTX CrossServiceTransaction) awaitRequiredAcks() error {
 		}
 		cstxAcksMapLock.RUnlock()
 		if time.Now().UnixMilli()-CSTX.StartedAt > int64(CSTX.Timeout) {
-			return constants.Error("CSTX_TIMEOUT", "CrossServiceTransaction timeout: "+CSTX.ID)
+			return ErrCSTXTimeout
 		}
 		time.Sleep(time.Second * 1)
 	}
