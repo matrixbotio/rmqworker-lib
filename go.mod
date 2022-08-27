@@ -15,6 +15,7 @@ require (
 )
 
 require (
+	github.com/benbjohnson/clock v1.1.0 // indirect
 	github.com/elastic/go-elasticsearch/v7 v7.13.1 // indirect
 	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421 // indirect

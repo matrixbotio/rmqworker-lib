@@ -9,14 +9,18 @@ import (
 	"go.uber.org/zap"
 )
 
-const cstxExchangeName = "cstx"
-const cstxAck = "ack"
-const cstxNack = "nack"
+const (
+	cstxExchangeName = "cstx"
+	cstxAck          = "ack"
+	cstxNack         = "nack"
+)
 
-const headerCSTXID = "CSTXID"
-const headerCSTXAckNum = "CSTXAckNum"
-const headerCSTXTimeout = "CSTXTimeout"
-const headerCSTXStartedAt = "CSTXStartedAt"
+const (
+	headerCSTXID        = "CSTXID"
+	headerCSTXAckNum    = "CSTXAckNum"
+	headerCSTXTimeout   = "CSTXTimeout"
+	headerCSTXStartedAt = "CSTXStartedAt"
+)
 
 const standardAckMessageLifetime = int64(time.Minute * 1)
 
@@ -25,16 +29,14 @@ var cstxAcksConsumer *RMQWorker
 var cstxAcksMap = make(map[string][]CSTXAck, 0)
 var cstxAcksMapLock sync.RWMutex
 
-// BeginCSTX starts a new cross-service transaction
-func (handler *RMQHandler) BeginCSTX(ackNum, timeout int32) (*CrossServiceTransaction, APIError) {
-	CSTX := CrossServiceTransaction{
+func (handler *RMQHandler) NewCSTX(ackNum, timeout int32) CrossServiceTransaction {
+	return CrossServiceTransaction{
 		handler:   handler,
 		ID:        getUUID(),
 		AckNum:    ackNum,
 		StartedAt: time.Now().UnixMilli(),
 		Timeout:   timeout,
 	}
-	return &CSTX, nil
 }
 
 func (CSTX CrossServiceTransaction) PublishToQueue(task RMQPublishRequestTask) APIError {
@@ -48,10 +50,9 @@ func (CSTX CrossServiceTransaction) PublishToExchange(task PublishToExchangeTask
 }
 
 // Commit the CrossServiceTransaction and await the required number of acks from other participants
-func (CSTX CrossServiceTransaction) Commit() (bool, APIError) {
-	err := CSTX.sendCSTXAck(cstxAck)
-	if err != nil {
-		return false, err
+func (CSTX CrossServiceTransaction) Commit() error {
+	if err := CSTX.sendCSTXAck(cstxAck); err != nil {
+		return *err
 	}
 	return CSTX.awaitRequiredAcks()
 }
@@ -114,19 +115,19 @@ func (CSTX CrossServiceTransaction) sendCSTXAck(ackType string) APIError {
 	})
 }
 
-func (CSTX CrossServiceTransaction) awaitRequiredAcks() (bool, APIError) {
+func (CSTX CrossServiceTransaction) awaitRequiredAcks() error {
 	if cstxAcksConsumer == nil {
-		return false, constants.Error("BASE_INTERNAL_ERROR", "CSTX acks consumer not started")
+		return constants.Error("BASE_INTERNAL_ERROR", "CSTX acks consumer not started")
 	}
 	for {
 		cstxAcksMapLock.RLock()
 		if len(cstxAcksMap[CSTX.ID]) >= int(CSTX.AckNum) {
 			cstxAcksMapLock.RUnlock()
-			return true, nil
+			return nil
 		}
 		cstxAcksMapLock.RUnlock()
 		if time.Now().UnixMilli()-CSTX.StartedAt > int64(CSTX.Timeout) {
-			return false, constants.Error("CSTX_TIMEOUT", "CrossServiceTransaction timeout: "+CSTX.ID)
+			return constants.Error("CSTX_TIMEOUT", "CrossServiceTransaction timeout: "+CSTX.ID)
 		}
 		time.Sleep(time.Second * 1)
 	}
