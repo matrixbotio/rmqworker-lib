@@ -34,19 +34,22 @@ func main() {
 		ISAutoDelete:   false,
 		Callback: func(w *rmqworker.RMQWorker, deliveryHandler rmqworker.RMQDeliveryHandler) {
 			transaction := deliveryHandler.GetCSTX(h)
-
-			zap.L().Debug(fmt.Sprintf(
-				"cstx ID: %s; received data: %s",
-				transaction.ID,
-				deliveryHandler.GetMessageBody(),
-			))
-
-			res, err := transaction.Commit()
-			if err != nil {
-				zap.L().Error(fmt.Sprintf("commit error: %#v", err))
-			} else {
-				zap.L().Debug(fmt.Sprintf("commit result: %v", res))
+			if transaction.ID == "" {
+				return
 			}
+
+			zap.L().Info(
+				"get transaction from rabbit-queue",
+				zap.String("struct", fmt.Sprintf("%#v", transaction)),
+				zap.String("message-body", string(deliveryHandler.GetMessageBody())),
+			)
+
+			if err := transaction.Commit(); err != nil {
+				zap.L().Info("commit error", zap.Error(err))
+				return
+			}
+
+			zap.L().Info("commit success")
 		},
 	}
 	worker, err := h.NewRMQWorker(workerTask)

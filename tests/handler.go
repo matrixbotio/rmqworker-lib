@@ -1,14 +1,14 @@
-package cmd
+package tests
 
 import (
-	"fmt"
+	"testing"
 
-	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest"
 
 	"github.com/matrixbotio/rmqworker-lib"
 )
 
-func GetHandler() *rmqworker.RMQHandler {
+func getHandler(t *testing.T) *rmqworker.RMQHandler {
 	task := rmqworker.CreateRMQHandlerTask{
 		Data: rmqworker.RMQConnectionData{
 			User:     "example",
@@ -19,12 +19,12 @@ func GetHandler() *rmqworker.RMQHandler {
 		},
 		UseErrorCallback:        false,
 		ConnectionErrorCallback: nil,
-		Logger:                  zap.L(),
+		Logger:                  zaptest.NewLogger(t),
 	}
 
 	h, err := rmqworker.NewRMQHandler(task)
 	if err != nil {
-		panic(fmt.Sprintf("error: %#v", err))
+		t.FailNow()
 	}
 
 	return h
