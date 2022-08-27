@@ -4,6 +4,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/matrixbotio/constants-lib"
 	"github.com/streadway/amqp"
 	"go.uber.org/zap"
@@ -32,7 +33,7 @@ var cstxAcksMapLock sync.RWMutex
 func (handler *RMQHandler) NewCSTX(ackNum, timeout int32) CrossServiceTransaction {
 	return CrossServiceTransaction{
 		handler:   handler,
-		ID:        getUUID(),
+		ID:        uuid.NewString(),
 		AckNum:    ackNum,
 		StartedAt: time.Now().UnixMilli(),
 		Timeout:   timeout,
@@ -74,7 +75,7 @@ func (handler *RMQHandler) StartCSTXAcksConsumer() APIError {
 		return err
 	}
 
-	queueName := cstxExchangeName + "-" + getUUID()
+	queueName := cstxExchangeName + "-" + uuid.NewString()
 	task := WorkerTask{
 		QueueName:        queueName,
 		ISQueueDurable:   false,

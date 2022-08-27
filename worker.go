@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/beefsack/go-rate"
+	"github.com/google/uuid"
 	"github.com/matrixbotio/constants-lib"
 	darkmq "github.com/sagleft/darkrmq"
 	simplecron "github.com/sagleft/simple-cron"
@@ -51,7 +52,7 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 		},
 		conn: r.conn,
 		rmqConsumer: &consumer{ // consumer
-			Tag: task.WorkerName + "-" + getUUID(),
+			Tag: task.WorkerName + "-" + uuid.NewString(),
 			QueueData: DeclareQueueTask{
 				Name:             task.QueueName,
 				Durable:          task.ISQueueDurable,
@@ -189,7 +190,7 @@ func (w *RMQWorker) SetConsumerTag(uniqueTag string) *RMQWorker {
 
 // SetConsumerTagFromName - assign a consumer tag to the worker based on its name and random ID
 func (w *RMQWorker) SetConsumerTagFromName() *RMQWorker {
-	tag := w.data.Name + "-" + getUUID()
+	tag := w.data.Name + "-" + uuid.NewString()
 	if w.data.Name == "" {
 		tag = "worker" + w.rmqConsumer.Tag
 	}
