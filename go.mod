@@ -11,16 +11,21 @@ require (
 	github.com/sagleft/darkrmq v0.7.18
 	github.com/sagleft/simple-cron v1.3.0
 	github.com/streadway/amqp v1.0.0
+	github.com/stretchr/testify v1.7.0
 	go.uber.org/zap v1.22.0
 )
 
 require (
+	github.com/benbjohnson/clock v1.1.0 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/elastic/go-elasticsearch/v7 v7.13.1 // indirect
 	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421 // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

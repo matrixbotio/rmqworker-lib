@@ -3,13 +3,8 @@ package rmqworker
 import (
 	"strings"
 
-	"github.com/google/uuid"
 	"github.com/matrixbotio/constants-lib"
 )
-
-func getUUID() string {
-	return uuid.New().String()
-}
 
 func encodeMessage(message interface{}) ([]byte, APIError) {
 	jsonBytes, marshalErr := json.Marshal(message)

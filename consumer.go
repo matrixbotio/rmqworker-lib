@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/google/uuid"
 	"github.com/matrixbotio/constants-lib"
 	darkmq "github.com/sagleft/darkrmq"
 	"github.com/streadway/amqp"
@@ -121,7 +122,7 @@ func (c *consumer) Consume(task darkmq.ConsumeTask) error {
 
 	// set consumer tag
 	if task.UniqueTag == "" {
-		task.UniqueTag = getUUID()
+		task.UniqueTag = uuid.NewString()
 	}
 
 	msgs, err := task.Ch.Consume(

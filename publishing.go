@@ -3,6 +3,7 @@ package rmqworker
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/matrixbotio/constants-lib"
 	"github.com/streadway/amqp"
 )
@@ -25,7 +26,7 @@ func (r *RMQHandler) RMQPublishToQueue(task RMQPublishRequestTask) APIError {
 		exchangeName: "",
 		key:          task.QueueName,
 		publishing: amqp.Publishing{
-			CorrelationId: getUUID(),
+			CorrelationId: uuid.NewString(),
 			Headers:       headers,
 			DeliveryMode:  amqp.Persistent,
 			ContentType:   defaultContentType,
@@ -49,7 +50,7 @@ func (r *RMQHandler) PublishToQueue(task RMQPublishRequestTask) APIError {
 
 	correlationID := task.CorrelationID
 	if correlationID == "" {
-		correlationID = getUUID()
+		correlationID = uuid.NewString()
 	}
 
 	headers = setCSTXHeaders(headers, task.CSTX)
@@ -158,7 +159,7 @@ func (r *RMQHandler) PublishToExchange(task PublishToExchangeTask) APIError {
 
 	correlationID := task.CorrelationID
 	if correlationID == "" {
-		correlationID = getUUID()
+		correlationID = uuid.NewString()
 	}
 
 	headers = setCSTXHeaders(headers, task.cstx)

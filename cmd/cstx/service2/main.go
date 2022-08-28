@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -13,6 +13,8 @@ import (
 	"github.com/matrixbotio/rmqworker-lib/cmd"
 )
 
+const queue = "service2"
+
 func main() {
 	logger, loggerErr := zes.Init(false)
 	if loggerErr != nil {
@@ -23,13 +25,31 @@ func main() {
 
 	h := cmd.GetHandler()
 
+	h.StartCSTXAcksConsumer()
+
 	workerTask := rmqworker.WorkerTask{
-		QueueName:      "alex",
-		RoutingKey:     "alex",
+		QueueName:      queue,
+		RoutingKey:     queue,
 		ISQueueDurable: false,
 		ISAutoDelete:   false,
 		Callback: func(w *rmqworker.RMQWorker, deliveryHandler rmqworker.RMQDeliveryHandler) {
-			log.Printf("received: %s", deliveryHandler.GetMessageBody())
+			transaction := deliveryHandler.GetCSTX(h)
+			if transaction.ID == "" {
+				return
+			}
+
+			zap.L().Info(
+				"get transaction from rabbit-queue",
+				zap.String("struct", fmt.Sprintf("%#v", transaction)),
+				zap.String("message-body", string(deliveryHandler.GetMessageBody())),
+			)
+
+			if err := transaction.Commit(); err != nil {
+				zap.L().Info("commit error", zap.Error(err))
+				return
+			}
+
+			zap.L().Info("commit success")
 		},
 	}
 	worker, err := h.NewRMQWorker(workerTask)
@@ -46,7 +66,6 @@ func main() {
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-sigs
-		log.Printf("Finishing")
 		worker.Finish()
 	}()
 

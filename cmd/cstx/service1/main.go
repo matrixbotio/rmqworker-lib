@@ -1,9 +1,7 @@
 package main
 
-//  {"data": "alex"}
-
 import (
-	"log"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -23,9 +21,10 @@ func main() {
 		panic(loggerErr)
 	}
 	defer logger.Close()
+	zap.ReplaceGlobals(logger.New(zap.DebugLevel))
 
-	h := cmd.GetHandler(logger.New(zap.DebugLevel))
-	
+	h := cmd.GetHandler()
+
 	h.StartCSTXAcksConsumer()
 
 	workerTask := rmqworker.WorkerTask{
@@ -35,18 +34,22 @@ func main() {
 		ISAutoDelete:   false,
 		Callback: func(w *rmqworker.RMQWorker, deliveryHandler rmqworker.RMQDeliveryHandler) {
 			transaction := deliveryHandler.GetCSTX(h)
+			if transaction.ID == "" {
+				return
+			}
 
-			log.Printf(
-				"cstx ID: %s\nreceived data: %s\n",
-				transaction.ID,
-				deliveryHandler.GetMessageBody(),
+			zap.L().Info(
+				"get transaction from rabbit-queue",
+				zap.String("struct", fmt.Sprintf("%#v", transaction)),
+				zap.String("message-body", string(deliveryHandler.GetMessageBody())),
 			)
 
-			res, err := transaction.Commit()
-			if err != nil {
-				log.Printf("commit error: %#v", err)
+			if err := transaction.Commit(); err != nil {
+				zap.L().Info("commit error", zap.Error(err))
+				return
 			}
-			log.Printf("commit result: %v", res)
+
+			zap.L().Info("commit success")
 		},
 	}
 	worker, err := h.NewRMQWorker(workerTask)
