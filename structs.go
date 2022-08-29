@@ -10,6 +10,8 @@ import (
 	simplecron "github.com/sagleft/simple-cron"
 	"github.com/streadway/amqp"
 	"go.uber.org/zap"
+
+	"github.com/matrixbotio/rmqworker-lib/pkg/cstx"
 )
 
 // APIError - error data container
@@ -58,7 +60,7 @@ type RMQWorker struct {
 	timeoutCallback  RMQTimeoutCallback
 	cronHandler      *simplecron.CronObject
 
-	logger      *zap.Logger
+	Logger      *zap.Logger
 	rateLimiter *rate.RateLimiter
 
 	stopCh chan struct{}
@@ -106,7 +108,7 @@ type RMQPublishRequestTask struct {
 	// optional
 	ResponseRoutingKey string
 	CorrelationID      string
-	CSTX               CrossServiceTransaction
+	CSTX               cstx.CrossServiceTransaction
 }
 
 // RMQPublishResponseTask - response for publish message to RMQ request
@@ -237,21 +239,5 @@ type PublishToExchangeTask struct {
 	ResponseRoutingKey string
 	CorrelationID      string
 
-	cstx CrossServiceTransaction
-}
-
-type CrossServiceTransaction struct {
-	ID        string
-	AckNum    int32
-	StartedAt int64
-	Timeout   int32
-
-	handler *RMQHandler
-}
-
-type CSTXAck struct {
-	TXID    string
-	Type    string // ack or nack
-	Time    int64
-	Timeout int32
+	CSTX cstx.CrossServiceTransaction
 }

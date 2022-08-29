@@ -75,7 +75,7 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 		consumersCount:   task.ConsumersCount,
 		deliveryCallback: task.Callback,
 		timeoutCallback:  task.TimeoutCallback,
-		logger:           r.task.Logger,
+		Logger:           r.task.Logger,
 	}
 
 	// setup error handler
@@ -98,7 +98,7 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 }
 
 func (w *RMQWorker) logVerbose(message string) {
-	w.logger.Debug(message, zap.String("worker_name", w.data.Name))
+	w.Logger.Debug(message, zap.String("worker_name", w.data.Name))
 }
 
 // SetName - set RMQ worker name for logs
@@ -205,7 +205,7 @@ func (w *RMQWorker) stopCron() {
 
 func (w *RMQWorker) handleError(err *constants.APIError) {
 	if !w.useErrorCallback {
-		w.logger.Error("handleError", zap.Error(err))
+		w.Logger.Error("handleError", zap.Error(err))
 		return
 	}
 

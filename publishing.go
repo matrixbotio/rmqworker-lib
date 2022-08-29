@@ -6,6 +6,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/matrixbotio/constants-lib"
 	"github.com/streadway/amqp"
+
+	"github.com/matrixbotio/rmqworker-lib/pkg/cstx"
 )
 
 // RMQPublishToQueue - send request to rmq queue.
@@ -53,7 +55,7 @@ func (r *RMQHandler) PublishToQueue(task RMQPublishRequestTask) APIError {
 		correlationID = uuid.NewString()
 	}
 
-	headers = setCSTXHeaders(headers, task.CSTX)
+	headers = cstx.SetCSTXHeaders(headers, task.CSTX)
 
 	return r.publishMessage(publishTask{
 		exchangeName: "",
@@ -162,7 +164,7 @@ func (r *RMQHandler) PublishToExchange(task PublishToExchangeTask) APIError {
 		correlationID = uuid.NewString()
 	}
 
-	headers = setCSTXHeaders(headers, task.cstx)
+	headers = cstx.SetCSTXHeaders(headers, task.CSTX)
 
 	return r.publishMessage(publishTask{
 		exchangeName: task.ExchangeName,
