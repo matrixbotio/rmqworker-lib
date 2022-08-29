@@ -8,11 +8,13 @@ import (
 	"github.com/streadway/amqp"
 
 	"github.com/matrixbotio/rmqworker-lib/pkg/cstx"
+	"github.com/matrixbotio/rmqworker-lib/pkg/errs"
+	"github.com/matrixbotio/rmqworker-lib/pkg/tasks"
 )
 
 // RMQPublishToQueue - send request to rmq queue.
 // NOTE: should be replaced by PublishToExchange in later lib versions
-func (r *RMQHandler) RMQPublishToQueue(task RMQPublishRequestTask) APIError {
+func (r *RMQHandler) RMQPublishToQueue(task tasks.RMQPublishRequestTask) errs.APIError {
 	headers := amqp.Table{}
 	if task.ResponseRoutingKey != "" {
 		headers["responseRoutingKey"] = task.ResponseRoutingKey
@@ -38,7 +40,7 @@ func (r *RMQHandler) RMQPublishToQueue(task RMQPublishRequestTask) APIError {
 }
 
 // PublishToQueue - send request to rmq queue
-func (r *RMQHandler) PublishToQueue(task RMQPublishRequestTask) APIError {
+func (r *RMQHandler) PublishToQueue(task tasks.RMQPublishRequestTask) errs.APIError {
 	headers := amqp.Table{}
 	if task.ResponseRoutingKey != "" {
 		headers["responseRoutingKey"] = task.ResponseRoutingKey
@@ -74,7 +76,7 @@ func (r *RMQHandler) PublishToQueue(task RMQPublishRequestTask) APIError {
 func (r *RMQHandler) SendRMQResponse(
 	task *RMQPublishResponseTask,
 	errorMsg ...*constants.APIError,
-) APIError {
+) errs.APIError {
 	headers := amqp.Table{}
 	var responseBody []byte
 	contentType := defaultContentType
@@ -89,7 +91,7 @@ func (r *RMQHandler) SendRMQResponse(
 		// no errors
 		headers["code"] = 0
 		// encode message
-		var err APIError
+		var err errs.APIError
 		responseBody, err = encodeMessage(task.MessageBody)
 		if err != nil {
 			return err
@@ -124,7 +126,7 @@ func (r *RMQHandler) RMQPublishToExchange(
 	exchangeName,
 	routingKey string,
 	responseRoutingKey ...string,
-) APIError {
+) errs.APIError {
 	headers := amqp.Table{}
 	if len(responseRoutingKey) > 0 {
 		headers["responseRoutingKey"] = responseRoutingKey[0]
@@ -148,7 +150,7 @@ func (r *RMQHandler) RMQPublishToExchange(
 
 // PublishToExchange - publish message to exchangeю
 // responseRoutingKey is optional to send requests to exchange
-func (r *RMQHandler) PublishToExchange(task PublishToExchangeTask) APIError {
+func (r *RMQHandler) PublishToExchange(task tasks.PublishToExchangeTask) errs.APIError {
 	headers := amqp.Table{}
 	if task.ResponseRoutingKey != "" {
 		headers["responseRoutingKey"] = task.ResponseRoutingKey
@@ -184,7 +186,7 @@ type publishTask struct {
 	publishing   amqp.Publishing
 }
 
-func (r *RMQHandler) publishMessage(task publishTask) APIError {
+func (r *RMQHandler) publishMessage(task publishTask) errs.APIError {
 	r.rlock()
 	defer r.runlock()
 

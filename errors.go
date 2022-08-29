@@ -1,10 +1,14 @@
 package rmqworker
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/matrixbotio/rmqworker-lib/pkg/errs"
+)
 
 var ErrCSTXTimeout = errors.New("crossServiceTransaction timeout")
 
-func ConvertAPIError(err APIError) error {
+func ConvertAPIError(err errs.APIError) error {
 	if err != nil {
 		return *err
 	}

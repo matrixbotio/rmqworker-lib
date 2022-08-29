@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/matrixbotio/rmqworker-lib/pkg/cstx"
+	"github.com/matrixbotio/rmqworker-lib/pkg/errs"
 )
 
 func (handler *RMQHandler) NewCSTX(ackNum, timeout int32) cstx.CrossServiceTransaction {
@@ -18,7 +19,7 @@ func (handler *RMQHandler) NewCSTX(ackNum, timeout int32) cstx.CrossServiceTrans
 	}
 }
 
-func (handler *RMQHandler) StartCSTXAcksConsumer() APIError {
+func (handler *RMQHandler) StartCSTXAcksConsumer() errs.APIError {
 	cstx.ACKSConsumerStartedLock.Lock()
 	defer cstx.ACKSConsumerStartedLock.Unlock()
 

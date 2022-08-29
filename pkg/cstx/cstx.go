@@ -5,15 +5,16 @@ import (
 
 	"github.com/matrixbotio/constants-lib"
 
-	"github.com/matrixbotio/rmqworker-lib"
+	"github.com/matrixbotio/rmqworker-lib/pkg/errs"
+	"github.com/matrixbotio/rmqworker-lib/pkg/tasks"
 )
 
-func (tx CrossServiceTransaction) PublishToQueue(task rmqworker.RMQPublishRequestTask) rmqworker.APIError {
+func (tx CrossServiceTransaction) PublishToQueue(task tasks.RMQPublishRequestTask) errs.APIError {
 	task.CSTX = tx
 	return tx.Handler.PublishToQueue(task)
 }
 
-func (tx CrossServiceTransaction) PublishToExchange(task rmqworker.PublishToExchangeTask) rmqworker.APIError {
+func (tx CrossServiceTransaction) PublishToExchange(task tasks.PublishToExchangeTask) errs.APIError {
 	task.CSTX = tx
 	return tx.Handler.PublishToExchange(task)
 }
@@ -26,12 +27,12 @@ func (tx CrossServiceTransaction) Commit() error {
 	return tx.awaitRequiredAcks()
 }
 
-func (tx CrossServiceTransaction) Rollback() rmqworker.APIError {
+func (tx CrossServiceTransaction) Rollback() errs.APIError {
 	return tx.sendCSTXAck(CSTXNackType)
 }
 
-func (tx CrossServiceTransaction) sendCSTXAck(ackType string) rmqworker.APIError {
-	return tx.Handler.PublishToExchange(rmqworker.PublishToExchangeTask{
+func (tx CrossServiceTransaction) sendCSTXAck(ackType string) errs.APIError {
+	return tx.Handler.PublishToExchange(tasks.PublishToExchangeTask{
 		Message: CSTXAck{
 			TXID:    tx.ID,
 			Type:    ackType,

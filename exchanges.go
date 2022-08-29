@@ -5,10 +5,12 @@ import (
 
 	"github.com/matrixbotio/constants-lib"
 	"github.com/streadway/amqp"
+
+	"github.com/matrixbotio/rmqworker-lib/pkg/errs"
 )
 
 // rmqExchangeDeclare - declare RMQ exchange
-func (r *RMQHandler) rmqExchangeDeclare(RMQChannel *amqp.Channel, task RMQExchangeDeclareTask) APIError {
+func (r *RMQHandler) rmqExchangeDeclare(RMQChannel *amqp.Channel, task RMQExchangeDeclareTask) errs.APIError {
 	r.rlock()
 	defer r.runlock()
 
@@ -37,7 +39,7 @@ func (r *RMQHandler) rmqExchangeDeclare(RMQChannel *amqp.Channel, task RMQExchan
 
 // DeclareExchanges - declare RMQ exchanges list.
 // exchange name -> exchange type
-func (r *RMQHandler) DeclareExchanges(exchangeTypes map[string]string) APIError {
+func (r *RMQHandler) DeclareExchanges(exchangeTypes map[string]string) errs.APIError {
 	ch, err := r.getChannel()
 	if err != nil {
 		return err
@@ -56,7 +58,7 @@ func (r *RMQHandler) DeclareExchanges(exchangeTypes map[string]string) APIError 
 }
 
 // IsQueueExists - is queue exists? /ᐠ｡ꞈ｡ᐟ\
-func (r *RMQHandler) IsQueueExists(name string) (bool, APIError) {
+func (r *RMQHandler) IsQueueExists(name string) (bool, errs.APIError) {
 	ch, err := r.getChannel()
 	if err != nil {
 		return false, err

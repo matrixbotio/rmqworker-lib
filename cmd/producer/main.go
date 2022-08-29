@@ -6,6 +6,7 @@ import (
 
 	"github.com/matrixbotio/rmqworker-lib"
 	"github.com/matrixbotio/rmqworker-lib/cmd"
+	"github.com/matrixbotio/rmqworker-lib/pkg/tasks"
 )
 
 func main() {
@@ -18,7 +19,7 @@ func main() {
 
 	h := cmd.GetHandler()
 
-	err := h.PublishToQueue(rmqworker.RMQPublishRequestTask{
+	err := h.PublishToQueue(tasks.RMQPublishRequestTask{
 		QueueName:          "alex",
 		MessageBody:        "body-body-body",
 		ResponseRoutingKey: "",

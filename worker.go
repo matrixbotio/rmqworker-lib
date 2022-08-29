@@ -11,6 +11,8 @@ import (
 	simplecron "github.com/sagleft/simple-cron"
 	"github.com/streadway/amqp"
 	"go.uber.org/zap"
+
+	"github.com/matrixbotio/rmqworker-lib/pkg/errs"
 )
 
 /*
@@ -31,7 +33,7 @@ import (
 */
 
 // NewRMQWorker - create new RMQ worker to receive messages
-func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
+func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, errs.APIError) {
 	// set worker name
 	if task.WorkerName == "" {
 		task.WorkerName = "RMQ-W"
@@ -130,7 +132,7 @@ func (w *RMQWorker) SetCheckResponseErrors(check bool) *RMQWorker {
 }
 
 // Serve - start consumer(s)
-func (w *RMQWorker) Serve() APIError {
+func (w *RMQWorker) Serve() errs.APIError {
 	if w.data.UseResponseTimeout {
 		w.runCron()
 	}

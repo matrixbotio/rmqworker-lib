@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/matrixbotio/rmqworker-lib"
+	"github.com/matrixbotio/rmqworker-lib/pkg/tasks"
 )
 
 const (
@@ -65,7 +66,7 @@ func TestIntegration_CSTX_OneConsumerSuccess(t *testing.T) {
 	// run transaction
 	cstx = rmqHandler.NewCSTX(ackCount, cstxTransactionTimeoutMS)
 
-	err = cstx.PublishToQueue(rmqworker.RMQPublishRequestTask{
+	err = cstx.PublishToQueue(tasks.RMQPublishRequestTask{
 		QueueName:   queueName1,
 		MessageBody: messageBody1,
 		CSTX:        cstx,
@@ -162,14 +163,14 @@ func TestIntegration_CSTX_TwoConsumersSuccess(t *testing.T) {
 	// run transaction
 	cstx = rmqHandler.NewCSTX(ackCount, cstxTransactionTimeoutMS)
 
-	err = cstx.PublishToQueue(rmqworker.RMQPublishRequestTask{
+	err = cstx.PublishToQueue(tasks.RMQPublishRequestTask{
 		QueueName:   queueName1,
 		MessageBody: messageBody1,
 		CSTX:        cstx,
 	})
 	require.NoError(t, rmqworker.ConvertAPIError(err))
 
-	err = cstx.PublishToQueue(rmqworker.RMQPublishRequestTask{
+	err = cstx.PublishToQueue(tasks.RMQPublishRequestTask{
 		QueueName:   queueName2,
 		MessageBody: messageBody2,
 		CSTX:        cstx,
@@ -236,7 +237,7 @@ func TestIntegration_CSTX_OneConsumerTimeoutError(t *testing.T) {
 	// run transaction
 	cstx = rmqHandler.NewCSTX(ackCount, cstxTransactionTimeoutMS)
 
-	err = cstx.PublishToQueue(rmqworker.RMQPublishRequestTask{
+	err = cstx.PublishToQueue(tasks.RMQPublishRequestTask{
 		QueueName:   queueName1,
 		MessageBody: messageBody1,
 		CSTX:        cstx,
@@ -330,14 +331,14 @@ func TestIntegration_CSTX_TwoConsumersTimeoutWhenFirstDelayedError(t *testing.T)
 	// run transaction
 	cstx = rmqHandler.NewCSTX(ackCount, cstxTransactionTimeoutMS)
 
-	err = cstx.PublishToQueue(rmqworker.RMQPublishRequestTask{
+	err = cstx.PublishToQueue(tasks.RMQPublishRequestTask{
 		QueueName:   queueName1,
 		MessageBody: messageBody1,
 		CSTX:        cstx,
 	})
 	require.NoError(t, rmqworker.ConvertAPIError(err))
 
-	err = cstx.PublishToQueue(rmqworker.RMQPublishRequestTask{
+	err = cstx.PublishToQueue(tasks.RMQPublishRequestTask{
 		QueueName:   queueName2,
 		MessageBody: messageBody2,
 		CSTX:        cstx,
@@ -431,14 +432,14 @@ func TestIntegration_CSTX_TwoConsumersTimeoutWhenSecondDelayedError(t *testing.T
 	// run transaction
 	cstx = rmqHandler.NewCSTX(ackCount, cstxTransactionTimeoutMS)
 
-	err = cstx.PublishToQueue(rmqworker.RMQPublishRequestTask{
+	err = cstx.PublishToQueue(tasks.RMQPublishRequestTask{
 		QueueName:   queueName1,
 		MessageBody: messageBody1,
 		CSTX:        cstx,
 	})
 	require.NoError(t, rmqworker.ConvertAPIError(err))
 
-	err = cstx.PublishToQueue(rmqworker.RMQPublishRequestTask{
+	err = cstx.PublishToQueue(tasks.RMQPublishRequestTask{
 		QueueName:   queueName2,
 		MessageBody: messageBody2,
 		CSTX:        cstx,

@@ -11,11 +11,8 @@ import (
 	"github.com/streadway/amqp"
 	"go.uber.org/zap"
 
-	"github.com/matrixbotio/rmqworker-lib/pkg/cstx"
+	"github.com/matrixbotio/rmqworker-lib/pkg/errs"
 )
-
-// APIError - error data container
-type APIError *constants.APIError
 
 // RMQConnectionData - rmq connection data container
 type RMQConnectionData struct {
@@ -99,18 +96,6 @@ type RMQExchangeDeclareTask struct {
 	MessagesLifetime int64
 }
 
-// RMQPublishRequestTask - publish message to RMQ task data container
-type RMQPublishRequestTask struct {
-	// required
-	QueueName   string
-	MessageBody interface{}
-
-	// optional
-	ResponseRoutingKey string
-	CorrelationID      string
-	CSTX               cstx.CrossServiceTransaction
-}
-
 // RMQPublishResponseTask - response for publish message to RMQ request
 type RMQPublishResponseTask struct {
 	ExchangeName       string
@@ -180,7 +165,7 @@ type rmqWorkerChannels struct {
 type CreateRMQHandlerTask struct {
 	Data                    RMQConnectionData
 	UseErrorCallback        bool
-	ConnectionErrorCallback func(err APIError)
+	ConnectionErrorCallback func(err errs.APIError)
 	Logger                  *zap.Logger
 }
 
@@ -227,17 +212,4 @@ type RequestHandlerTask struct {
 	WorkerName             string
 	ForceQueueToDurable    bool
 	MethodFriendlyName     string // the name of the operation performed by the vorker for the logs and errors
-}
-
-type PublishToExchangeTask struct {
-	// required
-	Message      interface{}
-	ExchangeName string
-
-	// optional
-	RoutingKey         string
-	ResponseRoutingKey string
-	CorrelationID      string
-
-	CSTX cstx.CrossServiceTransaction
 }
