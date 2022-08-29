@@ -9,7 +9,7 @@ import (
 	simplecron "github.com/sagleft/simple-cron"
 
 	"github.com/matrixbotio/rmqworker-lib/pkg/errs"
-	"github.com/matrixbotio/rmqworker-lib/pkg/tasks"
+	"github.com/matrixbotio/rmqworker-lib/pkg/structs"
 )
 
 /*
@@ -191,7 +191,7 @@ func (r *RequestHandler) sendRequest(messageBody interface{}, responseRoutingKey
 		)
 	}
 
-	return r.RMQH.RMQPublishToQueue(tasks.RMQPublishRequestTask{
+	return r.RMQH.RMQPublishToQueue(structs.RMQPublishRequestTask{
 		QueueName:          r.Task.RequestToQueueName,
 		ResponseRoutingKey: responseRoutingKey,
 		MessageBody:        messageBody,

@@ -3,17 +3,26 @@ package cstx
 import (
 	"time"
 
-	"github.com/streadway/amqp"
+	"github.com/matrixbotio/rmqworker-lib/pkg/structs"
 )
 
-func SetCSTXHeaders(headers amqp.Table, CSTX CrossServiceTransaction) amqp.Table {
-	if CSTX.ID != "" {
-		headers[HeaderCSTXID] = CSTX.ID
-		headers[HeaderCSTXAckNum] = CSTX.AckNum
-		headers[HeaderCSTXTimeout] = CSTX.Timeout
-		headers[HeaderCSTXStartedAt] = CSTX.StartedAt
+//func SetCSTXHeaders(headers amqp.Table, CSTX CrossServiceTransaction) amqp.Table {
+//	if CSTX.ID != "" {
+//		headers[HeaderCSTXID] = CSTX.ID
+//		headers[HeaderCSTXAckNum] = CSTX.AckNum
+//		headers[HeaderCSTXTimeout] = CSTX.Timeout
+//		headers[HeaderCSTXStartedAt] = CSTX.StartedAt
+//	}
+//	return headers
+//}
+
+func GetCSTXHeaders(tx CrossServiceTransaction) []structs.RMQHeader {
+	return []structs.RMQHeader{
+		{Name: HeaderCSTXID, Value: tx.ID},
+		{Name: HeaderCSTXAckNum, Value: tx.AckNum},
+		{Name: HeaderCSTXTimeout, Value: tx.Timeout},
+		{Name: HeaderCSTXStartedAt, Value: tx.StartedAt},
 	}
-	return headers
 }
 
 func StartAcksCleaner() {

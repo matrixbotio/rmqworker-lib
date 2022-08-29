@@ -1,6 +1,4 @@
-package tasks
-
-import "github.com/matrixbotio/rmqworker-lib/pkg/cstx"
+package structs
 
 // RMQPublishRequestTask - publish message to RMQ task data container
 type RMQPublishRequestTask struct {
@@ -11,7 +9,6 @@ type RMQPublishRequestTask struct {
 	// optional
 	ResponseRoutingKey string
 	CorrelationID      string
-	CSTX               cstx.CrossServiceTransaction
 }
 
 type PublishToExchangeTask struct {
@@ -23,6 +20,4 @@ type PublishToExchangeTask struct {
 	RoutingKey         string
 	ResponseRoutingKey string
 	CorrelationID      string
-
-	CSTX cstx.CrossServiceTransaction
 }

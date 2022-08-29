@@ -5,7 +5,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/matrixbotio/rmqworker-lib/cmd"
-	"github.com/matrixbotio/rmqworker-lib/pkg/tasks"
+	"github.com/matrixbotio/rmqworker-lib/pkg/structs"
 )
 
 func main() {
@@ -24,20 +24,18 @@ func main() {
 
 	zap.L().Info("transaction started", zap.String("id", transaction.ID))
 
-	transaction.PublishToQueue(tasks.RMQPublishRequestTask{
+	transaction.PublishToQueue(structs.RMQPublishRequestTask{
 		QueueName:          "service1",
 		MessageBody:        "body-body-body-service1",
 		ResponseRoutingKey: "",
 		CorrelationID:      "",
-		CSTX:               transaction,
 	})
 
-	transaction.PublishToQueue(tasks.RMQPublishRequestTask{
+	transaction.PublishToQueue(structs.RMQPublishRequestTask{
 		QueueName:          "service2",
 		MessageBody:        "body-body-body-service2",
 		ResponseRoutingKey: "",
 		CorrelationID:      "",
-		CSTX:               transaction,
 	})
 
 	//res, err := transaction.Commit()

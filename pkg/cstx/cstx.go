@@ -5,19 +5,16 @@ import (
 
 	"github.com/matrixbotio/constants-lib"
 
-	"github.com/matrixbotio/rmqworker-lib"
 	"github.com/matrixbotio/rmqworker-lib/pkg/errs"
-	"github.com/matrixbotio/rmqworker-lib/pkg/tasks"
+	"github.com/matrixbotio/rmqworker-lib/pkg/structs"
 )
 
-func (tx CrossServiceTransaction) PublishToQueue(task tasks.RMQPublishRequestTask) errs.APIError {
-	task.CSTX = tx
-	return tx.Handler.PublishToQueue(task)
+func (tx CrossServiceTransaction) PublishToQueue(task structs.RMQPublishRequestTask) errs.APIError {
+	return tx.Handler.PublishCSXTToQueue(task, tx)
 }
 
-func (tx CrossServiceTransaction) PublishToExchange(task tasks.PublishToExchangeTask) errs.APIError {
-	task.CSTX = tx
-	return tx.Handler.PublishToExchange(task)
+func (tx CrossServiceTransaction) PublishToExchange(task structs.PublishToExchangeTask) errs.APIError {
+	return tx.Handler.PublishCSXTToExchange(task, tx)
 }
 
 // Commit the CrossServiceTransaction and await the required number of acks from other participants
@@ -33,7 +30,7 @@ func (tx CrossServiceTransaction) Rollback() errs.APIError {
 }
 
 func (tx CrossServiceTransaction) sendCSTXAck(ackType string) errs.APIError {
-	return tx.Handler.PublishToExchange(tasks.PublishToExchangeTask{
+	return tx.Handler.PublishToExchange(structs.PublishToExchangeTask{
 		Message: CSTXAck{
 			TXID:    tx.ID,
 			Type:    ackType,
@@ -45,7 +42,7 @@ func (tx CrossServiceTransaction) sendCSTXAck(ackType string) errs.APIError {
 }
 
 func (tx CrossServiceTransaction) awaitRequiredAcks() error {
-	if rmqworker.CSTXAcksConsumer == nil {
+	if IsCSTXAcksConsumerSet == false {
 		return constants.Error("BASE_INTERNAL_ERROR", "CSTX acks consumer not started")
 	}
 	for {

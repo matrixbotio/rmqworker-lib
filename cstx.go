@@ -65,6 +65,7 @@ func (handler *RMQHandler) StartCSTXAcksConsumer() errs.APIError {
 	if err != nil {
 		return err
 	}
+	cstx.IsCSTXAcksConsumerSet = true
 
 	err = CSTXAcksConsumer.Serve()
 	if err != nil {
