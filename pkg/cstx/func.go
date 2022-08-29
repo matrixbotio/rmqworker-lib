@@ -1,13 +1,9 @@
 package cstx
 
 import (
-	"encoding/json"
 	"time"
 
 	"github.com/streadway/amqp"
-	"go.uber.org/zap"
-
-	"github.com/matrixbotio/rmqworker-lib"
 )
 
 func SetCSTXHeaders(headers amqp.Table, CSTX CrossServiceTransaction) amqp.Table {
@@ -29,22 +25,6 @@ func StartAcksCleaner() {
 				delete(CSTXAcksMap, txId)
 			}
 		}
-		CSTXAcksMapLock.Unlock()
-	}
-}
-
-func ACKSConsumerCallback() rmqworker.RMQDeliveryCallback {
-	return func(worker *rmqworker.RMQWorker, deliveryHandler rmqworker.RMQDeliveryHandler) {
-		var ack CSTXAck
-		body := deliveryHandler.GetMessageBody()
-		if len(body) > 0 {
-			if err := json.Unmarshal(body, &ack); err != nil {
-				worker.Logger.Error("unmarshal CrossServiceTransaction Ack message body", zap.Error(err))
-				return
-			}
-		}
-		CSTXAcksMapLock.Lock()
-		CSTXAcksMap[ack.TXID] = append(CSTXAcksMap[ack.TXID], ack)
 		CSTXAcksMapLock.Unlock()
 	}
 }

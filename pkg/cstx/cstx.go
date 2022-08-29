@@ -5,6 +5,7 @@ import (
 
 	"github.com/matrixbotio/constants-lib"
 
+	"github.com/matrixbotio/rmqworker-lib"
 	"github.com/matrixbotio/rmqworker-lib/pkg/errs"
 	"github.com/matrixbotio/rmqworker-lib/pkg/tasks"
 )
@@ -44,7 +45,7 @@ func (tx CrossServiceTransaction) sendCSTXAck(ackType string) errs.APIError {
 }
 
 func (tx CrossServiceTransaction) awaitRequiredAcks() error {
-	if CSTXAcksConsumer == nil {
+	if rmqworker.CSTXAcksConsumer == nil {
 		return constants.Error("BASE_INTERNAL_ERROR", "CSTX acks consumer not started")
 	}
 	for {

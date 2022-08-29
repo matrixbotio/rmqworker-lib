@@ -4,10 +4,13 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 
 	"github.com/matrixbotio/rmqworker-lib/pkg/cstx"
 	"github.com/matrixbotio/rmqworker-lib/pkg/errs"
 )
+
+var CSTXAcksConsumer *RMQWorker
 
 func (handler *RMQHandler) NewCSTX(ackNum, timeout int32) cstx.CrossServiceTransaction {
 	return cstx.CrossServiceTransaction{
@@ -23,7 +26,7 @@ func (handler *RMQHandler) StartCSTXAcksConsumer() errs.APIError {
 	cstx.ACKSConsumerStartedLock.Lock()
 	defer cstx.ACKSConsumerStartedLock.Unlock()
 
-	if cstx.CSTXAcksConsumer != nil {
+	if CSTXAcksConsumer != nil {
 		return nil
 	}
 
@@ -34,10 +37,22 @@ func (handler *RMQHandler) StartCSTXAcksConsumer() errs.APIError {
 
 	queueName := cstx.CSTXExchangeName + "-" + uuid.NewString()
 	task := WorkerTask{
-		QueueName:        queueName,
-		ISQueueDurable:   false,
-		ISAutoDelete:     true,
-		Callback:         cstx.ACKSConsumerCallback(),
+		QueueName:      queueName,
+		ISQueueDurable: false,
+		ISAutoDelete:   true,
+		Callback: func(worker *RMQWorker, deliveryHandler RMQDeliveryHandler) {
+			var ack cstx.CSTXAck
+			body := deliveryHandler.GetMessageBody()
+			if len(body) > 0 {
+				if err := json.Unmarshal(body, &ack); err != nil {
+					worker.Logger.Error("unmarshal CrossServiceTransaction Ack message body", zap.Error(err))
+					return
+				}
+			}
+			cstx.CSTXAcksMapLock.Lock()
+			cstx.CSTXAcksMap[ack.TXID] = append(cstx.CSTXAcksMap[ack.TXID], ack)
+			cstx.CSTXAcksMapLock.Unlock()
+		},
 		ID:               queueName,
 		FromExchange:     cstx.CSTXExchangeName,
 		ExchangeType:     ExchangeTypeTopic,
@@ -46,12 +61,12 @@ func (handler *RMQHandler) StartCSTXAcksConsumer() errs.APIError {
 		QueueLength:      1000,
 		MessagesLifetime: cstx.StandardAckMessageLifetime,
 	}
-	cstx.CSTXAcksConsumer, err = handler.NewRMQWorker(task)
+	CSTXAcksConsumer, err = handler.NewRMQWorker(task)
 	if err != nil {
 		return err
 	}
 
-	err = cstx.CSTXAcksConsumer.Serve()
+	err = CSTXAcksConsumer.Serve()
 	if err != nil {
 		return err
 	}
