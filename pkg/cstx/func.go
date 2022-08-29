@@ -6,16 +6,6 @@ import (
 	"github.com/matrixbotio/rmqworker-lib/pkg/structs"
 )
 
-//func SetCSTXHeaders(headers amqp.Table, CSTX CrossServiceTransaction) amqp.Table {
-//	if CSTX.ID != "" {
-//		headers[HeaderCSTXID] = CSTX.ID
-//		headers[HeaderCSTXAckNum] = CSTX.AckNum
-//		headers[HeaderCSTXTimeout] = CSTX.Timeout
-//		headers[HeaderCSTXStartedAt] = CSTX.StartedAt
-//	}
-//	return headers
-//}
-
 func GetCSTXHeaders(tx CrossServiceTransaction) []structs.RMQHeader {
 	return []structs.RMQHeader{
 		{Name: HeaderCSTXID, Value: tx.ID},

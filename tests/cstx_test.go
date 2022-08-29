@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/matrixbotio/rmqworker-lib"
+	"github.com/matrixbotio/rmqworker-lib/pkg/cstx"
 	"github.com/matrixbotio/rmqworker-lib/pkg/structs"
 )
 
@@ -32,7 +33,7 @@ func TestIntegration_CSTX_OneConsumerSuccess(t *testing.T) {
 
 	var wg sync.WaitGroup
 	wg.Add(ackCount)
-	var cstx rmqworker.CrossServiceTransaction
+	var tx cstx.CrossServiceTransaction
 	rmqHandler := getHandler(t)
 
 	// start service
@@ -47,7 +48,7 @@ func TestIntegration_CSTX_OneConsumerSuccess(t *testing.T) {
 			}
 
 			// test
-			assert.Equal(t, cstx.ID, transaction.ID)
+			assert.Equal(t, tx.ID, transaction.ID)
 			assert.Equal(t, []byte(`"`+messageBody1+`"`), h.GetMessageBody())
 
 			err := transaction.Commit()
@@ -58,20 +59,19 @@ func TestIntegration_CSTX_OneConsumerSuccess(t *testing.T) {
 		},
 	}
 	worker1, err := rmqHandler.NewRMQWorker(workerTask1)
-	require.NoError(t, rmqworker.ConvertAPIError(err))
+	require.NoError(t, ConvertAPIError(err))
 	err = worker1.Serve()
-	require.NoError(t, rmqworker.ConvertAPIError(err))
+	require.NoError(t, ConvertAPIError(err))
 	go worker1.AwaitFinish()
 
 	// run transaction
-	cstx = rmqHandler.NewCSTX(ackCount, cstxTransactionTimeoutMS)
+	tx = rmqHandler.NewCSTX(ackCount, cstxTransactionTimeoutMS)
 
-	err = cstx.PublishToQueue(structs.RMQPublishRequestTask{
+	err = tx.PublishToQueue(structs.RMQPublishRequestTask{
 		QueueName:   queueName1,
 		MessageBody: messageBody1,
-		CSTX:        cstx,
 	})
-	require.NoError(t, rmqworker.ConvertAPIError(err))
+	require.NoError(t, ConvertAPIError(err))
 
 	// wait
 	doneCh := make(chan struct{})
@@ -101,7 +101,7 @@ func TestIntegration_CSTX_TwoConsumersSuccess(t *testing.T) {
 
 	var wg sync.WaitGroup
 	wg.Add(ackCount)
-	var cstx rmqworker.CrossServiceTransaction
+	var tx cstx.CrossServiceTransaction
 	rmqHandler := getHandler(t)
 
 	// start service1
@@ -116,7 +116,7 @@ func TestIntegration_CSTX_TwoConsumersSuccess(t *testing.T) {
 			}
 
 			// test
-			assert.Equal(t, cstx.ID, transaction.ID)
+			assert.Equal(t, tx.ID, transaction.ID)
 			assert.Equal(t, []byte(`"`+messageBody1+`"`), h.GetMessageBody())
 
 			err := transaction.Commit()
@@ -127,9 +127,9 @@ func TestIntegration_CSTX_TwoConsumersSuccess(t *testing.T) {
 		},
 	}
 	worker1, err := rmqHandler.NewRMQWorker(workerTask1)
-	require.NoError(t, rmqworker.ConvertAPIError(err))
+	require.NoError(t, ConvertAPIError(err))
 	err = worker1.Serve()
-	require.NoError(t, rmqworker.ConvertAPIError(err))
+	require.NoError(t, ConvertAPIError(err))
 	go worker1.AwaitFinish()
 
 	// start service2
@@ -144,7 +144,7 @@ func TestIntegration_CSTX_TwoConsumersSuccess(t *testing.T) {
 			}
 
 			// test
-			assert.Equal(t, cstx.ID, transaction.ID)
+			assert.Equal(t, tx.ID, transaction.ID)
 			assert.Equal(t, []byte(`"`+messageBody2+`"`), h.GetMessageBody())
 
 			err := transaction.Commit()
@@ -155,27 +155,25 @@ func TestIntegration_CSTX_TwoConsumersSuccess(t *testing.T) {
 		},
 	}
 	worker2, err := rmqHandler.NewRMQWorker(workerTask2)
-	require.NoError(t, rmqworker.ConvertAPIError(err))
+	require.NoError(t, ConvertAPIError(err))
 	err = worker2.Serve()
-	require.NoError(t, rmqworker.ConvertAPIError(err))
+	require.NoError(t, ConvertAPIError(err))
 	go worker2.AwaitFinish()
 
 	// run transaction
-	cstx = rmqHandler.NewCSTX(ackCount, cstxTransactionTimeoutMS)
+	tx = rmqHandler.NewCSTX(ackCount, cstxTransactionTimeoutMS)
 
-	err = cstx.PublishToQueue(structs.RMQPublishRequestTask{
+	err = tx.PublishToQueue(structs.RMQPublishRequestTask{
 		QueueName:   queueName1,
 		MessageBody: messageBody1,
-		CSTX:        cstx,
 	})
-	require.NoError(t, rmqworker.ConvertAPIError(err))
+	require.NoError(t, ConvertAPIError(err))
 
-	err = cstx.PublishToQueue(structs.RMQPublishRequestTask{
+	err = tx.PublishToQueue(structs.RMQPublishRequestTask{
 		QueueName:   queueName2,
 		MessageBody: messageBody2,
-		CSTX:        cstx,
 	})
-	require.NoError(t, rmqworker.ConvertAPIError(err))
+	require.NoError(t, ConvertAPIError(err))
 
 	// wait
 	doneCh := make(chan struct{})
@@ -203,7 +201,7 @@ func TestIntegration_CSTX_OneConsumerTimeoutError(t *testing.T) {
 
 	var wg sync.WaitGroup
 	wg.Add(ackCount)
-	var cstx rmqworker.CrossServiceTransaction
+	var tx cstx.CrossServiceTransaction
 	rmqHandler := getHandler(t)
 
 	// start service
@@ -222,27 +220,26 @@ func TestIntegration_CSTX_OneConsumerTimeoutError(t *testing.T) {
 
 			// test
 			err := transaction.Commit()
-			assert.ErrorIs(t, rmqworker.ErrCSTXTimeout, err)
+			assert.ErrorIs(t, cstx.ErrCSTXTimeout, err)
 
 			// finished
 			wg.Done()
 		},
 	}
 	worker1, err := rmqHandler.NewRMQWorker(workerTask1)
-	require.NoError(t, rmqworker.ConvertAPIError(err))
+	require.NoError(t, ConvertAPIError(err))
 	err = worker1.Serve()
-	require.NoError(t, rmqworker.ConvertAPIError(err))
+	require.NoError(t, ConvertAPIError(err))
 	go worker1.AwaitFinish()
 
 	// run transaction
-	cstx = rmqHandler.NewCSTX(ackCount, cstxTransactionTimeoutMS)
+	tx = rmqHandler.NewCSTX(ackCount, cstxTransactionTimeoutMS)
 
-	err = cstx.PublishToQueue(structs.RMQPublishRequestTask{
+	err = tx.PublishToQueue(structs.RMQPublishRequestTask{
 		QueueName:   queueName1,
 		MessageBody: messageBody1,
-		CSTX:        cstx,
 	})
-	require.NoError(t, rmqworker.ConvertAPIError(err))
+	require.NoError(t, ConvertAPIError(err))
 
 	// wait
 	doneCh := make(chan struct{})
@@ -272,7 +269,7 @@ func TestIntegration_CSTX_TwoConsumersTimeoutWhenFirstDelayedError(t *testing.T)
 
 	var wg sync.WaitGroup
 	wg.Add(ackCount)
-	var cstx rmqworker.CrossServiceTransaction
+	var tx cstx.CrossServiceTransaction
 	rmqHandler := getHandler(t)
 
 	// start service1
@@ -291,16 +288,16 @@ func TestIntegration_CSTX_TwoConsumersTimeoutWhenFirstDelayedError(t *testing.T)
 
 			// test
 			err := transaction.Commit()
-			assert.ErrorIs(t, rmqworker.ErrCSTXTimeout, err)
+			assert.ErrorIs(t, cstx.ErrCSTXTimeout, err)
 
 			// finished
 			wg.Done()
 		},
 	}
 	worker1, err := rmqHandler.NewRMQWorker(workerTask1)
-	require.NoError(t, rmqworker.ConvertAPIError(err))
+	require.NoError(t, ConvertAPIError(err))
 	err = worker1.Serve()
-	require.NoError(t, rmqworker.ConvertAPIError(err))
+	require.NoError(t, ConvertAPIError(err))
 	go worker1.AwaitFinish()
 
 	// start service2
@@ -316,34 +313,32 @@ func TestIntegration_CSTX_TwoConsumersTimeoutWhenFirstDelayedError(t *testing.T)
 
 			// test
 			err := transaction.Commit()
-			assert.ErrorIs(t, rmqworker.ErrCSTXTimeout, err)
+			assert.ErrorIs(t, cstx.ErrCSTXTimeout, err)
 
 			// finished
 			wg.Done()
 		},
 	}
 	worker2, err := rmqHandler.NewRMQWorker(workerTask2)
-	require.NoError(t, rmqworker.ConvertAPIError(err))
+	require.NoError(t, ConvertAPIError(err))
 	err = worker2.Serve()
-	require.NoError(t, rmqworker.ConvertAPIError(err))
+	require.NoError(t, ConvertAPIError(err))
 	go worker2.AwaitFinish()
 
 	// run transaction
-	cstx = rmqHandler.NewCSTX(ackCount, cstxTransactionTimeoutMS)
+	tx = rmqHandler.NewCSTX(ackCount, cstxTransactionTimeoutMS)
 
-	err = cstx.PublishToQueue(structs.RMQPublishRequestTask{
+	err = tx.PublishToQueue(structs.RMQPublishRequestTask{
 		QueueName:   queueName1,
 		MessageBody: messageBody1,
-		CSTX:        cstx,
 	})
-	require.NoError(t, rmqworker.ConvertAPIError(err))
+	require.NoError(t, ConvertAPIError(err))
 
-	err = cstx.PublishToQueue(structs.RMQPublishRequestTask{
+	err = tx.PublishToQueue(structs.RMQPublishRequestTask{
 		QueueName:   queueName2,
 		MessageBody: messageBody2,
-		CSTX:        cstx,
 	})
-	require.NoError(t, rmqworker.ConvertAPIError(err))
+	require.NoError(t, ConvertAPIError(err))
 
 	// wait
 	doneCh := make(chan struct{})
@@ -373,7 +368,7 @@ func TestIntegration_CSTX_TwoConsumersTimeoutWhenSecondDelayedError(t *testing.T
 
 	var wg sync.WaitGroup
 	wg.Add(ackCount)
-	var cstx rmqworker.CrossServiceTransaction
+	var tx cstx.CrossServiceTransaction
 	rmqHandler := getHandler(t)
 
 	// start service1
@@ -389,16 +384,16 @@ func TestIntegration_CSTX_TwoConsumersTimeoutWhenSecondDelayedError(t *testing.T
 
 			// test
 			err := transaction.Commit()
-			assert.ErrorIs(t, rmqworker.ErrCSTXTimeout, err)
+			assert.ErrorIs(t, cstx.ErrCSTXTimeout, err)
 
 			// finished
 			wg.Done()
 		},
 	}
 	worker1, err := rmqHandler.NewRMQWorker(workerTask1)
-	require.NoError(t, rmqworker.ConvertAPIError(err))
+	require.NoError(t, ConvertAPIError(err))
 	err = worker1.Serve()
-	require.NoError(t, rmqworker.ConvertAPIError(err))
+	require.NoError(t, ConvertAPIError(err))
 	go worker1.AwaitFinish()
 
 	// start service2
@@ -417,34 +412,32 @@ func TestIntegration_CSTX_TwoConsumersTimeoutWhenSecondDelayedError(t *testing.T
 
 			// test
 			err := transaction.Commit()
-			assert.ErrorIs(t, rmqworker.ErrCSTXTimeout, err)
+			assert.ErrorIs(t, cstx.ErrCSTXTimeout, err)
 
 			// finished
 			wg.Done()
 		},
 	}
 	worker2, err := rmqHandler.NewRMQWorker(workerTask2)
-	require.NoError(t, rmqworker.ConvertAPIError(err))
+	require.NoError(t, ConvertAPIError(err))
 	err = worker2.Serve()
-	require.NoError(t, rmqworker.ConvertAPIError(err))
+	require.NoError(t, ConvertAPIError(err))
 	go worker2.AwaitFinish()
 
 	// run transaction
-	cstx = rmqHandler.NewCSTX(ackCount, cstxTransactionTimeoutMS)
+	tx = rmqHandler.NewCSTX(ackCount, cstxTransactionTimeoutMS)
 
-	err = cstx.PublishToQueue(structs.RMQPublishRequestTask{
+	err = tx.PublishToQueue(structs.RMQPublishRequestTask{
 		QueueName:   queueName1,
 		MessageBody: messageBody1,
-		CSTX:        cstx,
 	})
-	require.NoError(t, rmqworker.ConvertAPIError(err))
+	require.NoError(t, ConvertAPIError(err))
 
-	err = cstx.PublishToQueue(structs.RMQPublishRequestTask{
+	err = tx.PublishToQueue(structs.RMQPublishRequestTask{
 		QueueName:   queueName2,
 		MessageBody: messageBody2,
-		CSTX:        cstx,
 	})
-	require.NoError(t, rmqworker.ConvertAPIError(err))
+	require.NoError(t, ConvertAPIError(err))
 
 	// wait
 	doneCh := make(chan struct{})
