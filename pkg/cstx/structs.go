@@ -9,9 +9,9 @@ type CrossServiceTransaction struct {
 	Handler handler
 }
 
-type CSTXAck struct {
+type AckMessage struct {
 	TXID    string
-	Type    string // ack or nack
+	Type    ackType
 	Time    int64
 	Timeout int32
 }

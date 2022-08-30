@@ -2,13 +2,16 @@ package cstx
 
 import "time"
 
+type ackType string
+
 const (
-	CSTXExchangeName = "cstx"
-	CSTXAckType      = "ack"
-	CSTXNackType     = "nack"
+	successAckType ackType = "ack"
+	failureAckType         = "nack"
 )
 
 const (
+	ExchangeName = "cstx"
+
 	HeaderCSTXID        = "CSTXID"
 	HeaderCSTXAckNum    = "CSTXAckNum"
 	HeaderCSTXTimeout   = "CSTXTimeout"

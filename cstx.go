@@ -30,18 +30,18 @@ func (handler *RMQHandler) StartCSTXAcksConsumer() errs.APIError {
 		return nil
 	}
 
-	err := handler.DeclareExchanges(map[string]string{cstx.CSTXExchangeName: ExchangeTypeTopic})
+	err := handler.DeclareExchanges(map[string]string{cstx.ExchangeName: ExchangeTypeTopic})
 	if err != nil {
 		return err
 	}
 
-	queueName := cstx.CSTXExchangeName + "-" + uuid.NewString()
+	queueName := cstx.ExchangeName + "-" + uuid.NewString()
 	task := WorkerTask{
 		QueueName:      queueName,
 		ISQueueDurable: false,
 		ISAutoDelete:   true,
 		Callback: func(worker *RMQWorker, deliveryHandler RMQDeliveryHandler) {
-			var ack cstx.CSTXAck
+			var ack cstx.AckMessage
 			body := deliveryHandler.GetMessageBody()
 			if len(body) > 0 {
 				if err := json.Unmarshal(body, &ack); err != nil {
@@ -49,12 +49,13 @@ func (handler *RMQHandler) StartCSTXAcksConsumer() errs.APIError {
 					return
 				}
 			}
+
 			cstx.CSTXAcksMapLock.Lock()
 			cstx.CSTXAcksMap[ack.TXID] = append(cstx.CSTXAcksMap[ack.TXID], ack)
 			cstx.CSTXAcksMapLock.Unlock()
 		},
 		ID:               queueName,
-		FromExchange:     cstx.CSTXExchangeName,
+		FromExchange:     cstx.ExchangeName,
 		ExchangeType:     ExchangeTypeTopic,
 		ConsumersCount:   1,
 		WorkerName:       queueName,

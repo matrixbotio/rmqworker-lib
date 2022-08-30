@@ -9,7 +9,7 @@ import (
 	"github.com/matrixbotio/rmqworker-lib"
 )
 
-func getHandler(t *testing.T) *rmqworker.RMQHandler {
+func GetHandler(t *testing.T) *rmqworker.RMQHandler {
 	task := rmqworker.CreateRMQHandlerTask{
 		Data: rmqworker.RMQConnectionData{
 			User:     "example",

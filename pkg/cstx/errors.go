@@ -5,5 +5,6 @@ import (
 )
 
 var (
-	ErrCSTXTimeout = errors.New("crossServiceTransaction timeout")
+	ErrTimeout   = errors.New("crossServiceTransaction timeout")
+	ErrCancelled = errors.New("crossServiceTransaction cancelled")
 )
