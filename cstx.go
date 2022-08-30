@@ -1,6 +1,7 @@
 package rmqworker
 
 import (
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -10,7 +11,10 @@ import (
 	"github.com/matrixbotio/rmqworker-lib/pkg/errs"
 )
 
-var CSTXAcksConsumer *RMQWorker
+var (
+	cstxAcksConsumer            *RMQWorker
+	cstxAcksConsumerStartedLock sync.Mutex
+)
 
 func (handler *RMQHandler) NewCSTX(ackNum, timeout int32) cstx.CrossServiceTransaction {
 	return cstx.CrossServiceTransaction{
@@ -23,10 +27,10 @@ func (handler *RMQHandler) NewCSTX(ackNum, timeout int32) cstx.CrossServiceTrans
 }
 
 func (handler *RMQHandler) StartCSTXAcksConsumer() errs.APIError {
-	cstx.ACKSConsumerStartedLock.Lock()
-	defer cstx.ACKSConsumerStartedLock.Unlock()
+	cstxAcksConsumerStartedLock.Lock()
+	defer cstxAcksConsumerStartedLock.Unlock()
 
-	if CSTXAcksConsumer != nil {
+	if cstxAcksConsumer != nil {
 		return nil
 	}
 
@@ -50,9 +54,9 @@ func (handler *RMQHandler) StartCSTXAcksConsumer() errs.APIError {
 				}
 			}
 
-			cstx.CSTXAcksMapLock.Lock()
-			cstx.CSTXAcksMap[ack.TXID] = append(cstx.CSTXAcksMap[ack.TXID], ack)
-			cstx.CSTXAcksMapLock.Unlock()
+			cstx.AcksMapLock.Lock()
+			cstx.AcksMap[ack.TXID] = append(cstx.AcksMap[ack.TXID], ack)
+			cstx.AcksMapLock.Unlock()
 		},
 		ID:               queueName,
 		FromExchange:     cstx.ExchangeName,
@@ -62,16 +66,17 @@ func (handler *RMQHandler) StartCSTXAcksConsumer() errs.APIError {
 		QueueLength:      1000,
 		MessagesLifetime: cstx.StandardAckMessageLifetime,
 	}
-	CSTXAcksConsumer, err = handler.NewRMQWorker(task)
-	if err != nil {
-		return err
-	}
-	cstx.IsCSTXAcksConsumerSet = true
 
-	err = CSTXAcksConsumer.Serve()
+	cstxAcksConsumer, err = handler.NewRMQWorker(task)
 	if err != nil {
 		return err
 	}
+
+	if err := cstxAcksConsumer.Serve(); err != nil {
+		return err
+	}
+
+	cstx.IsCSTXAcksConsumerSet = true
 
 	go cstx.StartAcksCleaner()
 
@@ -80,19 +85,19 @@ func (handler *RMQHandler) StartCSTXAcksConsumer() errs.APIError {
 
 func (deliveryHandler RMQDeliveryHandler) GetCSTX(handler *RMQHandler) cstx.CrossServiceTransaction {
 	var CSTX cstx.CrossServiceTransaction
-	ID, exists := deliveryHandler.GetHeader(cstx.HeaderCSTXID)
+	ID, exists := deliveryHandler.GetHeader(cstx.HeaderID)
 	if exists {
 		CSTX.ID = ID.(string)
 	}
-	ackNum, exists := deliveryHandler.GetHeader(cstx.HeaderCSTXAckNum)
+	ackNum, exists := deliveryHandler.GetHeader(cstx.HeaderAckNum)
 	if exists {
 		CSTX.AckNum = ackNum.(int32)
 	}
-	timeout, exists := deliveryHandler.GetHeader(cstx.HeaderCSTXTimeout)
+	timeout, exists := deliveryHandler.GetHeader(cstx.HeaderTimeout)
 	if exists {
 		CSTX.Timeout = timeout.(int32)
 	}
-	startedAt, exists := deliveryHandler.GetHeader(cstx.HeaderCSTXStartedAt)
+	startedAt, exists := deliveryHandler.GetHeader(cstx.HeaderStartedAt)
 	if exists {
 		CSTX.StartedAt = startedAt.(int64)
 	}

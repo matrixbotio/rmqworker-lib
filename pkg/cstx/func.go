@@ -8,22 +8,22 @@ import (
 
 func GetCSTXHeaders(tx CrossServiceTransaction) []structs.RMQHeader {
 	return []structs.RMQHeader{
-		{Name: HeaderCSTXID, Value: tx.ID},
-		{Name: HeaderCSTXAckNum, Value: tx.AckNum},
-		{Name: HeaderCSTXTimeout, Value: tx.Timeout},
-		{Name: HeaderCSTXStartedAt, Value: tx.StartedAt},
+		{Name: HeaderID, Value: tx.ID},
+		{Name: HeaderAckNum, Value: tx.AckNum},
+		{Name: HeaderTimeout, Value: tx.Timeout},
+		{Name: HeaderStartedAt, Value: tx.StartedAt},
 	}
 }
 
 func StartAcksCleaner() {
 	for {
 		time.Sleep(time.Minute * 5)
-		CSTXAcksMapLock.Lock()
-		for txId, txAcks := range CSTXAcksMap {
+		AcksMapLock.Lock()
+		for txId, txAcks := range AcksMap {
 			if time.Now().UnixMilli()-txAcks[0].Time > int64(txAcks[0].Timeout) {
-				delete(CSTXAcksMap, txId)
+				delete(AcksMap, txId)
 			}
 		}
-		CSTXAcksMapLock.Unlock()
+		AcksMapLock.Unlock()
 	}
 }

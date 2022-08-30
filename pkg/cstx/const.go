@@ -12,10 +12,10 @@ const (
 const (
 	ExchangeName = "cstx"
 
-	HeaderCSTXID        = "CSTXID"
-	HeaderCSTXAckNum    = "CSTXAckNum"
-	HeaderCSTXTimeout   = "CSTXTimeout"
-	HeaderCSTXStartedAt = "CSTXStartedAt"
+	HeaderID        = "CSTXID"
+	HeaderAckNum    = "CSTXAckNum"
+	HeaderTimeout   = "CSTXTimeout"
+	HeaderStartedAt = "CSTXStartedAt"
 )
 
 const (

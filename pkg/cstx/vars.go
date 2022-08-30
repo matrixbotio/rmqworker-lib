@@ -5,8 +5,8 @@ import (
 )
 
 var (
-	IsCSTXAcksConsumerSet   bool
-	CSTXAcksMap             = make(map[string][]AckMessage, 0)
-	CSTXAcksMapLock         sync.RWMutex
-	ACKSConsumerStartedLock sync.Mutex
+	IsCSTXAcksConsumerSet bool
+
+	AcksMap     = make(map[string][]AckMessage, 0)
+	AcksMapLock sync.RWMutex
 )

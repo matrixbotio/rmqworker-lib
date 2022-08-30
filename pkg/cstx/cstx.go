@@ -53,20 +53,20 @@ func (tx CrossServiceTransaction) awaitRequiredAcks() error {
 	}
 
 	for {
-		CSTXAcksMapLock.RLock()
+		AcksMapLock.RLock()
 
-		for _, t := range CSTXAcksMap[tx.ID] {
+		for _, t := range AcksMap[tx.ID] {
 			if t.Type == failureAckType {
-				CSTXAcksMapLock.RUnlock()
+				AcksMapLock.RUnlock()
 				return ErrCancelled
 			}
 		}
-		if len(CSTXAcksMap[tx.ID]) >= int(tx.AckNum) {
-			CSTXAcksMapLock.RUnlock()
+		if len(AcksMap[tx.ID]) >= int(tx.AckNum) {
+			AcksMapLock.RUnlock()
 			return nil
 		}
 
-		CSTXAcksMapLock.RUnlock()
+		AcksMapLock.RUnlock()
 
 		if time.Now().UnixMilli()-tx.StartedAt > int64(tx.Timeout) {
 			return ErrTimeout
