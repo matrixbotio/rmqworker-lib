@@ -4,9 +4,11 @@ import (
 	"strings"
 
 	"github.com/matrixbotio/constants-lib"
+
+	"github.com/matrixbotio/rmqworker-lib/pkg/errs"
 )
 
-func encodeMessage(message interface{}) ([]byte, APIError) {
+func encodeMessage(message interface{}) ([]byte, errs.APIError) {
 	jsonBytes, marshalErr := json.Marshal(message)
 	if marshalErr != nil {
 		return nil, constants.Error(

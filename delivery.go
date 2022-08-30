@@ -3,6 +3,8 @@ package rmqworker
 import (
 	"github.com/matrixbotio/constants-lib"
 	"github.com/streadway/amqp"
+
+	"github.com/matrixbotio/rmqworker-lib/pkg/errs"
 )
 
 // RMQDeliveryHandler - RMQ delivery data container
@@ -31,7 +33,7 @@ func (d *RMQDeliveryHandler) GetHeader(headerName string) (interface{}, bool) {
 }
 
 // GetResponseRoutingKeyHeader - get response routing key from delivery headers
-func (d *RMQDeliveryHandler) GetResponseRoutingKeyHeader() (string, APIError) {
+func (d *RMQDeliveryHandler) GetResponseRoutingKeyHeader() (string, errs.APIError) {
 	// get header
 	headerRaw, exists := d.GetHeader("responseRoutingKey")
 	if !exists {
@@ -63,7 +65,7 @@ func (d *RMQDeliveryHandler) GetRoutingKey() string {
 }
 
 // Accept RMQ message delivery
-func (d *RMQDeliveryHandler) Accept() APIError {
+func (d *RMQDeliveryHandler) Accept() errs.APIError {
 	if d.isAccepted {
 		return constants.Error(
 			"DATA_REQ_ERR",
@@ -80,7 +82,7 @@ func (d *RMQDeliveryHandler) Accept() APIError {
 	return nil
 }
 
-func (d *RMQDeliveryHandler) simpleAccept() APIError {
+func (d *RMQDeliveryHandler) simpleAccept() errs.APIError {
 	err := d.rmqDelivery.Ack(false)
 	if err != nil {
 		return constants.Error(
@@ -92,7 +94,7 @@ func (d *RMQDeliveryHandler) simpleAccept() APIError {
 }
 
 // Reject RMQ message delivery
-func (d *RMQDeliveryHandler) Reject(requeue bool) APIError {
+func (d *RMQDeliveryHandler) Reject(requeue bool) errs.APIError {
 	err := d.rmqDelivery.Reject(requeue)
 	if err != nil {
 		return constants.Error(
@@ -104,7 +106,7 @@ func (d *RMQDeliveryHandler) Reject(requeue bool) APIError {
 }
 
 // CheckResponseError - check RMQ response error
-func (d *RMQDeliveryHandler) CheckResponseError() APIError {
+func (d *RMQDeliveryHandler) CheckResponseError() errs.APIError {
 	responseCodeRaw, isFieldFound := d.GetHeader("code")
 	if !isFieldFound {
 		return nil

@@ -7,6 +7,9 @@ import (
 	"github.com/matrixbotio/constants-lib"
 	darkmq "github.com/sagleft/darkrmq"
 	simplecron "github.com/sagleft/simple-cron"
+
+	"github.com/matrixbotio/rmqworker-lib/pkg/errs"
+	"github.com/matrixbotio/rmqworker-lib/pkg/structs"
 )
 
 /*
@@ -22,7 +25,7 @@ jgs  {}  /  \_/\=/\_/  \
 */
 
 // NewRMQHandler - create new RMQHandler
-func NewRMQHandler(task CreateRMQHandlerTask) (*RMQHandler, APIError) {
+func NewRMQHandler(task CreateRMQHandlerTask) (*RMQHandler, errs.APIError) {
 	// create handler
 	r := RMQHandler{
 		task: task,
@@ -31,7 +34,7 @@ func NewRMQHandler(task CreateRMQHandlerTask) (*RMQHandler, APIError) {
 	return &r, r.rmqInit()
 }
 
-func (r *RMQHandler) rmqInit() APIError {
+func (r *RMQHandler) rmqInit() errs.APIError {
 	// init rmq connector
 	r.conn = darkmq.NewConnector(darkmq.Config{
 		Wait: waitBetweenReconnect,
@@ -128,7 +131,7 @@ func (r *RMQHandler) runlock() {
 */
 
 // NewRequestHandler - create new handler for one-time request
-func (h *RMQHandler) NewRequestHandler(task RequestHandlerTask) (*RequestHandler, APIError) {
+func (h *RMQHandler) NewRequestHandler(task RequestHandlerTask) (*RequestHandler, errs.APIError) {
 	r := &RequestHandler{
 		RMQH:     h,
 		Task:     task,
@@ -137,7 +140,7 @@ func (h *RMQHandler) NewRequestHandler(task RequestHandlerTask) (*RequestHandler
 	r.remakeFinishedChannel()
 
 	// create RMQ-M worker
-	var err APIError
+	var err errs.APIError
 	r.Worker, err = r.RMQH.NewRMQWorker(WorkerTask{
 		QueueName:          r.Task.TempQueueName,
 		RoutingKey:         r.Task.TempQueueName,
@@ -178,7 +181,7 @@ func (r *RequestHandler) SetID(id string) *RequestHandler {
 	return r
 }
 
-func (r *RequestHandler) sendRequest(messageBody interface{}, responseRoutingKey string) APIError {
+func (r *RequestHandler) sendRequest(messageBody interface{}, responseRoutingKey string) errs.APIError {
 	if r.Task.ExchangeInsteadOfQueue {
 		return r.RMQH.RMQPublishToExchange(
 			messageBody,               // request message
@@ -188,7 +191,7 @@ func (r *RequestHandler) sendRequest(messageBody interface{}, responseRoutingKey
 		)
 	}
 
-	return r.RMQH.RMQPublishToQueue(RMQPublishRequestTask{
+	return r.RMQH.RMQPublishToQueue(structs.RMQPublishRequestTask{
 		QueueName:          r.Task.RequestToQueueName,
 		ResponseRoutingKey: responseRoutingKey,
 		MessageBody:        messageBody,
@@ -213,7 +216,7 @@ func (r *RequestHandler) resume() {
 }
 
 // Send request (sync)
-func (r *RequestHandler) Send(messageBody interface{}, responseRoutingKey string) (*RequestHandlerResponse, APIError) {
+func (r *RequestHandler) Send(messageBody interface{}, responseRoutingKey string) (*RequestHandlerResponse, errs.APIError) {
 	// init
 	r.resume()
 	if r.Task.AttemptsNumber == 0 {
@@ -271,7 +274,7 @@ func (r *RequestHandler) markFinished() {
 	}
 }
 
-func (r *RequestHandler) DeleteQueues() APIError {
+func (r *RequestHandler) DeleteQueues() errs.APIError {
 	return r.RMQH.DeleteQueues(map[string][]string{
 		"reqHandler": {r.Task.TempQueueName},
 	})
@@ -301,7 +304,7 @@ type RequestHandlerResponse struct {
 }
 
 // Decode response from JSON. pass pointer to struct or map in `destination`
-func (s *RequestHandlerResponse) Decode(destination interface{}) APIError {
+func (s *RequestHandlerResponse) Decode(destination interface{}) errs.APIError {
 	err := json.Unmarshal(s.ResponseBody, destination)
 	if err != nil {
 		return constants.Error(

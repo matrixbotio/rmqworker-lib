@@ -3,11 +3,13 @@ package rmqworker
 import (
 	"github.com/matrixbotio/constants-lib"
 	"github.com/streadway/amqp"
+
+	"github.com/matrixbotio/rmqworker-lib/pkg/errs"
 )
 
 // DeleteQueues - delete RMQ queues.
 // map[manager name] -> array of queue names
-func (r *RMQHandler) DeleteQueues(queueNames map[string][]string) APIError {
+func (r *RMQHandler) DeleteQueues(queueNames map[string][]string) errs.APIError {
 	for managerName, queueNames := range queueNames {
 		for _, queueName := range queueNames {
 			err := r.queueDelete(managerName, queueName)
@@ -19,7 +21,7 @@ func (r *RMQHandler) DeleteQueues(queueNames map[string][]string) APIError {
 	return nil
 }
 
-func (r *RMQHandler) getChannel() (*amqp.Channel, APIError) {
+func (r *RMQHandler) getChannel() (*amqp.Channel, errs.APIError) {
 	ch, rmqErr := r.publisher.Channel()
 	if rmqErr != nil {
 		return nil, constants.Error(
@@ -30,7 +32,7 @@ func (r *RMQHandler) getChannel() (*amqp.Channel, APIError) {
 	return ch, nil
 }
 
-func (r *RMQHandler) queueDelete(managerName, queueName string) APIError {
+func (r *RMQHandler) queueDelete(managerName, queueName string) errs.APIError {
 	r.rlock()
 	defer r.runlock()
 

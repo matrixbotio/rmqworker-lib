@@ -4,8 +4,8 @@ import (
 	"github.com/matrixbotio/go-common-lib/zes"
 	"go.uber.org/zap"
 
-	"github.com/matrixbotio/rmqworker-lib"
 	"github.com/matrixbotio/rmqworker-lib/cmd"
+	"github.com/matrixbotio/rmqworker-lib/pkg/structs"
 )
 
 func main() {
@@ -24,20 +24,18 @@ func main() {
 
 	zap.L().Info("transaction started", zap.String("id", transaction.ID))
 
-	transaction.PublishToQueue(rmqworker.RMQPublishRequestTask{
+	transaction.PublishToQueue(structs.RMQPublishRequestTask{
 		QueueName:          "service1",
 		MessageBody:        "body-body-body-service1",
 		ResponseRoutingKey: "",
 		CorrelationID:      "",
-		CSTX:               transaction,
 	})
 
-	transaction.PublishToQueue(rmqworker.RMQPublishRequestTask{
+	transaction.PublishToQueue(structs.RMQPublishRequestTask{
 		QueueName:          "service2",
 		MessageBody:        "body-body-body-service2",
 		ResponseRoutingKey: "",
 		CorrelationID:      "",
-		CSTX:               transaction,
 	})
 
 	//res, err := transaction.Commit()

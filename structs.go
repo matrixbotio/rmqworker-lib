@@ -10,10 +10,9 @@ import (
 	simplecron "github.com/sagleft/simple-cron"
 	"github.com/streadway/amqp"
 	"go.uber.org/zap"
-)
 
-// APIError - error data container
-type APIError *constants.APIError
+	"github.com/matrixbotio/rmqworker-lib/pkg/errs"
+)
 
 // RMQConnectionData - rmq connection data container
 type RMQConnectionData struct {
@@ -58,7 +57,7 @@ type RMQWorker struct {
 	timeoutCallback  RMQTimeoutCallback
 	cronHandler      *simplecron.CronObject
 
-	logger      *zap.Logger
+	Logger      *zap.Logger
 	rateLimiter *rate.RateLimiter
 
 	stopCh chan struct{}
@@ -95,18 +94,6 @@ type RMQExchangeDeclareTask struct {
 	ExchangeName     string
 	ExchangeType     string
 	MessagesLifetime int64
-}
-
-// RMQPublishRequestTask - publish message to RMQ task data container
-type RMQPublishRequestTask struct {
-	// required
-	QueueName   string
-	MessageBody interface{}
-
-	// optional
-	ResponseRoutingKey string
-	CorrelationID      string
-	CSTX               CrossServiceTransaction
 }
 
 // RMQPublishResponseTask - response for publish message to RMQ request
@@ -178,7 +165,7 @@ type rmqWorkerChannels struct {
 type CreateRMQHandlerTask struct {
 	Data                    RMQConnectionData
 	UseErrorCallback        bool
-	ConnectionErrorCallback func(err APIError)
+	ConnectionErrorCallback func(err errs.APIError)
 	Logger                  *zap.Logger
 }
 
@@ -225,33 +212,4 @@ type RequestHandlerTask struct {
 	WorkerName             string
 	ForceQueueToDurable    bool
 	MethodFriendlyName     string // the name of the operation performed by the vorker for the logs and errors
-}
-
-type PublishToExchangeTask struct {
-	// required
-	Message      interface{}
-	ExchangeName string
-
-	// optional
-	RoutingKey         string
-	ResponseRoutingKey string
-	CorrelationID      string
-
-	cstx CrossServiceTransaction
-}
-
-type CrossServiceTransaction struct {
-	ID        string
-	AckNum    int32
-	StartedAt int64
-	Timeout   int32
-
-	handler *RMQHandler
-}
-
-type CSTXAck struct {
-	TXID    string
-	Type    string // ack or nack
-	Time    int64
-	Timeout int32
 }

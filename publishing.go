@@ -6,11 +6,15 @@ import (
 	"github.com/google/uuid"
 	"github.com/matrixbotio/constants-lib"
 	"github.com/streadway/amqp"
+
+	"github.com/matrixbotio/rmqworker-lib/pkg/cstx"
+	"github.com/matrixbotio/rmqworker-lib/pkg/errs"
+	"github.com/matrixbotio/rmqworker-lib/pkg/structs"
 )
 
 // RMQPublishToQueue - send request to rmq queue.
 // NOTE: should be replaced by PublishToExchange in later lib versions
-func (r *RMQHandler) RMQPublishToQueue(task RMQPublishRequestTask) APIError {
+func (r *RMQHandler) RMQPublishToQueue(task structs.RMQPublishRequestTask) errs.APIError {
 	headers := amqp.Table{}
 	if task.ResponseRoutingKey != "" {
 		headers["responseRoutingKey"] = task.ResponseRoutingKey
@@ -36,7 +40,7 @@ func (r *RMQHandler) RMQPublishToQueue(task RMQPublishRequestTask) APIError {
 }
 
 // PublishToQueue - send request to rmq queue
-func (r *RMQHandler) PublishToQueue(task RMQPublishRequestTask) APIError {
+func (r *RMQHandler) PublishToQueue(task structs.RMQPublishRequestTask, additionalHeaders ...structs.RMQHeader) errs.APIError {
 	headers := amqp.Table{}
 	if task.ResponseRoutingKey != "" {
 		headers["responseRoutingKey"] = task.ResponseRoutingKey
@@ -53,7 +57,9 @@ func (r *RMQHandler) PublishToQueue(task RMQPublishRequestTask) APIError {
 		correlationID = uuid.NewString()
 	}
 
-	headers = setCSTXHeaders(headers, task.CSTX)
+	for _, h := range additionalHeaders {
+		headers[h.Name] = h.Value
+	}
 
 	return r.publishMessage(publishTask{
 		exchangeName: "",
@@ -72,7 +78,7 @@ func (r *RMQHandler) PublishToQueue(task RMQPublishRequestTask) APIError {
 func (r *RMQHandler) SendRMQResponse(
 	task *RMQPublishResponseTask,
 	errorMsg ...*constants.APIError,
-) APIError {
+) errs.APIError {
 	headers := amqp.Table{}
 	var responseBody []byte
 	contentType := defaultContentType
@@ -87,7 +93,7 @@ func (r *RMQHandler) SendRMQResponse(
 		// no errors
 		headers["code"] = 0
 		// encode message
-		var err APIError
+		var err errs.APIError
 		responseBody, err = encodeMessage(task.MessageBody)
 		if err != nil {
 			return err
@@ -122,7 +128,7 @@ func (r *RMQHandler) RMQPublishToExchange(
 	exchangeName,
 	routingKey string,
 	responseRoutingKey ...string,
-) APIError {
+) errs.APIError {
 	headers := amqp.Table{}
 	if len(responseRoutingKey) > 0 {
 		headers["responseRoutingKey"] = responseRoutingKey[0]
@@ -146,7 +152,7 @@ func (r *RMQHandler) RMQPublishToExchange(
 
 // PublishToExchange - publish message to exchangeю
 // responseRoutingKey is optional to send requests to exchange
-func (r *RMQHandler) PublishToExchange(task PublishToExchangeTask) APIError {
+func (r *RMQHandler) PublishToExchange(task structs.PublishToExchangeTask, additionalHeaders ...structs.RMQHeader) errs.APIError {
 	headers := amqp.Table{}
 	if task.ResponseRoutingKey != "" {
 		headers["responseRoutingKey"] = task.ResponseRoutingKey
@@ -162,7 +168,9 @@ func (r *RMQHandler) PublishToExchange(task PublishToExchangeTask) APIError {
 		correlationID = uuid.NewString()
 	}
 
-	headers = setCSTXHeaders(headers, task.cstx)
+	for _, h := range additionalHeaders {
+		headers[h.Name] = h.Value
+	}
 
 	return r.publishMessage(publishTask{
 		exchangeName: task.ExchangeName,
@@ -176,13 +184,23 @@ func (r *RMQHandler) PublishToExchange(task PublishToExchangeTask) APIError {
 	})
 }
 
+func (r *RMQHandler) PublishCSXTToQueue(task structs.RMQPublishRequestTask, tx cstx.CrossServiceTransaction) errs.APIError {
+	headers := cstx.GetCSTXHeaders(tx)
+	return r.PublishToQueue(task, headers...)
+}
+
+func (r *RMQHandler) PublishCSXTToExchange(task structs.PublishToExchangeTask, tx cstx.CrossServiceTransaction) errs.APIError {
+	headers := cstx.GetCSTXHeaders(tx)
+	return r.PublishToExchange(task, headers...)
+}
+
 type publishTask struct {
 	exchangeName string
 	key          string
 	publishing   amqp.Publishing
 }
 
-func (r *RMQHandler) publishMessage(task publishTask) APIError {
+func (r *RMQHandler) publishMessage(task publishTask) errs.APIError {
 	r.rlock()
 	defer r.runlock()
 

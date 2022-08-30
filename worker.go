@@ -11,6 +11,8 @@ import (
 	simplecron "github.com/sagleft/simple-cron"
 	"github.com/streadway/amqp"
 	"go.uber.org/zap"
+
+	"github.com/matrixbotio/rmqworker-lib/pkg/errs"
 )
 
 /*
@@ -31,7 +33,7 @@ import (
 */
 
 // NewRMQWorker - create new RMQ worker to receive messages
-func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
+func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, errs.APIError) {
 	// set worker name
 	if task.WorkerName == "" {
 		task.WorkerName = "RMQ-W"
@@ -75,7 +77,7 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 		consumersCount:   task.ConsumersCount,
 		deliveryCallback: task.Callback,
 		timeoutCallback:  task.TimeoutCallback,
-		logger:           r.task.Logger,
+		Logger:           r.task.Logger,
 	}
 
 	// setup error handler
@@ -98,7 +100,7 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, APIError) {
 }
 
 func (w *RMQWorker) logVerbose(message string) {
-	w.logger.Debug(message, zap.String("worker_name", w.data.Name))
+	w.Logger.Debug(message, zap.String("worker_name", w.data.Name))
 }
 
 // SetName - set RMQ worker name for logs
@@ -130,7 +132,7 @@ func (w *RMQWorker) SetCheckResponseErrors(check bool) *RMQWorker {
 }
 
 // Serve - start consumer(s)
-func (w *RMQWorker) Serve() APIError {
+func (w *RMQWorker) Serve() errs.APIError {
 	if w.data.UseResponseTimeout {
 		w.runCron()
 	}
@@ -205,7 +207,7 @@ func (w *RMQWorker) stopCron() {
 
 func (w *RMQWorker) handleError(err *constants.APIError) {
 	if !w.useErrorCallback {
-		w.logger.Error("handleError", zap.Error(err))
+		w.Logger.Error("handleError", zap.Error(err))
 		return
 	}
 
