@@ -107,6 +107,11 @@ func (r *RMQHandler) NewRMQHandler() *RMQHandler {
 	return &newHandler
 }
 
+// IsConnectionAlive - check connection
+func (r *RMQHandler) IsConnectionAlive() bool {
+	return r.conn.IsConnectionAlive()
+}
+
 func (r *RMQHandler) rlock() {
 	r.locks.rwLock.RLock()
 }
