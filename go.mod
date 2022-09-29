@@ -11,7 +11,7 @@ require (
 	github.com/sagleft/darkrmq v0.7.20
 	github.com/sagleft/simple-cron v1.3.0
 	github.com/streadway/amqp v1.0.0
-	github.com/stretchr/testify v1.7.0
+	github.com/stretchr/testify v1.8.0
 	go.uber.org/zap v1.22.0
 )
 
