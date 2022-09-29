@@ -4,7 +4,13 @@ import (
 	"testing"
 
 	"github.com/streadway/amqp"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestEncodeMessage(t *testing.T) {
+	require.NotPanics(t, func() { encodeMessage(nil) })
+}
 
 func TestDeliveryHandler(t *testing.T) {
 	message := "failed to generate joke"
@@ -28,19 +34,16 @@ func TestDeliveryHandler(t *testing.T) {
 
 	// test headers
 	_, isHeaderFound := delivery.GetHeader("responseRoutingKey")
-	if !isHeaderFound {
-		t.Fatal("failed to find header field")
-	}
+	require.Equal(t, isHeaderFound, true, "failed to find header field")
 
 	// test correlation ID
 	testCorrelationID := delivery.GetCorrelationID()
-	if testCorrelationID != correlationID {
-		t.Fatal("correlation ID `" + correlationID + "` is not equal to `" + testCorrelationID + "`")
-	}
+	require.Equal(
+		t, testCorrelationID, correlationID,
+		"correlation ID `"+correlationID+"` is not equal to `"+testCorrelationID+"`",
+	)
 
 	// test response error
 	err := delivery.CheckResponseError()
-	if err == nil {
-		t.Fatal("error should be set")
-	}
+	assert.NotNil(t, err, "error should be set")
 }
