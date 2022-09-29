@@ -9,6 +9,10 @@ import (
 )
 
 func encodeMessage(message interface{}) ([]byte, errs.APIError) {
+	if message == nil {
+		return []byte("{}"), nil
+	}
+
 	jsonBytes, marshalErr := json.Marshal(message)
 	if marshalErr != nil {
 		return nil, constants.Error(
