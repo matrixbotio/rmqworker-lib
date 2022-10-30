@@ -9,6 +9,22 @@ import (
 	"github.com/matrixbotio/rmqworker-lib/pkg/structs"
 )
 
+type CSTX interface {
+	PublishToQueue(task structs.RMQPublishRequestTask) errs.APIError
+	PublishToExchange(task structs.PublishToExchangeTask) errs.APIError
+	Commit() error
+	Rollback() error
+}
+
+type CrossServiceTransaction struct {
+	ID        string
+	AckNum    int32
+	StartedAt int64
+	Timeout   int32
+
+	Handler handler
+}
+
 func (tx CrossServiceTransaction) PublishToQueue(task structs.RMQPublishRequestTask) errs.APIError {
 	return tx.Handler.PublishCSXTToQueue(task, tx)
 }
