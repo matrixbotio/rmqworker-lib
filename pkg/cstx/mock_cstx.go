@@ -58,6 +58,42 @@ func (_c *MockCSTX_Commit_Call) Return(_a0 error) *MockCSTX_Commit_Call {
 	return _c
 }
 
+// GetID provides a mock function with given fields:
+func (_m *MockCSTX) GetID() string {
+	ret := _m.Called()
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func() string); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	return r0
+}
+
+// MockCSTX_GetID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetID'
+type MockCSTX_GetID_Call struct {
+	*mock.Call
+}
+
+// GetID is a helper method to define mock.On call
+func (_e *MockCSTX_Expecter) GetID() *MockCSTX_GetID_Call {
+	return &MockCSTX_GetID_Call{Call: _e.mock.On("GetID")}
+}
+
+func (_c *MockCSTX_GetID_Call) Run(run func()) *MockCSTX_GetID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *MockCSTX_GetID_Call) Return(_a0 string) *MockCSTX_GetID_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
 // PublishToExchange provides a mock function with given fields: task
 func (_m *MockCSTX) PublishToExchange(task structs.PublishToExchangeTask) errs.APIError {
 	ret := _m.Called(task)

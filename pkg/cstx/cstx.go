@@ -14,6 +14,7 @@ type CSTX interface {
 	PublishToExchange(task structs.PublishToExchangeTask) errs.APIError
 	Commit() error
 	Rollback() error
+	GetID() string
 }
 
 type CrossServiceTransaction struct {
@@ -23,6 +24,10 @@ type CrossServiceTransaction struct {
 	Timeout   int32
 
 	Handler handler
+}
+
+func (tx CrossServiceTransaction) GetID() string {
+	return tx.ID
 }
 
 func (tx CrossServiceTransaction) PublishToQueue(task structs.RMQPublishRequestTask) errs.APIError {
