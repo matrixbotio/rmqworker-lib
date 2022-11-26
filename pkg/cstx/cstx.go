@@ -1,6 +1,7 @@
 package cstx
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -12,9 +13,11 @@ import (
 type CSTX interface {
 	PublishToQueue(task structs.RMQPublishRequestTask) errs.APIError
 	PublishToExchange(task structs.PublishToExchangeTask) errs.APIError
+
 	Commit() error
 	Rollback() error
 	GetID() string
+	Serialize() string
 }
 
 type CrossServiceTransaction struct {
@@ -23,11 +26,19 @@ type CrossServiceTransaction struct {
 	StartedAt int64
 	Timeout   int32
 
-	Handler handler
+	Handler Handler `json:"-"`
 }
 
 func (tx CrossServiceTransaction) GetID() string {
 	return tx.ID
+}
+
+func (tx CrossServiceTransaction) Serialize() string {
+	res, err := json.Marshal(tx)
+	if err != nil {
+		panic("should not happened")
+	}
+	return string(res)
 }
 
 func (tx CrossServiceTransaction) PublishToQueue(task structs.RMQPublishRequestTask) errs.APIError {

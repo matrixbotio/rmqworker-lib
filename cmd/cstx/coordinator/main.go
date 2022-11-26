@@ -5,6 +5,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/matrixbotio/rmqworker-lib/cmd"
+	"github.com/matrixbotio/rmqworker-lib/pkg/cstx"
 	"github.com/matrixbotio/rmqworker-lib/pkg/structs"
 )
 
@@ -20,7 +21,7 @@ func main() {
 
 	//h.StartCSTXAcksConsumer()
 
-	transaction := h.NewCSTX(1, 3000)
+	transaction := cstx.New(1, 3000, h)
 
 	zap.L().Info("transaction started", zap.String("id", transaction.ID))
 

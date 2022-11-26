@@ -60,7 +60,7 @@ func TestIntegration_OneConsumerTimeoutError(t *testing.T) {
 	go worker1.AwaitFinish()
 
 	// run transaction
-	tx = rmqHandler.NewCSTX(ackCount, cstxTransactionTimeoutMS)
+	tx = cstx.New(ackCount, cstxTransactionTimeoutMS, rmqHandler)
 
 	err = tx.PublishToQueue(structs.RMQPublishRequestTask{
 		QueueName:   queueName1,
@@ -124,7 +124,7 @@ func TestIntegration_NotEnoughConfirmationsTimeoutError(t *testing.T) {
 	go worker1.AwaitFinish()
 
 	// run transaction
-	tx = rmqHandler.NewCSTX(ackCountWanted, cstxTransactionTimeoutMS)
+	tx = cstx.New(ackCountWanted, cstxTransactionTimeoutMS, rmqHandler)
 
 	err = tx.PublishToQueue(structs.RMQPublishRequestTask{
 		QueueName:   queueName1,
@@ -217,7 +217,7 @@ func TestIntegration_TwoConsumersTimeoutWhenFirstDelayedError(t *testing.T) {
 	go worker2.AwaitFinish()
 
 	// run transaction
-	tx = rmqHandler.NewCSTX(ackCount, cstxTransactionTimeoutMS)
+	tx = cstx.New(ackCount, cstxTransactionTimeoutMS, rmqHandler)
 
 	err = tx.PublishToQueue(structs.RMQPublishRequestTask{
 		QueueName:   queueName1,
@@ -316,7 +316,7 @@ func TestIntegration_TwoConsumersTimeoutWhenSecondDelayedError(t *testing.T) {
 	go worker2.AwaitFinish()
 
 	// run transaction
-	tx = rmqHandler.NewCSTX(ackCount, cstxTransactionTimeoutMS)
+	tx = cstx.New(ackCount, cstxTransactionTimeoutMS, rmqHandler)
 
 	err = tx.PublishToQueue(structs.RMQPublishRequestTask{
 		QueueName:   queueName1,

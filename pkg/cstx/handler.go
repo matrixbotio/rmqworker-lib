@@ -5,7 +5,7 @@ import (
 	"github.com/matrixbotio/rmqworker-lib/pkg/structs"
 )
 
-type handler interface {
+type Handler interface {
 	PublishCSXTToQueue(task structs.RMQPublishRequestTask, cstx CrossServiceTransaction) errs.APIError
 	PublishCSXTToExchange(task structs.PublishToExchangeTask, cstx CrossServiceTransaction) errs.APIError
 
