@@ -37,10 +37,7 @@ func (d *RMQDeliveryHandler) GetResponseRoutingKeyHeader() (string, errs.APIErro
 	// get header
 	headerRaw, exists := d.GetHeader("responseRoutingKey")
 	if !exists {
-		return "", constants.Error(
-			"DATA_HANDLE_ERR",
-			"failed to find responseRoutingKey header in rmq message",
-		)
+		return "", nil
 	}
 
 	// convert to string
