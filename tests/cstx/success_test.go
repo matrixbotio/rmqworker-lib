@@ -60,7 +60,7 @@ func TestIntegration_OneConsumerSuccess(t *testing.T) {
 	go worker1.AwaitFinish()
 
 	// run transaction
-	tx = rmqHandler.NewCSTX(ackCount, cstxTransactionTimeoutMS)
+	tx = cstx.New(ackCount, cstxTransactionTimeoutMS, rmqHandler)
 
 	err = tx.PublishToQueue(structs.RMQPublishRequestTask{
 		QueueName:   queueName1,
@@ -156,7 +156,7 @@ func TestIntegration_TwoConsumersSuccess(t *testing.T) {
 	go worker2.AwaitFinish()
 
 	// run transaction
-	tx = rmqHandler.NewCSTX(ackCount, cstxTransactionTimeoutMS)
+	tx = cstx.New(ackCount, cstxTransactionTimeoutMS, rmqHandler)
 
 	err = tx.PublishToQueue(structs.RMQPublishRequestTask{
 		QueueName:   queueName1,

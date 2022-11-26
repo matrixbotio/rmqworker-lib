@@ -2,7 +2,6 @@ package rmqworker
 
 import (
 	"sync"
-	"time"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -15,16 +14,6 @@ var (
 	cstxAcksConsumer            *RMQWorker
 	cstxAcksConsumerStartedLock sync.Mutex
 )
-
-func (handler *RMQHandler) NewCSTX(ackNum, timeout int32) cstx.CrossServiceTransaction {
-	return cstx.CrossServiceTransaction{
-		Handler:   handler,
-		ID:        uuid.NewString(),
-		AckNum:    ackNum,
-		StartedAt: time.Now().UnixMilli(),
-		Timeout:   timeout,
-	}
-}
 
 func (handler *RMQHandler) StartCSTXAcksConsumer() errs.APIError {
 	cstxAcksConsumerStartedLock.Lock()

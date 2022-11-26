@@ -57,7 +57,7 @@ func TestIntegration_OneConsumerRollbackSuccess(t *testing.T) {
 	go worker1.AwaitFinish()
 
 	// run transaction
-	tx = rmqHandler.NewCSTX(ackCount, cstxTransactionTimeoutMS)
+	tx = cstx.New(ackCount, cstxTransactionTimeoutMS, rmqHandler)
 
 	err = tx.PublishToQueue(structs.RMQPublishRequestTask{
 		QueueName:   queueName1,
@@ -147,7 +147,7 @@ func TestIntegration_TwoConsumersFirstRollbackError(t *testing.T) {
 	go worker2.AwaitFinish()
 
 	// run transaction
-	tx = rmqHandler.NewCSTX(ackCount, cstxTransactionTimeoutMS)
+	tx = cstx.New(ackCount, cstxTransactionTimeoutMS, rmqHandler)
 
 	err = tx.PublishToQueue(structs.RMQPublishRequestTask{
 		QueueName:   queueName1,
@@ -243,7 +243,7 @@ func TestIntegration_TwoConsumersSecondRollbackError(t *testing.T) {
 	go worker2.AwaitFinish()
 
 	// run transaction
-	tx = rmqHandler.NewCSTX(ackCount, cstxTransactionTimeoutMS)
+	tx = cstx.New(ackCount, cstxTransactionTimeoutMS, rmqHandler)
 
 	err = tx.PublishToQueue(structs.RMQPublishRequestTask{
 		QueueName:   queueName1,
