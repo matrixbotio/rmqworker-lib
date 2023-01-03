@@ -64,9 +64,6 @@ func (h *Handler) startResponsesConsumer(props HandlerProps) error {
 		RoutingKey:       h.queueName,
 		UseErrorCallback: true,
 		ErrorCallback:    h.responsesConsumerErrorCallback,
-		//DisableCheckResponseErrors: true,
-		//QueueLength:                props.QueueLength,
-		//DisableOverflow:            props.DisableOverflow,
 	}
 
 	w, apiErr := h.rmqHandler.NewRMQWorker(spec)

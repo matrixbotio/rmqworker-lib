@@ -2,6 +2,7 @@ package syncrpc
 
 import (
 	"encoding/json"
+	"sync"
 	"testing"
 
 	"github.com/matrixbotio/constants-lib"
@@ -11,13 +12,20 @@ import (
 	"github.com/matrixbotio/rmqworker-lib/pkg/structs"
 )
 
+var startCSTXAcksConsumerOnce sync.Once
+
 type requestResponseData struct {
 	UniqNumber int
 }
 
 // run simulator of an external service that gets our requests
 // responses to us back with the same data as form request
-func runWorker(t *testing.T, rmqHandler *rmqworker.RMQHandler) {
+func runWorker(t *testing.T, rmqHandler *rmqworker.RMQHandler, requestsExchange, responsesExchange string) {
+	startCSTXAcksConsumerOnce.Do(func() {
+		apiErr := rmqHandler.StartCSTXAcksConsumer()
+		require.Nil(t, apiErr)
+	})
+
 	w, apiErr := rmqHandler.NewRMQWorker(rmqworker.WorkerTask{
 		QueueName:  requestsExchange,
 		RoutingKey: requestsExchange,
@@ -42,6 +50,14 @@ func runWorker(t *testing.T, rmqHandler *rmqworker.RMQHandler) {
 				RoutingKey:    responseRoutingKeyHeader,
 			})
 			require.Nil(t, apiErr)
+
+			// logic in case of cstx - always do Commit()
+			if transaction := deliveryHandler.GetCSTX(rmqHandler); transaction.ID != "" {
+				go func() {
+					err := transaction.Commit()
+					require.NoError(t, err)
+				}()
+			}
 		},
 		FromExchange:     requestsExchange,
 		ExchangeType:     "topic",
