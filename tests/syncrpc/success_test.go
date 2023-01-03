@@ -20,8 +20,11 @@ func TestIntegration_Success(t *testing.T) {
 		t.Skip()
 	}
 
+	requestsExchange := requestsExchange + t.Name()
+	responsesExchange := responsesExchange + t.Name()
+
 	rmqHandler := tests.GetHandler(t)
-	runWorker(t, rmqHandler)
+	runWorker(t, rmqHandler, requestsExchange, responsesExchange)
 
 	// our 3 rpc-handlers
 	logger := zaptest.NewLogger(t)

@@ -7,6 +7,8 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/matrixbotio/rmqworker-lib/pkg/cstx"
+	"github.com/matrixbotio/rmqworker-lib/pkg/errs"
 	"github.com/matrixbotio/rmqworker-lib/pkg/structs"
 )
 
@@ -22,13 +24,20 @@ func (h *Handler) ExecuteRequest(ctx context.Context, requestData any) ([]byte, 
 	h.consumerResponses.Store(requestID, responseCh)
 	defer h.consumerResponses.Delete(requestID)
 
-	apiErr := h.rmqHandler.PublishToExchange(structs.PublishToExchangeTask{
+	taskToPublish := structs.PublishToExchangeTask{
 		ResponseRoutingKey: h.queueName,
 		CorrelationID:      requestID,
 		Message:            requestData,
 		ExchangeName:       h.props.RequestsExchange,
 		RoutingKey:         h.props.RequestsExchange,
-	})
+	}
+
+	var apiErr errs.APIError
+	if tx, ok := cstx.GetCstx(ctx); ok {
+		apiErr = tx.PublishToExchange(taskToPublish)
+	} else {
+		apiErr = h.rmqHandler.PublishToExchange(taskToPublish)
+	}
 	if apiErr != nil {
 		return nil, fmt.Errorf("publish request to exchange: %w", *apiErr)
 	}
