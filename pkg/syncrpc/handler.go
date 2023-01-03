@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 
 	"github.com/matrixbotio/rmqworker-lib"
@@ -40,7 +41,7 @@ func NewHandler(rmqHandler *rmqworker.RMQHandler, logger *zap.Logger, props Hand
 		rmqHandler: rmqHandler,
 		logger:     logger,
 		props:      props,
-		queueName:  fmt.Sprintf("syncrpc:%s:%s", props.ServiceTag, props.ResponsesExchange),
+		queueName:  fmt.Sprintf("%s-%s", props.ServiceTag, uuid.NewString()),
 	}
 
 	if err := h.startResponsesConsumer(props); err != nil {
