@@ -29,8 +29,9 @@ func TestIntegration_Success(t *testing.T) {
 	// our 3 rpc-handlers
 	logger := zaptest.NewLogger(t)
 	handlerProps := syncrpc.HandlerProps{
-		RequestsExchange:  requestsExchange,
-		ResponsesExchange: responsesExchange,
+		RequestsExchange:           requestsExchange,
+		RequestsExchangeRoutingKey: requestsExchange + "-r-key",
+		ResponsesExchange:          responsesExchange,
 	}
 
 	handlerProps.ServiceTag = "service-1"

@@ -29,7 +29,7 @@ func (h *Handler) ExecuteRequest(ctx context.Context, requestData any) ([]byte, 
 		CorrelationID:      requestID,
 		Message:            requestData,
 		ExchangeName:       h.props.RequestsExchange,
-		RoutingKey:         h.props.RequestsExchange,
+		RoutingKey:         h.props.RequestsExchangeRoutingKey,
 	}
 
 	var apiErr errs.APIError
