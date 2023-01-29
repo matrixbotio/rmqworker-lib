@@ -36,9 +36,10 @@ func TestIntegration_SuccessWithCstx(t *testing.T) {
 		rmqHandler,
 		zaptest.NewLogger(t),
 		syncrpc.HandlerProps{
-			RequestsExchange:  requestsExchange,
-			ResponsesExchange: responsesExchange,
-			ServiceTag:        "cstx-service",
+			RequestsExchange:           requestsExchange,
+			RequestsExchangeRoutingKey: requestsExchange + "-r-key",
+			ResponsesExchange:          responsesExchange,
+			ServiceTag:                 "cstx-service",
 		},
 	)
 	require.NoError(t, err)

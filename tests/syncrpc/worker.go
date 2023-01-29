@@ -28,7 +28,7 @@ func runWorker(t *testing.T, rmqHandler *rmqworker.RMQHandler, requestsExchange,
 
 	w, apiErr := rmqHandler.NewRMQWorker(rmqworker.WorkerTask{
 		QueueName:  requestsExchange,
-		RoutingKey: requestsExchange,
+		RoutingKey: requestsExchange + "-r-key",
 
 		ISQueueDurable: true,
 		ISAutoDelete:   false,

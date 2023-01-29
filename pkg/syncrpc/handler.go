@@ -11,8 +11,9 @@ import (
 )
 
 type HandlerProps struct {
-	RequestsExchange  string
-	ResponsesExchange string
+	RequestsExchange           string
+	RequestsExchangeRoutingKey string
+	ResponsesExchange          string
 
 	ServiceTag string
 }
@@ -32,6 +33,9 @@ func NewHandler(rmqHandler *rmqworker.RMQHandler, logger *zap.Logger, props Hand
 	}
 	if props.ResponsesExchange == "" {
 		return nil, fmt.Errorf("ResponsesExchange is empty")
+	}
+	if props.RequestsExchangeRoutingKey == "" {
+		return nil, fmt.Errorf("RequestsExchangeRoutingKey is empty")
 	}
 	if props.ServiceTag == "" {
 		return nil, fmt.Errorf("ServiceTag is empty")

@@ -74,7 +74,7 @@ func getHandler() *rmqworker.RMQHandler {
 func runWorker(rmqHandler *rmqworker.RMQHandler) {
 	w, apiErr := rmqHandler.NewRMQWorker(rmqworker.WorkerTask{
 		QueueName:  requestsExchange,
-		RoutingKey: requestsExchange,
+		RoutingKey: requestsExchange + "-r-key",
 
 		ISQueueDurable: true,
 		ISAutoDelete:   false,

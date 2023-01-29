@@ -38,9 +38,10 @@ func main() {
 	zap.L().Info("Sending message")
 
 	handlerProps := syncrpc.HandlerProps{
-		RequestsExchange:  requestsExchange,
-		ResponsesExchange: responsesExchange,
-		ServiceTag:        "service-1",
+		RequestsExchange:           requestsExchange,
+		RequestsExchangeRoutingKey: requestsExchange + "-r-key",
+		ResponsesExchange:          responsesExchange,
+		ServiceTag:                 "service-1",
 	}
 
 	handler, err := syncrpc.NewHandler(rmqHandler, zap.L(), handlerProps)
