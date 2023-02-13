@@ -28,20 +28,20 @@ func TestIntegration_Success(t *testing.T) {
 
 	// our 3 rpc-handlers
 	logger := zaptest.NewLogger(t)
-	handlerProps := syncrpc.HandlerProps{
+	serviceProps := syncrpc.ServiceProps{
 		RequestsExchange:           requestsExchange,
 		RequestsExchangeRoutingKey: requestsExchange + "-r-key",
 		ResponsesExchange:          responsesExchange,
 	}
 
-	handlerProps.ServiceTag = "service-1"
-	handler1, err := syncrpc.NewHandler(rmqHandler, logger, handlerProps)
+	serviceProps.ServiceTag = "service-1"
+	service1, err := syncrpc.NewService(rmqHandler, logger, serviceProps)
 	require.NoError(t, err)
 
-	handlerProps.ServiceTag = "service-2"
-	handler2, err := syncrpc.NewHandler(rmqHandler, logger, handlerProps)
+	serviceProps.ServiceTag = "service-2"
+	service2, err := syncrpc.NewService(rmqHandler, logger, serviceProps)
 	require.NoError(t, err)
-	handler3, err := syncrpc.NewHandler(rmqHandler, logger, handlerProps)
+	service3, err := syncrpc.NewService(rmqHandler, logger, serviceProps)
 	require.NoError(t, err)
 
 	// test
@@ -49,9 +49,9 @@ func TestIntegration_Success(t *testing.T) {
 	wg.Add(50 + 50 + 50)
 
 	j := 0
-	for _, h := range []*syncrpc.Handler{handler1, handler2, handler3} {
+	for _, h := range []*syncrpc.Service{service1, service2, service3} {
 		for i := 0; i < 50; i++ {
-			go func(h *syncrpc.Handler, j int) {
+			go func(h *syncrpc.Service, j int) {
 				defer wg.Done()
 
 				data, err := h.ExecuteRequest(context.Background(), requestResponseData{j})

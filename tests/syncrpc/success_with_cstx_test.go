@@ -32,10 +32,10 @@ func TestIntegration_SuccessWithCstx(t *testing.T) {
 	rmqHandler := tests.GetHandler(t)
 	runWorker(t, rmqHandler, requestsExchange, responsesExchange)
 
-	handler, err := syncrpc.NewHandler(
+	service, err := syncrpc.NewService(
 		rmqHandler,
 		zaptest.NewLogger(t),
-		syncrpc.HandlerProps{
+		syncrpc.ServiceProps{
 			RequestsExchange:           requestsExchange,
 			RequestsExchangeRoutingKey: requestsExchange + "-r-key",
 			ResponsesExchange:          responsesExchange,
@@ -55,7 +55,7 @@ func TestIntegration_SuccessWithCstx(t *testing.T) {
 			tx := cstx.New(cstxAckCount, cstxTransactionTimeoutMS, rmqHandler)
 			ctx := cstx.WithCstx(context.Background(), tx)
 
-			data, err := handler.ExecuteRequest(ctx, requestResponseData{i})
+			data, err := service.ExecuteRequest(ctx, requestResponseData{i})
 			require.NoError(t, err)
 
 			var result requestResponseData

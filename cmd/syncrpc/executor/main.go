@@ -37,19 +37,19 @@ func main() {
 	zap.L().Info("Started")
 	zap.L().Info("Sending message")
 
-	handlerProps := syncrpc.HandlerProps{
+	serviceProps := syncrpc.ServiceProps{
 		RequestsExchange:           requestsExchange,
 		RequestsExchangeRoutingKey: requestsExchange + "-r-key",
 		ResponsesExchange:          responsesExchange,
 		ServiceTag:                 "service-1",
 	}
 
-	handler, err := syncrpc.NewHandler(rmqHandler, zap.L(), handlerProps)
+	service, err := syncrpc.NewService(rmqHandler, zap.L(), serviceProps)
 	if err != nil {
 		panic(err)
 	}
 
-	data, err := handler.ExecuteRequest(context.Background(), outgoingData{MagicNumber: 199})
+	data, err := service.ExecuteRequest(context.Background(), outgoingData{MagicNumber: 199})
 	if err != nil {
 		panic(err)
 	}

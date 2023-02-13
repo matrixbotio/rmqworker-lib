@@ -10,7 +10,7 @@ import (
 	"github.com/matrixbotio/rmqworker-lib"
 )
 
-type HandlerProps struct {
+type ServiceProps struct {
 	RequestsExchange           string
 	RequestsExchangeRoutingKey string
 	ResponsesExchange          string
@@ -18,16 +18,16 @@ type HandlerProps struct {
 	ServiceTag string
 }
 
-type Handler struct {
+type Service struct {
 	rmqHandler *rmqworker.RMQHandler
 	logger     *zap.Logger
-	props      HandlerProps
+	props      ServiceProps
 
 	consumerResponses sync.Map
 	queueName         string
 }
 
-func NewHandler(rmqHandler *rmqworker.RMQHandler, logger *zap.Logger, props HandlerProps) (*Handler, error) {
+func NewService(rmqHandler *rmqworker.RMQHandler, logger *zap.Logger, props ServiceProps) (*Service, error) {
 	if props.RequestsExchange == "" {
 		return nil, fmt.Errorf("RequestsExchange is empty")
 	}
@@ -41,7 +41,7 @@ func NewHandler(rmqHandler *rmqworker.RMQHandler, logger *zap.Logger, props Hand
 		return nil, fmt.Errorf("ServiceTag is empty")
 	}
 
-	h := &Handler{
+	h := &Service{
 		rmqHandler: rmqHandler,
 		logger:     logger,
 		props:      props,

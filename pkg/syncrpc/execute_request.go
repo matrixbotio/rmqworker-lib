@@ -14,29 +14,29 @@ import (
 
 const executeRequestCallMaxTime = time.Minute
 
-func (h *Handler) ExecuteRequest(ctx context.Context, requestData any) ([]byte, error) {
+func (s *Service) ExecuteRequest(ctx context.Context, requestData any) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(ctx, executeRequestCallMaxTime)
 	defer cancel()
 
 	requestID := uuid.NewString()
 
 	responseCh := make(chan consumerResponse, 1)
-	h.consumerResponses.Store(requestID, responseCh)
-	defer h.consumerResponses.Delete(requestID)
+	s.consumerResponses.Store(requestID, responseCh)
+	defer s.consumerResponses.Delete(requestID)
 
 	taskToPublish := structs.PublishToExchangeTask{
-		ResponseRoutingKey: h.queueName,
+		ResponseRoutingKey: s.queueName,
 		CorrelationID:      requestID,
 		Message:            requestData,
-		ExchangeName:       h.props.RequestsExchange,
-		RoutingKey:         h.props.RequestsExchangeRoutingKey,
+		ExchangeName:       s.props.RequestsExchange,
+		RoutingKey:         s.props.RequestsExchangeRoutingKey,
 	}
 
 	var apiErr errs.APIError
 	if tx, ok := cstx.GetCstx(ctx); ok {
 		apiErr = tx.PublishToExchange(taskToPublish)
 	} else {
-		apiErr = h.rmqHandler.PublishToExchange(taskToPublish)
+		apiErr = s.rmqHandler.PublishToExchange(taskToPublish)
 	}
 	if apiErr != nil {
 		return nil, fmt.Errorf("publish request to exchange: %w", *apiErr)
