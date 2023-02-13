@@ -20,9 +20,9 @@ type consumerResponse struct {
 	error error
 }
 
-func (h *Handler) responsesConsumerCallback(_ *rmqworker.RMQWorker, deliveryHandler rmqworker.RMQDeliveryHandler) {
+func (s *Service) responsesConsumerCallback(_ *rmqworker.RMQWorker, deliveryHandler rmqworker.RMQDeliveryHandler) {
 	var responseCh chan consumerResponse
-	if ch, found := h.consumerResponses.Load(deliveryHandler.GetCorrelationID()); !found {
+	if ch, found := s.consumerResponses.Load(deliveryHandler.GetCorrelationID()); !found {
 		return
 	} else {
 		responseCh = ch.(chan consumerResponse)
@@ -39,34 +39,34 @@ func (h *Handler) responsesConsumerCallback(_ *rmqworker.RMQWorker, deliveryHand
 	close(responseCh)
 }
 
-func (h *Handler) responsesConsumerErrorCallback(_ *rmqworker.RMQWorker, err *constants.APIError) {
+func (s *Service) responsesConsumerErrorCallback(_ *rmqworker.RMQWorker, err *constants.APIError) {
 	if err != nil {
-		h.logger.Error(
-			"syncrpc.handler responsesConsumerErrorCallback",
+		s.logger.Error(
+			"syncrpc.service responsesConsumerErrorCallback",
 			zap.Error(*err),
-			zap.String("queue", h.queueName),
-			zap.String("serviceTag", h.props.ServiceTag),
+			zap.String("queue", s.queueName),
+			zap.String("serviceTag", s.props.ServiceTag),
 		)
 	}
 }
 
-func (h *Handler) startResponsesConsumer(props HandlerProps) error {
+func (s *Service) startResponsesConsumer(props ServiceProps) error {
 	spec := rmqworker.WorkerTask{
-		QueueName:        h.queueName,
+		QueueName:        s.queueName,
 		ISQueueDurable:   true,
 		ISAutoDelete:     false,
-		Callback:         h.responsesConsumerCallback,
+		Callback:         s.responsesConsumerCallback,
 		FromExchange:     props.ResponsesExchange,
 		ExchangeType:     exchangeType,
 		ConsumersCount:   consumersCount,
-		WorkerName:       "worker:" + h.queueName,
+		WorkerName:       "worker:" + s.queueName,
 		MessagesLifetime: messagesLifetimeMS,
-		RoutingKey:       h.queueName,
+		RoutingKey:       s.queueName,
 		UseErrorCallback: true,
-		ErrorCallback:    h.responsesConsumerErrorCallback,
+		ErrorCallback:    s.responsesConsumerErrorCallback,
 	}
 
-	w, apiErr := h.rmqHandler.NewRMQWorker(spec)
+	w, apiErr := s.rmqHandler.NewRMQWorker(spec)
 	if apiErr != nil {
 		return fmt.Errorf("create rmqWorker: %w", *apiErr)
 	}
