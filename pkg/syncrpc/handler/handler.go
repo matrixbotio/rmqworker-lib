@@ -1,4 +1,4 @@
-package syncrpc
+package handler
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"github.com/matrixbotio/constants-lib"
 
 	"github.com/matrixbotio/rmqworker-lib"
-	"github.com/matrixbotio/rmqworker-lib/pkg/syncrpc/dependencies"
+	"github.com/matrixbotio/rmqworker-lib/pkg/syncrpc/handler/dependencies"
 )
 
 type HandlerProps struct {
@@ -24,7 +24,7 @@ type Handler struct {
 	worker *rmqworker.RMQWorker
 }
 
-func NewHandler(rmqHandler dependencies.RMQHandler, props HandlerProps, callback Callback) *Handler {
+func New(rmqHandler dependencies.RMQHandler, props HandlerProps, callback Callback) *Handler {
 	return &Handler{
 		rmqHandler: rmqHandler,
 		props:      props,
@@ -43,7 +43,7 @@ func (h *Handler) Start() error {
 		ISQueueDurable: true,
 		ISAutoDelete:   false,
 		Callback: func(w *rmqworker.RMQWorker, deliveryHandler rmqworker.RMQDeliveryHandler) {
-			h.callbackWithResponse(&deliveryHandler, h.callback)
+			h.callbackWithResponse(&deliveryHandler)
 		},
 		ID:               queue,
 		FromExchange:     h.props.Exchange,

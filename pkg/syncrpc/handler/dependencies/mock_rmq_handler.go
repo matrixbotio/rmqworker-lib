@@ -4,6 +4,7 @@ package dependencies
 
 import (
 	constants "github.com/matrixbotio/constants-lib"
+
 	errs "github.com/matrixbotio/rmqworker-lib/pkg/errs"
 
 	mock "github.com/stretchr/testify/mock"

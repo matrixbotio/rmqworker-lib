@@ -8,7 +8,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/matrixbotio/rmqworker-lib"
-	"github.com/matrixbotio/rmqworker-lib/pkg/syncrpc"
+	"github.com/matrixbotio/rmqworker-lib/pkg/syncrpc/service"
 )
 
 const (
@@ -37,14 +37,14 @@ func main() {
 	zap.L().Info("Started")
 	zap.L().Info("Sending message")
 
-	serviceProps := syncrpc.ServiceProps{
+	serviceProps := service.ServiceProps{
 		RequestsExchange:           requestsExchange,
 		RequestsExchangeRoutingKey: requestsExchange + "-r-key",
 		ResponsesExchange:          responsesExchange,
 		ServiceTag:                 "service-1",
 	}
 
-	service, err := syncrpc.NewService(rmqHandler, zap.L(), serviceProps)
+	service, err := service.New(rmqHandler, zap.L(), serviceProps)
 	if err != nil {
 		panic(err)
 	}

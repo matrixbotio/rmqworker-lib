@@ -1,23 +1,23 @@
-package syncrpc
+package handler
 
 import (
 	"github.com/matrixbotio/constants-lib"
 	"go.uber.org/zap"
 
 	"github.com/matrixbotio/rmqworker-lib"
-	"github.com/matrixbotio/rmqworker-lib/pkg/syncrpc/dependencies"
+	"github.com/matrixbotio/rmqworker-lib/pkg/syncrpc/handler/dependencies"
 )
 
 type Callback func(w *rmqworker.RMQWorker, deliveryHandler dependencies.RMQDeliveryHandler) (any, error)
 
-func (h *Handler) callbackWithResponse(deliveryHandler dependencies.RMQDeliveryHandler, callback Callback) {
-	response, err := callback(h.worker, deliveryHandler)
+func (h *Handler) callbackWithResponse(deliveryHandler dependencies.RMQDeliveryHandler) {
+	response, err := h.callback(h.worker, deliveryHandler)
 
 	exchange := h.props.Exchange
 	responseRoutingKey, _ := deliveryHandler.GetResponseRoutingKeyHeader()
 
 	if responseRoutingKey != "" {
-		responseExchangeName := h.props.Exchange + ".response"
+		responseExchangeName := exchange + ".response"
 
 		errRespTask := rmqworker.RMQPublishResponseTask{
 			ExchangeName:       responseExchangeName,
@@ -25,15 +25,12 @@ func (h *Handler) callbackWithResponse(deliveryHandler dependencies.RMQDeliveryH
 			CorrelationID:      deliveryHandler.GetCorrelationID(),
 			MessageBody:        response,
 		}
-		var responseErr *constants.APIError = nil
+		var responseErr *constants.APIError
 		if err != nil {
 			responseErr = constants.Error("BASE_INTERNAL_ERROR", err.Error())
 		}
 
-		if err := h.rmqHandler.SendRMQResponse(
-			&errRespTask,
-			responseErr,
-		); err != nil {
+		if err := h.rmqHandler.SendRMQResponse(&errRespTask, responseErr); err != nil {
 			zap.L().Error("SendRMQResponse", zap.Error(*err), zap.String("method_name", exchange))
 		}
 	}
