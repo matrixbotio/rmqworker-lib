@@ -12,7 +12,7 @@ import (
 	"go.uber.org/zap/zaptest"
 
 	"github.com/matrixbotio/rmqworker-lib/pkg/cstx"
-	"github.com/matrixbotio/rmqworker-lib/pkg/syncrpc"
+	"github.com/matrixbotio/rmqworker-lib/pkg/syncrpc/service"
 	"github.com/matrixbotio/rmqworker-lib/tests"
 )
 
@@ -32,10 +32,10 @@ func TestIntegration_SuccessWithCstx(t *testing.T) {
 	rmqHandler := tests.GetHandler(t)
 	runWorker(t, rmqHandler, requestsExchange, responsesExchange)
 
-	service, err := syncrpc.NewService(
+	service, err := service.New(
 		rmqHandler,
 		zaptest.NewLogger(t),
-		syncrpc.ServiceProps{
+		service.ServiceProps{
 			RequestsExchange:           requestsExchange,
 			RequestsExchangeRoutingKey: requestsExchange + "-r-key",
 			ResponsesExchange:          responsesExchange,

@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 
-	"github.com/matrixbotio/rmqworker-lib/pkg/syncrpc"
+	"github.com/matrixbotio/rmqworker-lib/pkg/syncrpc/service"
 	"github.com/matrixbotio/rmqworker-lib/tests"
 )
 
@@ -28,20 +28,20 @@ func TestIntegration_Success(t *testing.T) {
 
 	// our 3 rpc-handlers
 	logger := zaptest.NewLogger(t)
-	serviceProps := syncrpc.ServiceProps{
+	serviceProps := service.ServiceProps{
 		RequestsExchange:           requestsExchange,
 		RequestsExchangeRoutingKey: requestsExchange + "-r-key",
 		ResponsesExchange:          responsesExchange,
 	}
 
 	serviceProps.ServiceTag = "service-1"
-	service1, err := syncrpc.NewService(rmqHandler, logger, serviceProps)
+	service1, err := service.New(rmqHandler, logger, serviceProps)
 	require.NoError(t, err)
 
 	serviceProps.ServiceTag = "service-2"
-	service2, err := syncrpc.NewService(rmqHandler, logger, serviceProps)
+	service2, err := service.New(rmqHandler, logger, serviceProps)
 	require.NoError(t, err)
-	service3, err := syncrpc.NewService(rmqHandler, logger, serviceProps)
+	service3, err := service.New(rmqHandler, logger, serviceProps)
 	require.NoError(t, err)
 
 	// test
@@ -49,9 +49,9 @@ func TestIntegration_Success(t *testing.T) {
 	wg.Add(50 + 50 + 50)
 
 	j := 0
-	for _, h := range []*syncrpc.Service{service1, service2, service3} {
+	for _, h := range []*service.Service{service1, service2, service3} {
 		for i := 0; i < 50; i++ {
-			go func(h *syncrpc.Service, j int) {
+			go func(h *service.Service, j int) {
 				defer wg.Done()
 
 				data, err := h.ExecuteRequest(context.Background(), requestResponseData{j})

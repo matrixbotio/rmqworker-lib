@@ -1,4 +1,4 @@
-package syncrpc
+package service
 
 import (
 	"fmt"
@@ -27,7 +27,7 @@ type Service struct {
 	queueName         string
 }
 
-func NewService(rmqHandler *rmqworker.RMQHandler, logger *zap.Logger, props ServiceProps) (*Service, error) {
+func New(rmqHandler *rmqworker.RMQHandler, logger *zap.Logger, props ServiceProps) (*Service, error) {
 	if props.RequestsExchange == "" {
 		return nil, fmt.Errorf("RequestsExchange is empty")
 	}

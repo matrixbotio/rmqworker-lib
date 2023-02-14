@@ -1,4 +1,4 @@
-package syncrpc
+package service
 
 import (
 	"context"
