@@ -9,13 +9,13 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/matrixbotio/rmqworker-lib"
-	dependencies2 "github.com/matrixbotio/rmqworker-lib/pkg/syncrpc/handler/dependencies"
+	"github.com/matrixbotio/rmqworker-lib/pkg/syncrpc/handler/dependencies"
 )
 
 func TestCallbackWithResponseSuccessful(t *testing.T) {
 	// given
-	deliveryHandler := dependencies2.NewMockRMQDeliveryHandler(t)
-	rmqHandler := dependencies2.NewMockRMQHandler(t)
+	deliveryHandler := dependencies.NewMockRMQDeliveryHandler(t)
+	rmqHandler := dependencies.NewMockRMQHandler(t)
 
 	deliveryHandler.EXPECT().GetResponseRoutingKeyHeader().Return("mockedResponseRoutingKey", nil)
 	deliveryHandler.EXPECT().GetCorrelationID().Return("mockedCorrelationID")
@@ -28,7 +28,7 @@ func TestCallbackWithResponseSuccessful(t *testing.T) {
 			actualResult = task.MessageBody.(string)
 		}).Return(nil)
 
-	callback := func(w *rmqworker.RMQWorker, deliveryHandler dependencies2.RMQDeliveryHandler) (any, error) {
+	callback := func(w *rmqworker.RMQWorker, deliveryHandler dependencies.RMQDeliveryHandler) (any, error) {
 		return expectedResult, nil
 	}
 
@@ -46,8 +46,8 @@ func TestCallbackWithResponseSuccessful(t *testing.T) {
 
 func TestCallbackWithResponseErrorResult(t *testing.T) {
 	// given
-	deliveryHandler := dependencies2.NewMockRMQDeliveryHandler(t)
-	rmqHandler := dependencies2.NewMockRMQHandler(t)
+	deliveryHandler := dependencies.NewMockRMQDeliveryHandler(t)
+	rmqHandler := dependencies.NewMockRMQHandler(t)
 
 	deliveryHandler.EXPECT().GetResponseRoutingKeyHeader().Return("mockedResponseRoutingKey", nil)
 	deliveryHandler.EXPECT().GetCorrelationID().Return("mockedCorrelationID")
@@ -60,7 +60,7 @@ func TestCallbackWithResponseErrorResult(t *testing.T) {
 
 	errMsg := "mocked error"
 
-	callback := func(w *rmqworker.RMQWorker, deliveryHandler dependencies2.RMQDeliveryHandler) (any, error) {
+	callback := func(w *rmqworker.RMQWorker, deliveryHandler dependencies.RMQDeliveryHandler) (any, error) {
 		return nil, errors.New(errMsg)
 	}
 
