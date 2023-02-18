@@ -1,4 +1,4 @@
-package dependencies
+package handler
 
 import (
 	"github.com/matrixbotio/constants-lib"
