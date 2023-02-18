@@ -72,21 +72,21 @@ func (handler *RMQHandler) StartCSTXAcksConsumer() errs.APIError {
 	return nil
 }
 
-func (deliveryHandler RMQDeliveryHandler) GetCSTX(handler *RMQHandler) cstx.CrossServiceTransaction {
+func (d *RMQDeliveryHandler) GetCSTX(handler *RMQHandler) cstx.CrossServiceTransaction {
 	var CSTX cstx.CrossServiceTransaction
-	ID, exists := deliveryHandler.GetHeader(cstx.HeaderID)
+	ID, exists := d.GetHeader(cstx.HeaderID)
 	if exists {
 		CSTX.ID = ID.(string)
 	}
-	ackNum, exists := deliveryHandler.GetHeader(cstx.HeaderAckNum)
+	ackNum, exists := d.GetHeader(cstx.HeaderAckNum)
 	if exists {
 		CSTX.AckNum = ackNum.(int32)
 	}
-	timeout, exists := deliveryHandler.GetHeader(cstx.HeaderTimeout)
+	timeout, exists := d.GetHeader(cstx.HeaderTimeout)
 	if exists {
 		CSTX.Timeout = timeout.(int32)
 	}
-	startedAt, exists := deliveryHandler.GetHeader(cstx.HeaderStartedAt)
+	startedAt, exists := d.GetHeader(cstx.HeaderStartedAt)
 	if exists {
 		CSTX.StartedAt = startedAt.(int64)
 	}
