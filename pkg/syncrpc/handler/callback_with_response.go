@@ -1,21 +1,35 @@
 package handler
 
 import (
+	"encoding/json"
+
 	"github.com/matrixbotio/constants-lib"
 	"go.uber.org/zap"
 
 	"github.com/matrixbotio/rmqworker-lib"
 )
 
-type Callback func(w *rmqworker.RMQWorker, deliveryHandler RMQDeliveryHandler) (any, error)
+type Callback func(w *rmqworker.RMQWorker, deliveryHandler RMQDeliveryHandler, request any) (any, error)
 
-func (h *Handler) callbackWithResponse(deliveryHandler RMQDeliveryHandler) {
-	response, err := h.callback(h.worker, deliveryHandler)
+func (h *Handler[T]) callbackWithResponse(deliveryHandler RMQDeliveryHandler) {
+	bodyBytes := deliveryHandler.GetMessageBody()
 
-	exchange := h.props.Exchange
+	var request T
+	var response any
+	var err error
+
+	if len(bodyBytes) > 0 {
+		err = json.Unmarshal(bodyBytes, &request)
+	}
+
+	if err == nil {
+		response, err = h.callback(h.worker, deliveryHandler, request)
+	}
+
 	responseRoutingKey, _ := deliveryHandler.GetResponseRoutingKeyHeader()
 
 	if responseRoutingKey != "" {
+		exchange := h.props.Exchange
 		responseExchangeName := exchange + ".response"
 
 		errRespTask := rmqworker.RMQPublishResponseTask{

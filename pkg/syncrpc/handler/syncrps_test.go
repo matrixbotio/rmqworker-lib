@@ -16,10 +16,9 @@ func TestCallbackWithResponseSuccessful(t *testing.T) {
 	deliveryHandler := NewMockRMQDeliveryHandler(t)
 	rmqHandler := NewMockRMQHandler(t)
 
+	deliveryHandler.EXPECT().GetMessageBody().Return([]byte("\"test\""))
 	deliveryHandler.EXPECT().GetResponseRoutingKeyHeader().Return("mockedResponseRoutingKey", nil)
 	deliveryHandler.EXPECT().GetCorrelationID().Return("mockedCorrelationID")
-
-	expectedResult := "ok"
 
 	actualResult := ""
 	rmqHandler.EXPECT().SendRMQResponse(mock.Anything, (*constants.APIError)(nil)).
@@ -27,11 +26,15 @@ func TestCallbackWithResponseSuccessful(t *testing.T) {
 			actualResult = task.MessageBody.(string)
 		}).Return(nil)
 
-	callback := func(w *rmqworker.RMQWorker, deliveryHandler RMQDeliveryHandler) (any, error) {
+	expectedResult := "ok"
+	var parsedRequest string
+
+	callback := func(w *rmqworker.RMQWorker, deliveryHandler RMQDeliveryHandler, request any) (any, error) {
+		parsedRequest = request.(string)
 		return expectedResult, nil
 	}
 
-	handler := Handler{
+	handler := Handler[string]{
 		rmqHandler: rmqHandler,
 		callback:   callback,
 	}
@@ -40,6 +43,7 @@ func TestCallbackWithResponseSuccessful(t *testing.T) {
 	handler.callbackWithResponse(deliveryHandler)
 
 	// then
+	assert.Equal(t, "test", parsedRequest)
 	assert.Equal(t, expectedResult, actualResult)
 }
 
@@ -48,6 +52,7 @@ func TestCallbackWithResponseErrorResult(t *testing.T) {
 	deliveryHandler := NewMockRMQDeliveryHandler(t)
 	rmqHandler := NewMockRMQHandler(t)
 
+	deliveryHandler.EXPECT().GetMessageBody().Return([]byte("\"test\""))
 	deliveryHandler.EXPECT().GetResponseRoutingKeyHeader().Return("mockedResponseRoutingKey", nil)
 	deliveryHandler.EXPECT().GetCorrelationID().Return("mockedCorrelationID")
 
@@ -59,11 +64,11 @@ func TestCallbackWithResponseErrorResult(t *testing.T) {
 
 	errMsg := "mocked error"
 
-	callback := func(w *rmqworker.RMQWorker, deliveryHandler RMQDeliveryHandler) (any, error) {
+	callback := func(w *rmqworker.RMQWorker, deliveryHandler RMQDeliveryHandler, request any) (any, error) {
 		return nil, errors.New(errMsg)
 	}
 
-	handler := Handler{
+	handler := Handler[string]{
 		rmqHandler: rmqHandler,
 		callback:   callback,
 	}

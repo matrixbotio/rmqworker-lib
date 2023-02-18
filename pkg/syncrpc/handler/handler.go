@@ -15,23 +15,23 @@ type Props struct {
 	MessagesLifetime int64 // milliseconds. 0 to disable limit
 }
 
-type Handler struct {
+type Handler[T any] struct {
 	rmqHandler RMQHandler
 	props      Props
-	callback   Callback
 
-	worker *rmqworker.RMQWorker
+	worker   *rmqworker.RMQWorker
+	callback Callback
 }
 
-func New(rmqHandler RMQHandler, props Props, callback Callback) *Handler {
-	return &Handler{
+func New[T any](rmqHandler RMQHandler, props Props, callback Callback) *Handler[T] {
+	return &Handler[T]{
 		rmqHandler: rmqHandler,
 		props:      props,
 		callback:   callback,
 	}
 }
 
-func (h *Handler) Start() error {
+func (h *Handler[T]) Start() error {
 	queue := h.props.Exchange
 	if h.props.RoutingKey != "" {
 		queue = queue + "-" + h.props.RoutingKey
@@ -65,6 +65,6 @@ func (h *Handler) Start() error {
 	return nil
 }
 
-func (h *Handler) Stop() {
+func (h *Handler[T]) Stop() {
 	h.worker.Stop()
 }
