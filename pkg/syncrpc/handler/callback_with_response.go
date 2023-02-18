@@ -5,12 +5,11 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/matrixbotio/rmqworker-lib"
-	"github.com/matrixbotio/rmqworker-lib/pkg/syncrpc/handler/dependencies"
 )
 
-type Callback func(w *rmqworker.RMQWorker, deliveryHandler dependencies.RMQDeliveryHandler) (any, error)
+type Callback func(w *rmqworker.RMQWorker, deliveryHandler RMQDeliveryHandler) (any, error)
 
-func (h *Handler) callbackWithResponse(deliveryHandler dependencies.RMQDeliveryHandler) {
+func (h *Handler) callbackWithResponse(deliveryHandler RMQDeliveryHandler) {
 	response, err := h.callback(h.worker, deliveryHandler)
 
 	exchange := h.props.Exchange
