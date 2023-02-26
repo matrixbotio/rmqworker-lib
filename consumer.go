@@ -3,12 +3,24 @@ package rmqworker
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/matrixbotio/constants-lib"
 	darkmq "github.com/sagleft/darkrmq"
 	"github.com/streadway/amqp"
 )
+
+type consumer struct {
+	Tag       string
+	ManualAck bool
+
+	QueueData DeclareQueueTask
+	Binding   exchandeBindData
+
+	msgHandler    func(delivery RMQDeliveryHandler)
+	errorCallback func(err *constants.APIError)
+}
 
 func (c *consumer) declareQueue(ch *amqp.Channel, task DeclareQueueTask) error {
 	args := amqp.Table{}
@@ -148,24 +160,10 @@ func (c *consumer) Consume(task darkmq.ConsumeTask) error {
 
 	for {
 		select {
-		case msg, chClosed := <-msgs:
-			if !chClosed {
-				return amqp.ErrClosed
+		case delivery, chOpened := <-msgs:
+			if err := c.handleDelivery(delivery, chOpened); err != nil {
+				c.ErrorCallback(err)
 			}
-
-			// get message
-			delivery := NewRMQDeliveryHandler(msg)
-
-			// accept message
-			err := delivery.Accept()
-			if err != nil {
-				c.errorCallback(err)
-				continue
-			}
-
-			// handle message
-			c.msgHandler(delivery)
-
 		case <-task.Ctx.Done():
 			return task.Ctx.Err()
 		}
@@ -177,10 +175,27 @@ func (c *consumer) GetTag() string {
 	return c.Tag
 }
 
-// GetTag - get consumer tag
 func (c *consumer) ErrorCallback(err error) {
 	c.errorCallback(constants.Error(
 		"SERVICE_REQ_FAILED",
 		err.Error(),
 	))
+}
+
+func (c *consumer) handleDelivery(delivery amqp.Delivery, chOpened bool) error {
+	if !chOpened {
+		return fmt.Errorf("handle delivery: %w", amqp.ErrClosed)
+	}
+
+	deliveryHandler := NewRMQDeliveryHandler(delivery)
+
+	if !c.ManualAck {
+		if err := deliveryHandler.Accept(); err != nil {
+			return fmt.Errorf("handle delivery accept message: %s", err.Message)
+		}
+	}
+
+	c.msgHandler(deliveryHandler)
+
+	return nil
 }

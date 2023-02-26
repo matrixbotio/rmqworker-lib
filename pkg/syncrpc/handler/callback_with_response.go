@@ -1,26 +1,19 @@
 package handler
 
 import (
-	"encoding/json"
-
 	"github.com/matrixbotio/constants-lib"
 	"go.uber.org/zap"
 
 	"github.com/matrixbotio/rmqworker-lib"
+	"github.com/matrixbotio/rmqworker-lib/pkg/utils"
 )
 
 type Callback func(w *rmqworker.RMQWorker, deliveryHandler RMQDeliveryHandler, request any) (any, error)
 
 func (h *Handler[T]) callbackWithResponse(deliveryHandler RMQDeliveryHandler) {
-	bodyBytes := deliveryHandler.GetMessageBody()
+	request, err := utils.GetRequest[T](deliveryHandler)
 
-	var request T
 	var response any
-	var err error
-
-	if len(bodyBytes) > 0 {
-		err = json.Unmarshal(bodyBytes, &request)
-	}
 
 	if err == nil {
 		response, err = h.callback(h.worker, deliveryHandler, request)

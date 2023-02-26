@@ -54,7 +54,8 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, errs.APIError) {
 		},
 		conn: r.conn,
 		rmqConsumer: &consumer{ // consumer
-			Tag: task.WorkerName + "-" + uuid.NewString(),
+			Tag:       task.WorkerName + "-" + uuid.NewString(),
+			ManualAck: task.ManualAck,
 			QueueData: DeclareQueueTask{
 				Name:             task.QueueName,
 				Durable:          task.ISQueueDurable,
