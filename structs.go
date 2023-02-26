@@ -23,17 +23,6 @@ type RMQConnectionData struct {
 	UseTLS   bool   `json:"tls"`
 }
 
-// consumer implement darkmq.Consumer interface
-type consumer struct {
-	Tag string
-
-	QueueData DeclareQueueTask
-	Binding   exchandeBindData
-
-	msgHandler    func(delivery RMQDeliveryHandler)
-	errorCallback func(err *constants.APIError)
-}
-
 type exchandeBindData struct {
 	// required
 	ExchangeName string
@@ -130,6 +119,7 @@ type WorkerTask struct {
 	Timeout                    time.Duration      // timeout to limit worker time
 	TimeoutCallback            RMQTimeoutCallback // timeout callback
 	DoNotStopOnTimeout         bool
+	ManualAck                  bool
 }
 
 // RMQDeliveryCallback - RMQ delivery callback function

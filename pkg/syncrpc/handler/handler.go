@@ -6,6 +6,7 @@ import (
 	"github.com/matrixbotio/constants-lib"
 
 	"github.com/matrixbotio/rmqworker-lib"
+	"github.com/matrixbotio/rmqworker-lib/pkg/utils"
 )
 
 type Props struct {
@@ -32,10 +33,7 @@ func New[T any](rmqHandler RMQHandler, props Props, callback Callback) *Handler[
 }
 
 func (h *Handler[T]) Start() error {
-	queue := h.props.Exchange
-	if h.props.RoutingKey != "" {
-		queue = queue + "-" + h.props.RoutingKey
-	}
+	queue := utils.GetQueueName(h.props.Exchange, h.props.RoutingKey)
 
 	workerTask := rmqworker.WorkerTask{
 		QueueName:      queue,
