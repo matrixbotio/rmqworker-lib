@@ -7,7 +7,6 @@ import (
 	"github.com/beefsack/go-rate"
 	"github.com/matrixbotio/constants-lib"
 	darkmq "github.com/sagleft/darkrmq"
-	simplecron "github.com/sagleft/simple-cron"
 	"github.com/streadway/amqp"
 	"go.uber.org/zap"
 
@@ -44,7 +43,6 @@ type RMQWorker struct {
 	useErrorCallback bool
 	errorCallback    RMQErrorCallback
 	timeoutCallback  RMQTimeoutCallback
-	cronHandler      *simplecron.CronObject
 
 	Logger      *zap.Logger
 	rateLimiter *rate.RateLimiter
@@ -134,12 +132,6 @@ type RMQTimeoutCallback func(w *RMQWorker)
 type rmqWorkerData struct {
 	Name                string // worker name
 	CheckResponseErrors bool   // whether to check the error code in the messages
-
-	// if only one response is expected,
-	// then a timeout can be applied
-	UseResponseTimeout  bool
-	WaitResponseTimeout time.Duration
-	DoNotStopOnTimeout  bool
 
 	// optional params
 	ID         string // worker ID for logs
