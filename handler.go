@@ -2,11 +2,9 @@ package rmqworker
 
 import (
 	"context"
-	"log"
-
+	"fmt"
 	"github.com/matrixbotio/constants-lib"
 	darkmq "github.com/sagleft/darkrmq"
-	simplecron "github.com/sagleft/simple-cron"
 
 	"github.com/matrixbotio/rmqworker-lib/pkg/errs"
 	"github.com/matrixbotio/rmqworker-lib/pkg/structs"
@@ -31,10 +29,14 @@ func NewRMQHandler(task CreateRMQHandlerTask) (*RMQHandler, errs.APIError) {
 		task: task,
 	}
 
-	return &r, r.rmqInit()
+	if err := r.rmqInit(); err != nil {
+		return nil, constants.Error("BASE_INTERNAL_ERROR", err.Error()) // TBD: return error
+	}
+
+	return &r, nil
 }
 
-func (r *RMQHandler) rmqInit() errs.APIError {
+func (r *RMQHandler) rmqInit() error {
 	// init rmq connector
 	r.conn = darkmq.NewConnector(darkmq.Config{
 		Wait: waitBetweenReconnect,
@@ -44,59 +46,32 @@ func (r *RMQHandler) rmqInit() errs.APIError {
 	r.connPool = darkmq.NewPool(r.conn)
 	r.connPoolLightning = darkmq.NewLightningPool(r.conn)
 
-	// setup conn listener
-	connEstablished := make(chan struct{})
-	markConnected := func() {
-		if len(connEstablished) == 0 {
-			connEstablished <- struct{}{}
-		}
-	}
-	r.conn.AddDialedListener(func(d darkmq.Dialed) {
-		markConnected()
-	})
-
-	// limit conn timeout
-	h := simplecron.NewRuntimeLimitHandler(handlerFirstConnTimeout, func() {
-		go r.rmqConnect()
-		<-connEstablished
-	})
-	if h.Run() {
-		markConnected() // to close goroutine
-		return constants.Error(
-			"SERVICE_REQ_TIMEOUT",
-			"RMQ conn timeout",
-		)
+	if err := r.rmqConnect(); err != nil {
+		return fmt.Errorf("rmq init handler connect: %w", err)
 	}
 
 	// init publishers
 	var err error
 	r.publisher, err = darkmq.NewConstantPublisher(r.connPoolLightning)
 	if err != nil {
-		return constants.Error(
-			"SERVICE_REQ_FAILED",
-			err.Error(),
-		)
+		return fmt.Errorf("rmq init handler publisher: %w", err)
 	}
+
 	return nil
 }
 
-func (r *RMQHandler) rmqConnect() {
+func (r *RMQHandler) rmqConnect() error {
 	dsn := getRMQConnectionURL(r.task.Data)
 
-	// ctx background -- opening a connection without a time limit
-	err := r.conn.Dial(context.Background(), dsn)
-	if err == nil {
-		return
+	ctx, cancel := context.WithTimeout(context.Background(), handlerFirstConnTimeout)
+	defer cancel()
+
+	err := r.conn.Dial(ctx, dsn)
+	if err != nil {
+		return fmt.Errorf("rmq handler connect dial: %w", err)
 	}
 
-	if !r.task.UseErrorCallback {
-		log.Println("[rmq handler error callback is not set] error: " + err.Error())
-		return
-	}
-
-	r.task.ConnectionErrorCallback(constants.Error(
-		"SERVICE_CONN_ERR", "failed to connect: "+err.Error(),
-	))
+	return nil
 }
 
 // NewRMQHandler - clone handler & open new RMQ channel
@@ -233,7 +208,6 @@ func (r *RequestHandler) Send(messageBody interface{}, responseRoutingKey string
 		// reset worker
 		r.remakeFinishedChannel()
 		r.reset()
-		r.Worker.runCron()
 
 		// send request
 		err := r.sendRequest(messageBody, responseRoutingKey)
@@ -248,14 +222,13 @@ func (r *RequestHandler) Send(messageBody interface{}, responseRoutingKey string
 			break
 		}
 	}
-	r.Worker.stopCron()
 	r.pause()
 
 	// return result
 	return r.Response, r.LastError
 }
 
-func (r *RequestHandler) handleTimeout(w *RMQWorker) {
+func (r *RequestHandler) handleTimeout(_ *RMQWorker) {
 	var message string
 	if r.Task.MethodFriendlyName == "" {
 		message = "send RMQ request timeout"
@@ -286,7 +259,7 @@ func (r *RequestHandler) DeleteQueues() errs.APIError {
 }
 
 // request callback
-func (r *RequestHandler) handleMessage(w *RMQWorker, deliveryHandler RMQDeliveryHandler) {
+func (r *RequestHandler) handleMessage(_ *RMQWorker, deliveryHandler RMQDeliveryHandler) {
 	defer r.markFinished()
 
 	if r.IsPaused {
@@ -298,7 +271,7 @@ func (r *RequestHandler) handleMessage(w *RMQWorker, deliveryHandler RMQDelivery
 	}
 }
 
-func (r *RequestHandler) onError(w *RMQWorker, err *constants.APIError) {
+func (r *RequestHandler) onError(_ *RMQWorker, err *constants.APIError) {
 	r.LastError = err
 	r.markFinished()
 }
@@ -323,6 +296,5 @@ func (s *RequestHandlerResponse) Decode(destination interface{}) errs.APIError {
 // Stop handler, cancel consumer
 func (r *RequestHandler) Stop() {
 	r.markFinished()
-	r.Worker.stopCron()
 	r.Worker.Stop()
 }

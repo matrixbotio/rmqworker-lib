@@ -33,8 +33,6 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/sagleft/darkrmq v0.7.20 h1:X9sbkl0ff3wDdE2kFayg7RxpbqKgc2p/M0aeW6aWgus=
 github.com/sagleft/darkrmq v0.7.20/go.mod h1:zQ+fDyeZi0xBTBXkN7gVe1MjylviSZU7bxcEoxWtagE=
-github.com/sagleft/simple-cron v1.3.0 h1:svLeo3LHMYVnRW24YmaQN2EbGAyBlVMFEmON+2EVO1E=
-github.com/sagleft/simple-cron v1.3.0/go.mod h1:a++6/wI1ZzgYe+lCAKlWBwR8xBYpPl1oXJpa5rUHlJI=
 github.com/streadway/amqp v1.0.0 h1:kuuDrUJFZL1QYL9hUNuCxNObNzB0bV/ZG5jV3RWAQgo=
 github.com/streadway/amqp v1.0.0/go.mod h1:AZpEONHx3DKn8O/DFsRAY58/XVQiIPMTMB1SddzLXVw=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=

@@ -8,7 +8,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/matrixbotio/constants-lib"
 	darkmq "github.com/sagleft/darkrmq"
-	simplecron "github.com/sagleft/simple-cron"
 	"github.com/streadway/amqp"
 	"go.uber.org/zap"
 
@@ -47,9 +46,6 @@ func (r *RMQHandler) NewRMQWorker(task WorkerTask) (*RMQWorker, errs.APIError) {
 		data: rmqWorkerData{
 			Name:                task.WorkerName,
 			CheckResponseErrors: !task.DisableCheckResponseErrors,
-			UseResponseTimeout:  task.Timeout > 0 && !task.DoNotStopOnTimeout,
-			WaitResponseTimeout: task.Timeout,
-			DoNotStopOnTimeout:  task.DoNotStopOnTimeout,
 			ID:                  task.ID,
 		},
 		conn: r.conn,
@@ -134,10 +130,6 @@ func (w *RMQWorker) SetCheckResponseErrors(check bool) *RMQWorker {
 
 // Serve - start consumer(s)
 func (w *RMQWorker) Serve() errs.APIError {
-	if w.data.UseResponseTimeout {
-		w.runCron()
-	}
-
 	err := w.conn.StartMultipleConsumers(darkmq.StartConsumersTask{
 		Ctx:      context.Background(),
 		Consumer: w.rmqConsumer,
@@ -180,11 +172,6 @@ func (w *RMQWorker) remakeStopChannel() {
 	w.stopCh = make(chan struct{}, 1)
 }
 
-func (w *RMQWorker) runCron() {
-	w.cronHandler = simplecron.NewCronHandler(w.timeIsUp, w.data.WaitResponseTimeout)
-	go w.cronHandler.Run()
-}
-
 // SetConsumerTag - set worker unique consumer tag
 func (w *RMQWorker) SetConsumerTag(uniqueTag string) *RMQWorker {
 	w.rmqConsumer.Tag = uniqueTag
@@ -200,12 +187,6 @@ func (w *RMQWorker) SetConsumerTagFromName() *RMQWorker {
 	return w.SetConsumerTag(tag)
 }
 
-func (w *RMQWorker) stopCron() {
-	if w.cronHandler != nil {
-		w.cronHandler.Stop()
-	}
-}
-
 func (w *RMQWorker) handleError(err *constants.APIError) {
 	if !w.useErrorCallback {
 		w.Logger.Error("handleError", zap.Error(err))
@@ -217,8 +198,6 @@ func (w *RMQWorker) handleError(err *constants.APIError) {
 
 func (w *RMQWorker) handleRMQMessage(delivery RMQDeliveryHandler) {
 	w.logVerbose("new rmq message found")
-
-	w.stopCron()
 
 	// check response error
 	if w.data.CheckResponseErrors {
@@ -239,16 +218,6 @@ func (w *RMQWorker) handleRMQMessage(delivery RMQDeliveryHandler) {
 
 	// run callback
 	w.deliveryCallback(w, delivery)
-}
-
-func (w *RMQWorker) timeIsUp() {
-	w.logVerbose("worker cron: response time is up")
-	w.cronHandler.Stop()
-	w.timeoutCallback(w)
-
-	if !w.data.DoNotStopOnTimeout {
-		w.Stop()
-	}
 }
 
 // AwaitFinish - wait for worker finished
