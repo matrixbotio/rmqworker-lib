@@ -2,7 +2,10 @@ package rmqworker
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"time"
+
 	"github.com/matrixbotio/constants-lib"
 	darkmq "github.com/sagleft/darkrmq"
 
@@ -61,17 +64,27 @@ func (r *RMQHandler) rmqInit() error {
 }
 
 func (r *RMQHandler) rmqConnect() error {
-	dsn := getRMQConnectionURL(r.task.Data)
+	var dsn = getRMQConnectionURL(r.task.Data)
+	var err = make(chan error)
 
-	ctx, cancel := context.WithTimeout(context.Background(), handlerFirstConnTimeout)
-	defer cancel()
+	r.conn.AddDialedListener(func(_ darkmq.Dialed) {
+		err <- nil
+	})
 
-	err := r.conn.Dial(ctx, dsn)
-	if err != nil {
-		return fmt.Errorf("rmq handler connect dial: %w", err)
+	go func() {
+		if connErr := r.conn.Dial(context.Background(), dsn); connErr != nil {
+			err <- fmt.Errorf("rmq handler connect dial: %w", connErr)
+		} else {
+			err <- nil
+		}
+	}()
+
+	select {
+	case e := <-err:
+		return e
+	case <-time.After(handlerFirstConnTimeout):
+		return errors.New("rmq handler connect dial: timeout")
 	}
-
-	return nil
 }
 
 // NewRMQHandler - clone handler & open new RMQ channel
