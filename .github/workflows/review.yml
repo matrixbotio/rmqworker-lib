@@ -18,5 +18,5 @@ jobs:
         with:
           GITHUB_TOKEN: ${{ secrets.GH_CI_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_API_MODEL: "gpt-3.5"
+          OPENAI_API_MODEL: "gpt-3.5-turbo"
           
