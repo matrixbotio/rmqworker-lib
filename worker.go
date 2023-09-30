@@ -2,6 +2,7 @@ package rmqworker
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/beefsack/go-rate"
@@ -189,7 +190,7 @@ func (w *RMQWorker) SetConsumerTagFromName() *RMQWorker {
 
 func (w *RMQWorker) handleError(err *constants.APIError) {
 	if !w.useErrorCallback {
-		w.Logger.Error("handleError", zap.Error(err))
+		w.Logger.Error("handleError", zap.Error(errors.New(err.Error())))
 		return
 	}
 
