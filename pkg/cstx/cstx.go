@@ -73,7 +73,7 @@ func (tx CrossServiceTransaction) sendCSTXAck(ackType ackType) error {
 	})
 
 	if err != nil {
-		return *err
+		return fmt.Errorf("cstx send ack: publish: %s", err.Message)
 	}
 
 	return nil
