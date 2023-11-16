@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/matrixbotio/constants-lib"
@@ -32,7 +33,7 @@ func (s *Service) responsesConsumerCallback(_ *rmqworker.RMQWorker, deliveryHand
 		data: deliveryHandler.GetMessageBody(),
 	}
 	if apiErr := deliveryHandler.CheckResponseError(); apiErr != nil {
-		response.error = *apiErr
+		response.error = errors.New(apiErr.Message)
 	}
 
 	responseCh <- response
@@ -43,7 +44,7 @@ func (s *Service) responsesConsumerErrorCallback(_ *rmqworker.RMQWorker, err *co
 	if err != nil {
 		s.logger.Error(
 			"syncrpc.service responsesConsumerErrorCallback",
-			zap.Error(*err),
+			zap.Error(errors.New(err.Message)),
 			zap.String("queue", s.queueName),
 			zap.String("serviceTag", s.props.ServiceTag),
 		)
