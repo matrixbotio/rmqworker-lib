@@ -1,8 +1,8 @@
 package cstx
 
 type AckMessage struct {
-	TXID    string
-	Type    ackType
-	Time    int64
-	Timeout int32
+	TXID    string  `json:"txId"`
+	Type    ackType `json:"type"`
+	Time    int64   `json:"time"`
+	Timeout int32   `json:"timeout"`
 }
