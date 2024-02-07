@@ -54,8 +54,8 @@ func (s *Service) responsesConsumerErrorCallback(_ *rmqworker.RMQWorker, err *co
 func (s *Service) startResponsesConsumer(props ServiceProps) error {
 	spec := rmqworker.WorkerTask{
 		QueueName:        s.queueName,
-		ISQueueDurable:   true,
-		ISAutoDelete:     false,
+		ISQueueDurable:   false,
+		ISAutoDelete:     true,
 		Callback:         s.responsesConsumerCallback,
 		FromExchange:     props.ResponsesExchange,
 		ExchangeType:     exchangeType,
