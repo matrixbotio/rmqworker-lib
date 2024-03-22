@@ -25,4 +25,5 @@ var (
 const (
 	ExchangeTypeDirect = "direct"
 	ExchangeTypeTopic  = "topic"
+	ExchangeTypeFanout = "fanout"
 )
