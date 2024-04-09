@@ -12,7 +12,6 @@ import (
 
 const (
 	exchangeType       = "topic"
-	consumersCount     = 1
 	messagesLifetimeMS = int64(2 * 60 * 1000)
 )
 
@@ -52,10 +51,30 @@ func (s *Service) responsesConsumerErrorCallback(_ *rmqworker.RMQWorker, err *co
 }
 
 func (s *Service) startResponsesConsumer(props ServiceProps) error {
+	errorCallback := s.responsesConsumerErrorCallback
+	if props.ErrorCallback != nil {
+		errorCallback = props.ErrorCallback
+	}
+
+	isQueueDurable := false
+	if props.ISQueueDurable != nil {
+		isQueueDurable = *props.ISQueueDurable
+	}
+
+	isAutoDelete := true
+	if props.ISAutoDelete != nil {
+		isAutoDelete = *props.ISAutoDelete
+	}
+
+	consumersCount := 1
+	if props.ConsumersCount != nil {
+		consumersCount = *props.ConsumersCount
+	}
+
 	spec := rmqworker.WorkerTask{
 		QueueName:        s.queueName,
-		ISQueueDurable:   false,
-		ISAutoDelete:     true,
+		ISQueueDurable:   isQueueDurable,
+		ISAutoDelete:     isAutoDelete,
 		Callback:         s.responsesConsumerCallback,
 		FromExchange:     props.ResponsesExchange,
 		ExchangeType:     exchangeType,
@@ -64,7 +83,7 @@ func (s *Service) startResponsesConsumer(props ServiceProps) error {
 		MessagesLifetime: messagesLifetimeMS,
 		RoutingKey:       s.queueName,
 		UseErrorCallback: true,
-		ErrorCallback:    s.responsesConsumerErrorCallback,
+		ErrorCallback:    errorCallback,
 	}
 
 	w, apiErr := s.rmqHandler.NewRMQWorker(spec)

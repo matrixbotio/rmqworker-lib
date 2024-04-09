@@ -14,6 +14,10 @@ type ServiceProps struct {
 	RequestsExchange           string
 	RequestsExchangeRoutingKey string
 	ResponsesExchange          string
+	ErrorCallback              rmqworker.RMQErrorCallback
+	ISQueueDurable             *bool
+	ISAutoDelete               *bool
+	ConsumersCount             *int
 
 	ServiceTag string
 }
