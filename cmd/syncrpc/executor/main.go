@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/matrixbotio/go-common-lib/zes"
 	"go.uber.org/zap"
 
 	"github.com/matrixbotio/rmqworker-lib"
@@ -25,12 +24,12 @@ type incomingData struct {
 }
 
 func main() {
-	logger, loggerErr := zes.Init(false)
+	logger, loggerErr := zap.NewDevelopment()
 	if loggerErr != nil {
 		panic(loggerErr)
 	}
-	defer logger.Close()
-	zap.ReplaceGlobals(logger.New(zap.InfoLevel))
+	defer logger.Sync()
+	zap.ReplaceGlobals(logger)
 
 	rmqHandler := getHandler()
 

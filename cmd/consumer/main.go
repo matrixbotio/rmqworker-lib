@@ -6,7 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/matrixbotio/go-common-lib/zes"
+	//"github.com/matrixbotio/go-common-lib/zes"
 	"go.uber.org/zap"
 
 	"github.com/matrixbotio/rmqworker-lib"
