@@ -76,7 +76,7 @@ func (c *RmqClient) Publish(ctx context.Context, t *structs.RMQPublishRequestTas
 	defer c.responses.Delete(t.CorrelationID)
 
 	if apiErr := c.rmqHandler.PublishToQueue(*t); apiErr != nil {
-		return nil, fmt.Errorf("rmqclient.SyncRequest publish request to exchange: %w", *apiErr)
+		return nil, fmt.Errorf("rmqclient.Publish publish request to exchange: %w", *apiErr)
 	}
 
 	if t.ResponseRoutingKey == "" {
@@ -88,7 +88,7 @@ func (c *RmqClient) Publish(ctx context.Context, t *structs.RMQPublishRequestTas
 		return nil, fmt.Errorf("context: %w", ctx.Err())
 	case response := <-responseCh:
 		if response.error != nil {
-			return nil, fmt.Errorf("response has error: %w", response.error)
+			return nil, response.error
 		}
 		return response.data, nil
 	}
