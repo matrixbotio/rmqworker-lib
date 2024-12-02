@@ -19,6 +19,7 @@ import (
 // WorkerTask.QueueName is a name of queue where responses will listen
 
 const requestTTL = time.Second * 30
+const reconnectTTL = time.Second * 5
 
 type RmqClient struct {
 	rmqHandler    *rmqworker.RMQHandler
@@ -126,7 +127,7 @@ func (c *RmqClient) callback(_ *rmqworker.RMQWorker, deliveryHandler rmqworker.R
 }
 
 // Handle error from exchange
-func (c *RmqClient) errorCallback(_ *rmqworker.RMQWorker, err *constants.APIError) {
+func (c *RmqClient) errorCallback(worker *rmqworker.RMQWorker, err *constants.APIError) {
 	if err != nil {
 		zap.L().Error(
 			"rmqclient.errorCallback",
@@ -145,4 +146,25 @@ func (c *RmqClient) errorCallback(_ *rmqworker.RMQWorker, err *constants.APIErro
 
 		return true
 	})
+
+	go c.reconnect(worker)
+}
+
+// Reconnect to RMQ
+func (c *RmqClient) reconnect(worker *rmqworker.RMQWorker) {
+	for {
+		zap.L().Info("Attempting to reconnect to RMQ...")
+		apiErr := worker.Serve()
+		if apiErr == nil {
+			zap.L().Info("Reconnected to RMQ successfully.")
+			return
+		}
+
+		zap.L().Error(
+			"Failed to reconnect to RMQ, retrying...",
+			zap.Error(errors.New(apiErr.Message)),
+		)
+
+		time.Sleep(reconnectTTL)
+	}
 }
