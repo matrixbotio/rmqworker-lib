@@ -1,6 +1,8 @@
 package rmqworker
 
 import (
+	"fmt"
+
 	"github.com/matrixbotio/constants-lib"
 	"github.com/streadway/amqp"
 
@@ -50,7 +52,10 @@ func (r *RMQHandler) queueDelete(managerName, queueName string) errs.APIError {
 	if rmqErr != nil {
 		return constants.Error(
 			"SERVICE_REQ_FAILED",
-			"failed to delete "+queueName+" queue: "+rmqErr.Error(),
+			fmt.Sprintf(
+				"failed to delete %s queue by %q: %s",
+				queueName, managerName, rmqErr.Error(),
+			),
 		)
 	}
 	return nil
