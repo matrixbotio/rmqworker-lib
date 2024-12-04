@@ -88,11 +88,21 @@ func (r *RMQHandler) rmqConnect() error {
 }
 
 // NewRMQHandler - clone handler & open new RMQ channel
-func (r *RMQHandler) NewRMQHandler() *RMQHandler {
-	handlerRoot := *r
-	newHandler := handlerRoot
-	newHandler.locks = rmqHandlerLocks{}
-	return &newHandler
+func (r *RMQHandler) NewRMQHandler() (*RMQHandler, error) {
+	newHandler := &RMQHandler{
+		task:              r.task,
+		conn:              r.conn,
+		connPool:          r.connPool, // use same channels pool
+		connPoolLightning: r.connPoolLightning,
+	}
+
+	// create new publisher to use separate channel
+	var err error
+	r.publisher, err = darkmq.NewConstantPublisher(r.connPoolLightning)
+	if err != nil {
+		return newHandler, fmt.Errorf("create publisher: %w", err)
+	}
+	return newHandler, nil
 }
 
 // IsConnectionAlive - check connection
