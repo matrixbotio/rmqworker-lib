@@ -98,7 +98,7 @@ func (r *RMQHandler) NewRMQHandler() (*RMQHandler, error) {
 
 	// create new publisher to use separate channel
 	var err error
-	r.publisher, err = darkmq.NewConstantPublisher(r.connPoolLightning)
+	newHandler.publisher, err = darkmq.NewConstantPublisher(r.connPoolLightning)
 	if err != nil {
 		return newHandler, fmt.Errorf("create publisher: %w", err)
 	}
