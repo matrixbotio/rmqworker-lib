@@ -33,6 +33,9 @@ func (c *consumer) declareQueue(ch *amqp.Channel, task DeclareQueueTask) error {
 	if task.DisableOverflow {
 		args["x-overflow"] = "reject-publish"
 	}
+	if task.DeadLetterExchange != "" {
+		args["x-dead-letter-exchange"] = task.DeadLetterExchange
+	}
 
 	_, err := ch.QueueDeclare(
 		task.Name,       // name

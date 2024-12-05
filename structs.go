@@ -57,9 +57,10 @@ type DeclareQueueTask struct {
 	AutoDelete bool
 
 	// optional
-	MessagesLifetime int64
-	MaxLength        int64
-	DisableOverflow  bool
+	MessagesLifetime   int64
+	MaxLength          int64
+	DisableOverflow    bool
+	DeadLetterExchange string
 }
 
 // RMQQueueDeclareTask - queue declare task data container
@@ -118,6 +119,7 @@ type WorkerTask struct {
 	TimeoutCallback            RMQTimeoutCallback // timeout callback
 	DoNotStopOnTimeout         bool
 	ManualAck                  bool
+	DeadLetterExchange         string
 }
 
 // RMQDeliveryCallback - RMQ delivery callback function
