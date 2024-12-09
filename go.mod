@@ -8,7 +8,7 @@ require (
 	github.com/json-iterator/go v1.1.12
 	github.com/matrixbotio/constants-lib v1.0.88
 	github.com/matrixbotio/go-common-lib v1.9.3
-	github.com/sagleft/darkrmq v0.8.0
+	github.com/sagleft/darkrmq v0.9.1
 	github.com/streadway/amqp v1.0.0
 	github.com/stretchr/testify v1.8.0
 	go.uber.org/zap v1.22.0
