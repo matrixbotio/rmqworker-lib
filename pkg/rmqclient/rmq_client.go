@@ -119,7 +119,7 @@ func (c *RmqClient) PublishToExchange(ctx context.Context, t *structs.PublishToE
 	defer c.responses.Delete(t.CorrelationID)
 
 	if apiErr := c.rmqHandler.PublishToExchange(*t); apiErr != nil {
-		return nil, fmt.Errorf("rmqclient.Publish publish request to queue: %w", *apiErr)
+		return nil, fmt.Errorf("rmqclient.Publish publish request to exchange: %w", *apiErr)
 	}
 
 	if t.ResponseRoutingKey == "" {
