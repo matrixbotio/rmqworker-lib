@@ -64,7 +64,7 @@ func New(rmqHandler *rmqworker.RMQHandler, t *rmqworker.WorkerTask, requestQueue
 	return c, nil
 }
 
-// Publish request to exchange and async wait for response
+// Publish request to queue and async wait for response
 // if t.ResponseRoutingKey is empty, no need to wait for response
 func (c *RmqClient) Publish(ctx context.Context, t *structs.RMQPublishRequestTask) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(ctx, requestTTL)
@@ -77,7 +77,7 @@ func (c *RmqClient) Publish(ctx context.Context, t *structs.RMQPublishRequestTas
 	defer c.responses.Delete(t.CorrelationID)
 
 	if apiErr := c.rmqHandler.PublishToQueue(*t); apiErr != nil {
-		return nil, fmt.Errorf("rmqclient.Publish publish request to exchange: %w", *apiErr)
+		return nil, fmt.Errorf("rmqclient.Publish publish request to queue: %w", *apiErr)
 	}
 
 	if t.ResponseRoutingKey == "" {
@@ -106,7 +106,38 @@ func (c *RmqClient) Send(ctx context.Context, message *Message) ([]byte, error) 
 	return c.Publish(ctx, t)
 }
 
-// Handle response from exchange
+// Publish request to exchange and wait for response
+// if t.ResponseRoutingKey is empty, no need to wait for response
+func (c *RmqClient) PublishToExchange(ctx context.Context, t *structs.PublishToExchangeTask) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(ctx, requestTTL)
+	defer cancel()
+
+	t.CorrelationID = nano.ID()
+
+	responseCh := make(chan response)
+	c.responses.Store(t.CorrelationID, responseCh)
+	defer c.responses.Delete(t.CorrelationID)
+
+	if apiErr := c.rmqHandler.PublishToExchange(*t); apiErr != nil {
+		return nil, fmt.Errorf("rmqclient.Publish publish request to queue: %w", *apiErr)
+	}
+
+	if t.ResponseRoutingKey == "" {
+		return nil, nil
+	}
+
+	select {
+	case <-ctx.Done():
+		return nil, fmt.Errorf("context: %w", ctx.Err())
+	case response := <-responseCh:
+		if response.error != nil {
+			return nil, response.error
+		}
+		return response.data, nil
+	}
+}
+
+// Handle response from queue
 func (c *RmqClient) callback(_ *rmqworker.RMQWorker, deliveryHandler rmqworker.RMQDeliveryHandler) {
 	var responseCh chan response
 	if ch, found := c.responses.Load(deliveryHandler.GetCorrelationID()); !found {
@@ -126,7 +157,7 @@ func (c *RmqClient) callback(_ *rmqworker.RMQWorker, deliveryHandler rmqworker.R
 	close(responseCh)
 }
 
-// Handle error from exchange
+// Handle error from queue
 func (c *RmqClient) errorCallback(worker *rmqworker.RMQWorker, err *constants.APIError) {
 	if err != nil {
 		zap.L().Error(
